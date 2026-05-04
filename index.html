@@ -3,88 +3,190 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lampros Konstantellos | Energy Notes</title>
-  <meta name="description" content="Personal website of Lampros Konstantellos — links, short bio, contact, and energy articles." />
+  <title>Lampros Konstantellos | Electrical & Computer Engineer</title>
+  <meta name="description" content="Personal website of Lampros Konstantellos — profile, projects, experience and contact." />
   <style>
     :root {
-      --bg:#f5f7fb; --card:#ffffff; --ink:#13233f; --muted:#5a6b88; --line:#dce3ef; --accent:#2d65d6;
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --ink: #10223f;
+      --muted: #5f6f8f;
+      --line: #dbe3f0;
+      --accent: #2358c9;
+      --shadow: 0 14px 34px rgba(8, 24, 58, 0.08);
+      --radius: 18px;
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,Segoe UI,system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
-    .wrap{max-width:980px;margin:0 auto;padding:1.2rem}
-    header{padding:2.5rem 0}
-    .hero{background:linear-gradient(145deg,#0f1d37,#1b3c78);color:#fff;border-radius:18px;padding:2rem}
-    h1{margin:.2rem 0 .4rem;font-size:2rem}
-    .lead{color:#d5def2;max-width:760px}
-    nav{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1rem}
-    nav a{color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.35);padding:.45rem .8rem;border-radius:999px;font-size:.92rem}
-    section{margin:1.1rem 0}
-    .grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1rem}
-    h2{font-size:1.25rem;margin:.4rem 0 .8rem}
-    .links a{display:block;margin:.38rem 0;color:var(--accent);text-decoration:none}
-    article h3{margin:.2rem 0}
-    .meta{font-size:.9rem;color:var(--muted)}
-    .tag{display:inline-block;background:#e8efff;color:#234b9d;font-size:.78rem;border-radius:999px;padding:.2rem .55rem;margin:.2rem .2rem 0 0}
-    footer{padding:1.5rem 0;color:var(--muted);font-size:.9rem;text-align:center}
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Roboto, system-ui, sans-serif;
+      background: radial-gradient(circle at top, #ffffff, var(--bg) 32%);
+      color: var(--ink);
+      line-height: 1.65;
+    }
+
+    .container {
+      width: min(1080px, calc(100% - 2.4rem));
+      margin: 0 auto;
+    }
+
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      background: rgba(244, 247, 251, 0.86);
+      border-bottom: 1px solid rgba(219, 227, 240, 0.8);
+    }
+
+    .top-nav .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.8rem 0;
+    }
+
+    .brand { font-weight: 700; font-size: 0.95rem; letter-spacing: 0.03em; }
+    .menu { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+    .menu a {
+      text-decoration: none;
+      color: var(--muted);
+      font-weight: 500;
+      padding: 0.48rem 0.75rem;
+      border-radius: 999px;
+      transition: 0.2s ease;
+    }
+    .menu a:hover {
+      color: var(--accent);
+      background: #e9f0ff;
+    }
+
+    header { padding: 3.4rem 0 1.6rem; }
+    .hero {
+      background: linear-gradient(145deg, #102348, #1a407f);
+      color: #fff;
+      border-radius: calc(var(--radius) + 2px);
+      box-shadow: var(--shadow);
+      padding: clamp(1.5rem, 4vw, 3rem);
+    }
+    .eyebrow { text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.82; font-size: 0.78rem; }
+    h1 { margin: 0.45rem 0 0.9rem; line-height: 1.2; font-size: clamp(1.9rem, 4.3vw, 3rem); }
+    .hero p { color: #dde7ff; max-width: 72ch; margin: 0; }
+
+    section { padding: 0.75rem 0; }
+    .grid { display: grid; gap: 1rem; grid-template-columns: repeat(12, 1fr); }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 25px rgba(17, 39, 73, 0.05);
+      padding: 1.2rem 1.25rem;
+    }
+
+    .span-8 { grid-column: span 8; }
+    .span-4 { grid-column: span 4; }
+    .span-6 { grid-column: span 6; }
+
+    h2 { margin: 0 0 0.75rem; font-size: 1.24rem; }
+    h3 { margin: 0 0 0.35rem; font-size: 1.04rem; }
+    .muted { color: var(--muted); }
+    ul { margin: 0.5rem 0 0; padding-left: 1.2rem; }
+
+    .links a {
+      display: block;
+      text-decoration: none;
+      color: var(--accent);
+      margin: 0.45rem 0;
+      font-weight: 500;
+    }
+    .links a:hover { text-decoration: underline; }
+
+    .news-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      background: #eef3ff;
+      color: #1f4fae;
+      padding: 0.55rem 0.9rem;
+      border-radius: 999px;
+      font-weight: 600;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .news-link:hover { transform: translateY(-1px); background: #dfeaff; }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      padding: 2.2rem 0;
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 860px) {
+      .span-8, .span-6, .span-4 { grid-column: 1 / -1; }
+      .top-nav .container { align-items: flex-start; flex-direction: column; }
+      header { padding-top: 2rem; }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <nav class="top-nav">
+    <div class="container">
+      <div class="brand">Lampros Konstantellos</div>
+      <div class="menu" aria-label="Primary navigation">
+        <a href="#profile">Profile</a>
+        <a href="#projects">Projects</a>
+        <a href="#experience">Experience</a>
+        <a href="#contact">Contact</a>
+        <a href="news/">News</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
     <header>
-      <div class="hero">
-        <p>Personal Website</p>
-        <h1>Lampros Konstantellos</h1>
-        <p class="lead">Electrical & Computer Engineer working on power systems, energy markets, and renewable integration. This website is a small hub for my links, short updates, and occasional thoughts on energy policy and infrastructure.</p>
-        <nav>
-          <a href="#about">About</a>
-          <a href="#links">Links</a>
-          <a href="#articles">Articles</a>
-          <a href="#contact">Contact</a>
-        </nav>
+      <div class="hero" id="profile">
+        <p class="eyebrow">Electrical & Computer Engineer</p>
+        <h1>Power systems, energy markets, and renewable integration.</h1>
+        <p>I work at the intersection of renewable project development, grid constraints, and applied energy analysis. This website focuses on my profile, selected project work, professional experience, and direct contact information.</p>
       </div>
     </header>
 
-    <section id="about" class="card">
-      <h2>Who I am (short)</h2>
-      <p>I work at the intersection of renewable project development, grid constraints, and applied energy analysis. My background includes research and consulting work around system flexibility, electrification, and real-world deployment constraints.</p>
+    <section id="projects" class="grid">
+      <article class="card span-6">
+        <h2>Selected Projects</h2>
+        <h3>Grid Constraint Analysis</h3>
+        <p class="muted">Technical assessment of bottlenecks and flexibility options for high-RES penetration scenarios.</p>
+        <h3>Market Readiness Studies</h3>
+        <p class="muted">Evaluation of operational and regulatory readiness for new flexibility resources and digital tools.</p>
+      </article>
+      <article class="card span-6" id="experience">
+        <h2>Experience Highlights</h2>
+        <ul>
+          <li>Research and consulting work on power system flexibility and electrification pathways.</li>
+          <li>Cross-functional collaboration across policy, engineering, and market stakeholders.</li>
+          <li>Applied analysis for real-world deployment constraints and infrastructure planning.</li>
+        </ul>
+      </article>
     </section>
 
-    <section id="links" class="grid">
-      <div class="card links">
-        <h2>Links</h2>
+    <section class="grid">
+      <article class="card span-8" id="contact">
+        <h2>Contact</h2>
+        <p>Email: <a href="mailto:lkonstantellos@gmail.com">lkonstantellos@gmail.com</a></p>
+        <p class="muted">Based in Athens, Greece. Open to collaborations, research dialogue, and project discussions.</p>
+      </article>
+      <aside class="card span-4 links">
+        <h2>Professional Links</h2>
         <a href="https://www.linkedin.com/in/lampros-konstantellos/" target="_blank" rel="noopener">LinkedIn</a>
         <a href="https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" target="_blank" rel="noopener">Google Scholar</a>
         <a href="https://ieeexplore.ieee.org/author/975219948451552" target="_blank" rel="noopener">IEEE Xplore</a>
         <a href="https://orcid.org/0009-0006-9424-2087" target="_blank" rel="noopener">ORCID</a>
-        <a href="https://zenodo.org/search?q=metadata.creators.person_or_org.name%3A%22Konstantellos%2C%20Lampros%22&l=list&p=1&s=10&sort=bestmatch" target="_blank" rel="noopener">Zenodo</a>
-      </div>
-      <div class="card" id="contact">
-        <h2>Contact</h2>
-        <p>Email: <a href="mailto:lkonstantellos@gmail.com">lkonstantellos@gmail.com</a></p>
-        <p>Based in Athens, Greece.</p>
-      </div>
-    </section>
-
-    <section id="articles" class="card">
-      <h2>Energy Articles</h2>
-      <article>
-        <p class="meta">April 8, 2026 · Athens</p>
-        <h3>Notes from the 7th Power & Gas Forum: from capacity growth to constraint management</h3>
-        <p>After the 7th Power & Gas Forum in Athens (organized by energypress.gr), one idea stood out clearly: the core challenge is no longer adding capacity, but managing constraints. I attended with LDK Consultants and colleagues Dr. Marios Stanitsas, Konstantinos Koumkoudis, and Thanos Vazakas.</p>
-        <p><strong>Main takeaways:</strong></p>
-        <ul>
-          <li><strong>Grid development</strong> must become the central priority. It remains the bottleneck for RES growth and electrification.</li>
-          <li><strong>Data centres</strong> are increasing pressure on networks; clear rules are needed for grid allocation and reservation duration.</li>
-          <li><strong>Smart meters and real-time data</strong> are now core infrastructure for market operation and flexibility services.</li>
-          <li><strong>Nuclear</strong> is back in policy discussions. Neighboring countries are moving faster, while SMRs are still not commercial and Greece faces non-trivial barriers.</li>
-          <li><strong>Hydrogen</strong> remains challenged by high production costs, relatively flat demand growth, and limited efficiency progress.</li>
-        </ul>
-        <p>In short: planning discipline and infrastructure governance now matter as much as generation ambition.</p>
-        <div>
-          <span class="tag">#PowerAndGas</span><span class="tag">#EnergyTransition</span><span class="tag">#GridInfrastructure</span><span class="tag">#Hydrogen</span><span class="tag">#NuclearEnergy</span><span class="tag">#DataCentres</span>
-        </div>
-      </article>
+        <a href="news/" class="news-link">Read latest news →</a>
+      </aside>
     </section>
 
     <footer>© 2026 Lampros Konstantellos</footer>
