@@ -1,6 +1,13 @@
-FROM nginx:alpine
+FROM node:20-alpine
 
-# Serve the full static website (home + /news pages + assets)
-COPY . /usr/share/nginx/html
+WORKDIR /app
 
-EXPOSE 80
+COPY package*.json ./
+RUN npm install --omit=dev
+
+COPY . .
+
+ENV NODE_ENV=production
+EXPOSE 3000
+
+CMD ["npm", "start"]
