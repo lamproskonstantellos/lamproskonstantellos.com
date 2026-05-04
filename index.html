@@ -59,7 +59,8 @@
       border-radius: 999px;
       transition: 0.2s ease;
     }
-    .menu a:hover {
+    .menu a:hover,
+    .menu a.active {
       color: var(--accent);
       background: #e9f0ff;
     }
@@ -84,7 +85,9 @@
       border-radius: var(--radius);
       box-shadow: 0 8px 25px rgba(17, 39, 73, 0.05);
       padding: 1.2rem 1.25rem;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(8,24,58,0.12); }
 
     .span-8 { grid-column: span 8; }
     .span-4 { grid-column: span 4; }
@@ -118,6 +121,22 @@
     }
     .news-link:hover { transform: translateY(-1px); background: #dfeaff; }
 
+    
+    .reveal {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+
     footer {
       text-align: center;
       color: var(--muted);
@@ -147,7 +166,7 @@
   </nav>
 
   <div class="container">
-    <header>
+    <header class="reveal">
       <div class="hero" id="profile">
         <p class="eyebrow">Electrical & Computer Engineer</p>
         <h1>Power systems, energy markets, and renewable integration.</h1>
@@ -155,7 +174,7 @@
       </div>
     </header>
 
-    <section id="projects" class="grid">
+    <section id="projects" class="grid reveal">
       <article class="card span-6">
         <h2>Selected Projects</h2>
         <h3>Grid Constraint Analysis</h3>
@@ -173,7 +192,7 @@
       </article>
     </section>
 
-    <section class="grid">
+    <section class="grid reveal">
       <article class="card span-8" id="contact">
         <h2>Contact</h2>
         <p>Email: <a href="mailto:lkonstantellos@gmail.com">lkonstantellos@gmail.com</a></p>
@@ -191,5 +210,35 @@
 
     <footer>© 2026 Lampros Konstantellos</footer>
   </div>
+
+  <script>
+    const sections = [...document.querySelectorAll('header, section[id], #contact')];
+    const navLinks = [...document.querySelectorAll('.menu a[href^="#"]')];
+
+    const updateActiveLink = () => {
+      const y = window.scrollY + 120;
+      let current = 'profile';
+      sections.forEach((section) => {
+        if (section.offsetTop <= y) current = section.id || current;
+      });
+      navLinks.forEach((link) => {
+        const isActive = link.getAttribute('href') === `#${current}`;
+        link.classList.toggle('active', isActive);
+      });
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.14 });
+
+    document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+    window.addEventListener('scroll', updateActiveLink, { passive: true });
+    updateActiveLink();
+  </script>
 </body>
 </html>
