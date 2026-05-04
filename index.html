@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lampros Konstantellos | Energy Notes</title>
+  <meta name="description" content="Personal website of Lampros Konstantellos — links, short bio, contact, and energy articles." />
+  <style>
+    :root {
+      --bg:#f5f7fb; --card:#ffffff; --ink:#13233f; --muted:#5a6b88; --line:#dce3ef; --accent:#2d65d6;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Segoe UI,system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+    .wrap{max-width:980px;margin:0 auto;padding:1.2rem}
+    header{padding:2.5rem 0}
+    .hero{background:linear-gradient(145deg,#0f1d37,#1b3c78);color:#fff;border-radius:18px;padding:2rem}
+    h1{margin:.2rem 0 .4rem;font-size:2rem}
+    .lead{color:#d5def2;max-width:760px}
+    nav{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1rem}
+    nav a{color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.35);padding:.45rem .8rem;border-radius:999px;font-size:.92rem}
+    section{margin:1.1rem 0}
+    .grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1rem}
+    h2{font-size:1.25rem;margin:.4rem 0 .8rem}
+    .links a{display:block;margin:.38rem 0;color:var(--accent);text-decoration:none}
+    article h3{margin:.2rem 0}
+    .meta{font-size:.9rem;color:var(--muted)}
+    .tag{display:inline-block;background:#e8efff;color:#234b9d;font-size:.78rem;border-radius:999px;padding:.2rem .55rem;margin:.2rem .2rem 0 0}
+    footer{padding:1.5rem 0;color:var(--muted);font-size:.9rem;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="hero">
+        <p>Personal Website</p>
+        <h1>Lampros Konstantellos</h1>
+        <p class="lead">Electrical & Computer Engineer working on power systems, energy markets, and renewable integration. This website is a small hub for my links, short updates, and occasional thoughts on energy policy and infrastructure.</p>
+        <nav>
+          <a href="#about">About</a>
+          <a href="#links">Links</a>
+          <a href="#articles">Articles</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <section id="about" class="card">
+      <h2>Who I am (short)</h2>
+      <p>I work at the intersection of renewable project development, grid constraints, and applied energy analysis. My background includes research and consulting work around system flexibility, electrification, and real-world deployment constraints.</p>
+    </section>
+
+    <section id="links" class="grid">
+      <div class="card links">
+        <h2>Links</h2>
+        <a href="https://www.linkedin.com/in/lampros-konstantellos/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" target="_blank" rel="noopener">Google Scholar</a>
+        <a href="https://ieeexplore.ieee.org/author/975219948451552" target="_blank" rel="noopener">IEEE Xplore</a>
+        <a href="https://orcid.org/0009-0006-9424-2087" target="_blank" rel="noopener">ORCID</a>
+        <a href="https://zenodo.org/search?q=metadata.creators.person_or_org.name%3A%22Konstantellos%2C%20Lampros%22&l=list&p=1&s=10&sort=bestmatch" target="_blank" rel="noopener">Zenodo</a>
+      </div>
+      <div class="card" id="contact">
+        <h2>Contact</h2>
+        <p>Email: <a href="mailto:lkonstantellos@gmail.com">lkonstantellos@gmail.com</a></p>
+        <p>Based in Athens, Greece.</p>
+      </div>
+    </section>
+
+    <section id="articles" class="card">
+      <h2>Energy Articles</h2>
+      <article>
+        <p class="meta">April 8, 2026 · Athens</p>
+        <h3>Notes from the 7th Power & Gas Forum: from capacity growth to constraint management</h3>
+        <p>After the 7th Power & Gas Forum in Athens (organized by energypress.gr), one idea stood out clearly: the core challenge is no longer adding capacity, but managing constraints. I attended with LDK Consultants and colleagues Dr. Marios Stanitsas, Konstantinos Koumkoudis, and Thanos Vazakas.</p>
+        <p><strong>Main takeaways:</strong></p>
+        <ul>
+          <li><strong>Grid development</strong> must become the central priority. It remains the bottleneck for RES growth and electrification.</li>
+          <li><strong>Data centres</strong> are increasing pressure on networks; clear rules are needed for grid allocation and reservation duration.</li>
+          <li><strong>Smart meters and real-time data</strong> are now core infrastructure for market operation and flexibility services.</li>
+          <li><strong>Nuclear</strong> is back in policy discussions. Neighboring countries are moving faster, while SMRs are still not commercial and Greece faces non-trivial barriers.</li>
+          <li><strong>Hydrogen</strong> remains challenged by high production costs, relatively flat demand growth, and limited efficiency progress.</li>
+        </ul>
+        <p>In short: planning discipline and infrastructure governance now matter as much as generation ambition.</p>
+        <div>
+          <span class="tag">#PowerAndGas</span><span class="tag">#EnergyTransition</span><span class="tag">#GridInfrastructure</span><span class="tag">#Hydrogen</span><span class="tag">#NuclearEnergy</span><span class="tag">#DataCentres</span>
+        </div>
+      </article>
+    </section>
+
+    <footer>© 2026 Lampros Konstantellos</footer>
+  </div>
+</body>
+</html>
