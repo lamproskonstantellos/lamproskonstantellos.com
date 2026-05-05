@@ -6,6 +6,9 @@ const { URL } = require("url");
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
 
+// Unique per server start — forces browser to re-fetch JS/CSS on every deploy
+const DEPLOY_VERSION = Date.now();
+
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -21,7 +24,25 @@ const mimeTypes = {
   ".pdf": "application/pdf"
 };
 
-const NO_CACHE_EXTS = new Set([".html", ".js", ".jsx", ".css"]);
+function serveIndex(res, filePath) {
+  fs.readFile(filePath, "utf8", (err, html) => {
+    if (err) {
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("404 Not Found");
+      return;
+    }
+    // Inject deploy version into all local asset URLs so browser always fetches fresh
+    const versioned = html.replace(
+      /((?:src|href)=")(\/[^"?]+\.(?:css|js|jsx))(")/g,
+      `$1$2?v=${DEPLOY_VERSION}$3`
+    );
+    res.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+    });
+    res.end(versioned);
+  });
+}
 
 function sendFile(res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
@@ -33,14 +54,7 @@ function sendFile(res, filePath) {
       res.end("404 Not Found");
       return;
     }
-
-    const headers = { "Content-Type": contentType };
-    if (NO_CACHE_EXTS.has(ext)) {
-      headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-    } else {
-      headers["Cache-Control"] = "public, max-age=31536000, immutable";
-    }
-    res.writeHead(200, headers);
+    res.writeHead(200, { "Content-Type": contentType });
     res.end(data);
   });
 }
@@ -63,12 +77,15 @@ const server = http.createServer((req, res) => {
 
   fs.stat(requestedPath, (err, stats) => {
     if (!err && stats.isFile()) {
-      sendFile(res, requestedPath);
+      if (requestedPath.endsWith(".html")) {
+        serveIndex(res, requestedPath);
+      } else {
+        sendFile(res, requestedPath);
+      }
       return;
     }
 
-    const fallbackPath = path.join(PUBLIC_DIR, "index.html");
-    sendFile(res, fallbackPath);
+    serveIndex(res, path.join(PUBLIC_DIR, "index.html"));
   });
 });
 
