@@ -3,309 +3,173 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lampros Konstantellos | Electrical & Computer Engineer</title>
-  <meta name="description" content="Professional profile of Lampros Konstantellos, Electrical & Computer Engineer focused on renewable energy systems, grid flexibility, battery storage, and applied energy research." />
-  <style>
-    :root {
-      --bg: #f6f8fc;
-      --surface: #ffffff;
-      --surface-soft: #fbfcff;
-      --ink: #10233f;
-      --muted: #5e6f8e;
-      --line: #dde4ef;
-      --line-strong: #cfd8e8;
-      --accent: #244f9f;
-      --shadow-soft: 0 8px 24px rgba(16, 35, 63, 0.06);
-      --shadow-card: 0 12px 28px rgba(16, 35, 63, 0.08);
-      --radius-lg: 20px;
-      --radius-md: 14px;
-    }
-
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      font-family: Inter, "Segoe UI", Roboto, system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      line-height: 1.72;
-    }
-
-    .container { width: min(1120px, calc(100% - 2.5rem)); margin: 0 auto; }
-
-    .site-header {
-      position: sticky;
-      top: 0;
-      z-index: 12;
-      background: rgba(246, 248, 252, 0.92);
-      border-bottom: 1px solid var(--line);
-      backdrop-filter: blur(8px);
-    }
-    .site-header .container {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 1rem 0;
-    }
-    .brand { display: flex; flex-direction: column; line-height: 1.35; }
-    .brand strong { font-size: 1.02rem; letter-spacing: .01em; }
-    .brand span { color: var(--muted); font-size: .88rem; }
-
-    .site-nav { display: flex; gap: 1.1rem; }
-    .site-nav a {
-      text-decoration: none;
-      color: #1e3559;
-      font-size: .95rem;
-      font-weight: 500;
-      padding: .2rem 0;
-      border-bottom: 1px solid transparent;
-    }
-    .site-nav a:hover,
-    .site-nav a:focus-visible { border-color: var(--line-strong); }
-
-    main { padding: 2.6rem 0 3rem; }
-
-    .hero {
-      display: grid;
-      grid-template-columns: minmax(0, 1.45fr) minmax(260px, .9fr);
-      gap: clamp(1.5rem, 3vw, 2.6rem);
-      align-items: center;
-      margin-bottom: 3.4rem;
-    }
-    .hero h1 {
-      margin: 0;
-      font-size: clamp(1.85rem, 3vw, 2.5rem);
-      line-height: 1.28;
-      letter-spacing: -0.012em;
-      max-width: 24ch;
-    }
-    .hero p {
-      margin: 1.05rem 0 0;
-      color: var(--muted);
-      max-width: 62ch;
-    }
-    .hero-cta { display: flex; flex-wrap: wrap; gap: 1.1rem; margin-top: 1.2rem; }
-    .hero-cta a {
-      text-decoration: none;
-      color: var(--accent);
-      font-weight: 600;
-      font-size: .94rem;
-    }
-
-    .portrait-card {
-      justify-self: end;
-      width: min(300px, 100%);
-      padding: .9rem;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--line);
-      background: var(--surface);
-      box-shadow: var(--shadow-card);
-    }
-    .portrait {
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      border-radius: 16px;
-      border: 1px solid var(--line);
-      display: block;
-      object-fit: cover;
-      object-position: center 36%;
-      background: #e9edf5;
-    }
-
-    section { margin-top: 3.1rem; }
-    section h2 {
-      font-size: 1.32rem;
-      letter-spacing: .01em;
-      margin: 0 0 1rem;
-    }
-
-    .about-copy {
-      max-width: 78ch;
-      border-top: 1px solid var(--line);
-      padding-top: 1.25rem;
-    }
-    .about-copy p { margin: 0 0 1rem; color: #324666; }
-
-    .publication-list { display: grid; gap: 1rem; }
-    .publication-card {
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--surface);
-      box-shadow: var(--shadow-soft);
-      padding: 1.2rem 1.15rem;
-    }
-    .publication-meta {
-      margin: 0;
-      color: var(--muted);
-      font-size: .82rem;
-      letter-spacing: .07em;
-      text-transform: uppercase;
-    }
-    .publication-card h3 {
-      margin: .5rem 0 .55rem;
-      line-height: 1.42;
-      font-size: 1.12rem;
-    }
-    .authors { margin: 0; color: #4c5f7f; font-size: .95rem; }
-    .award-badge {
-      display: inline-flex;
-      border: 1px solid #e8d8af;
-      background: #fcf8ee;
-      color: #7f6222;
-      padding: .2rem .6rem;
-      border-radius: 999px;
-      font-size: .76rem;
-      font-weight: 600;
-      margin-bottom: .6rem;
-    }
-    .publication-links {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-top: .55rem;
-    }
-    .publication-links a { color: var(--accent); text-decoration: none; font-size: .92rem; }
-
-    .contact-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(200px, 1fr));
-      gap: .65rem;
-    }
-    .contact-item {
-      display: flex;
-      align-items: center;
-      gap: .65rem;
-      padding: .72rem .78rem;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      color: #273d60;
-      background: var(--surface-soft);
-      text-decoration: none;
-      font-size: .92rem;
-    }
-    .contact-item span[aria-hidden="true"] {
-      width: 1.2rem;
-      text-align: center;
-      color: #405879;
-      font-size: .9rem;
-    }
-
-    footer {
-      border-top: 1px solid var(--line);
-      padding: 1.4rem 0 2rem;
-      color: var(--muted);
-      font-size: .9rem;
-    }
-    .footer-row { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    .footer-links { display: flex; gap: .75rem; }
-    .footer-links a { color: var(--muted); text-decoration: none; }
-
-    @media (max-width: 900px) {
-      .site-header .container { flex-direction: column; align-items: flex-start; }
-      .hero { grid-template-columns: 1fr; }
-      .portrait-card { justify-self: start; width: min(280px, 72%); order: -1; }
-      .contact-grid { grid-template-columns: repeat(2, minmax(200px, 1fr)); }
-    }
-    @media (max-width: 640px) {
-      .container { width: min(1120px, calc(100% - 1.4rem)); }
-      .site-nav { gap: .8rem; flex-wrap: wrap; }
-      main { padding-top: 1.8rem; }
-      section { margin-top: 2.5rem; }
-      .portrait-card { width: min(290px, 100%); }
-      .contact-grid { grid-template-columns: 1fr; }
-    }
-  </style>
+  <title>Lampros Konstantellos | Electrical &amp; Computer Engineer</title>
+  <meta name="description" content="Personal website of Lampros Konstantellos, Electrical and Computer Engineer focused on renewable energy systems, grid flexibility, battery storage, and applied energy research." />
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
+
   <header class="site-header">
     <div class="container">
-      <div class="brand">
-        <strong>Lampros Konstantellos</strong>
-        <span>Electrical &amp; Computer Engineer</span>
+      <div class="header-inner">
+        <a class="brand" href="/">
+          <span class="brand-name">Lampros Konstantellos</span>
+          <span class="brand-role">Electrical &amp; Computer Engineer</span>
+        </a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <a href="#about">About</a>
+          <a href="#publications">Publications</a>
+          <a href="/news/">News</a>
+          <a href="#contact">Contact</a>
+        </nav>
       </div>
-      <nav class="site-nav" aria-label="Main navigation">
-        <a href="#about">About</a>
-        <a href="#publications">Publications</a>
-        <a href="/news/">News</a>
-        <a href="#contact">Contact</a>
-      </nav>
     </div>
   </header>
 
-  <main class="container">
-    <section class="hero" aria-labelledby="hero-title">
-      <div>
-        <h1 id="hero-title">Electrical &amp; Computer Engineer focused on renewable energy systems, grid flexibility, and storage integration.</h1>
-        <p>I work across applied energy system modelling, techno-economic evaluation, and industry-driven research for PV, wind, battery storage, and flexible electricity systems.</p>
-        <div class="hero-cta">
-          <a href="#publications">View publications</a>
-          <a href="/news/">Read news</a>
-          <a href="#contact">Contact</a>
+  <main>
+    <div class="container">
+
+      <!-- Hero -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div>
+          <h1 id="hero-title">Electrical &amp; Computer Engineer focused on renewable energy systems, grid flexibility, and storage integration.</h1>
+          <p class="hero-sub">I work across applied energy system modelling, techno-economic evaluation, and industry-driven research for PV, wind, battery storage, and flexible electricity systems.</p>
+          <div class="hero-cta">
+            <a href="#publications">View publications</a>
+            <a href="/news/">Read news</a>
+            <a href="#contact">Contact</a>
+          </div>
         </div>
-      </div>
-      <figure class="portrait-card">
-        <img class="portrait" src="/public/images/lampros-konstantellos-profile.jpg" alt="Lampros Konstantellos" />
-      </figure>
-    </section>
+        <div class="portrait-card">
+          <img class="portrait" src="/lampros-konstantellos-picture.jpg" alt="Lampros Konstantellos" />
+        </div>
+      </section>
 
-    <section id="about" aria-labelledby="about-title">
-      <h2 id="about-title">About</h2>
-      <div class="about-copy">
-        <p>I am an Electrical and Computer Engineer focused on renewable energy systems, grid integration, and techno-economic evaluation of PV, wind, and battery energy storage projects.</p>
-        <p>I currently work as a Renewable Energy Consultant, supporting technical due diligence, feasibility studies, and financial assessments for energy investments across public and private-sector contexts.</p>
-        <p>My research experience includes real-time Hardware-in-the-Loop grid simulation at TUM, AI-based electric vehicle charging modelling at Fraunhofer ISE, and an award-winning IEEE publication on Vehicle-to-Grid integration in autonomous island systems.</p>
-        <p>I am particularly interested in applied energy system modelling, grid flexibility, storage integration, and industry-driven research at the intersection of engineering, energy markets, and finance.</p>
-      </div>
-    </section>
+      <!-- About -->
+      <section id="about" class="section" aria-labelledby="about-title">
+        <h2 class="section-title" id="about-title">About</h2>
+        <div class="about-body">
+          <p>I am an Electrical and Computer Engineer focused on renewable energy systems, grid integration, and techno-economic evaluation of PV, wind, and battery energy storage projects.</p>
+          <p>I currently work as a Renewable Energy Consultant, supporting technical due diligence, feasibility studies, and financial assessments for energy investments across public and private-sector contexts.</p>
+          <p>My research experience includes real-time Hardware-in-the-Loop grid simulation at TUM, AI-based electric vehicle charging modelling at Fraunhofer ISE, and an award-winning IEEE publication on Vehicle-to-Grid integration in autonomous island systems.</p>
+          <p>I am particularly interested in applied energy system modelling, grid flexibility, storage integration, and industry-driven research at the intersection of engineering, energy markets, and finance.</p>
+        </div>
+      </section>
 
-    <section id="publications" aria-labelledby="publications-title">
-      <h2 id="publications-title">Publications</h2>
-      <div class="publication-list">
-        <article class="publication-card">
-          <span class="award-badge">3rd Best Paper Award</span>
-          <p class="publication-meta">IEEE PESS 2025 · Munich, Germany</p>
-          <h3>Integration of PV and V2G Technology in an Island Grid: A Real-Time Simulation Study of Kastellorizo</h3>
-          <p class="authors">Konstantellos, L., Mohapatra, A., Kavvathas, T., Konstantopoulos, G., &amp; Hamacher, T. (2025)</p>
-          <div class="publication-links">
-            <a href="https://ieeexplore.ieee.org/" target="_blank" rel="noopener">IEEE Xplore</a>
-            <a href="https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" target="_blank" rel="noopener">Google Scholar</a>
-          </div>
-        </article>
+      <!-- Publications -->
+      <section id="publications" class="section" aria-labelledby="publications-title">
+        <h2 class="section-title" id="publications-title">Publications</h2>
+        <div class="pub-list">
 
-        <article class="publication-card">
-          <p class="publication-meta">EVS38 · Gothenburg, Sweden · 2025</p>
-          <h3>Financial Impact Analysis of Electric Vehicle Charging Behavior with RNN Model and Validation Against Real-World Data</h3>
-          <p class="authors">Konstantellos, L., Kamaci, Z., Pekmezci, D., &amp; Köpfer, B. (2025)</p>
-          <div class="publication-links">
-            <a href="https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" target="_blank" rel="noopener">Google Scholar</a>
-          </div>
-        </article>
-      </div>
-    </section>
+          <article class="pub-card">
+            <div class="award-badge">
+              <svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M5 0l1.12 3.45H9.5L6.7 5.59l1.12 3.45L5 7.04 2.18 9.04 3.3 5.59.5 3.45h3.38L5 0z"/></svg>
+              3rd Best Paper Award
+            </div>
+            <p class="pub-venue">IEEE PESS 2025 &middot; Munich, Germany</p>
+            <h3 class="pub-title">Integration of PV and V2G Technology in an Island Grid: A Real-Time Simulation Study of Kastellorizo</h3>
+            <p class="pub-authors">Konstantellos, L., Mohapatra, A., Kavvathas, T., Konstantopoulos, G., &amp; Hamacher, T. (2025)</p>
+            <div class="pub-links">
+              <a href="https://ieeexplore.ieee.org/document/11443073" target="_blank" rel="noopener">IEEE Xplore</a>
+              <span class="sep" aria-hidden="true">&middot;</span>
+              <a href="https://www.vde-verlag.de/proceedings-en/566656006.html" target="_blank" rel="noopener">VDE Verlag</a>
+              <span class="sep" aria-hidden="true">&middot;</span>
+              <a href="https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" target="_blank" rel="noopener">Google Scholar</a>
+            </div>
+          </article>
 
-    <section id="contact" aria-labelledby="contact-title">
-      <h2 id="contact-title">Contact</h2>
-      <div class="contact-grid">
-        <a class="contact-item" href="https://www.linkedin.com/in/lampros-konstantellos/" target="_blank" rel="noopener"><span aria-hidden="true">in</span> LinkedIn</a>
-        <a class="contact-item" href="https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" target="_blank" rel="noopener"><span aria-hidden="true">◎</span> Google Scholar</a>
-        <a class="contact-item" href="https://ieeexplore.ieee.org/author/975219948451552" target="_blank" rel="noopener"><span aria-hidden="true">◧</span> IEEE Xplore</a>
-        <a class="contact-item" href="https://orcid.org/0009-0006-9424-2087" target="_blank" rel="noopener"><span aria-hidden="true">iD</span> ORCID</a>
-        <a class="contact-item" href="https://zenodo.org/search?page=1&size=20&q=Lampros%20Konstantellos" target="_blank" rel="noopener"><span aria-hidden="true">◍</span> Zenodo</a>
-        <a class="contact-item" href="mailto:lampros.kosntantellos@gmail.com"><span aria-hidden="true">✉</span> Email</a>
-      </div>
-    </section>
+          <article class="pub-card">
+            <p class="pub-venue">EVS38 &middot; Gothenburg, Sweden &middot; 2025</p>
+            <h3 class="pub-title">Financial Impact Analysis of Electric Vehicle Charging Behavior with RNN Model and Validation Against Real-World Data</h3>
+            <p class="pub-authors">Konstantellos, L., Kamaci, Z., Pekmezci, D., &amp; K&ouml;pfer, B. (2025)</p>
+            <div class="pub-links">
+              <a href="https://evs38-program.org/images/Proceedings/D%20Charging%20Infrastructure%20and%20grid%20integration/448_Financial_Impact_Analysis_of_Electric_Vehicle_Charging_Behavior_with_RNN_Model_and_Validation_Against_Real_World_Data.pdf" target="_blank" rel="noopener">EVS38 PDF</a>
+              <span class="sep" aria-hidden="true">&middot;</span>
+              <a href="https://zenodo.org/records/15882802" target="_blank" rel="noopener">Zenodo</a>
+              <span class="sep" aria-hidden="true">&middot;</span>
+              <a href="https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" target="_blank" rel="noopener">Google Scholar</a>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- Contact -->
+      <section id="contact" class="section" aria-labelledby="contact-title">
+        <h2 class="section-title" id="contact-title">Contact</h2>
+        <div class="contact-grid">
+
+          <a class="contact-link" href="https://www.linkedin.com/in/lampros-konstantellos/" target="_blank" rel="noopener">
+            <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4V9h4v1.5a6 6 0 0 1 2-1.5z"/>
+              <rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
+            </svg>
+            LinkedIn
+          </a>
+
+          <a class="contact-link" href="https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" target="_blank" rel="noopener">
+            <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 9H2l10-7 10 7z"/>
+              <path d="M6 9v7a6 6 0 0 0 12 0V9"/>
+              <line x1="19" y1="9" x2="19" y2="15"/>
+            </svg>
+            Google Scholar
+          </a>
+
+          <a class="contact-link" href="https://ieeexplore.ieee.org/author/975219948451552" target="_blank" rel="noopener">
+            <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="8" y1="12" x2="16" y2="12"/>
+              <line x1="8" y1="16" x2="13" y2="16"/>
+            </svg>
+            IEEE Xplore
+          </a>
+
+          <a class="contact-link" href="https://orcid.org/0009-0006-9424-2087" target="_blank" rel="noopener">
+            <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="9" y1="6" x2="9" y2="18"/>
+              <path d="M9 6h3a3 3 0 0 1 0 6H9"/>
+            </svg>
+            ORCID
+          </a>
+
+          <a class="contact-link" href="https://zenodo.org/search?page=1&size=20&q=Lampros%20Konstantellos" target="_blank" rel="noopener">
+            <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <ellipse cx="12" cy="5" rx="9" ry="3"/>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+            </svg>
+            Zenodo
+          </a>
+
+          <a class="contact-link" href="mailto:lampros.konstantellos@gmail.com">
+            <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+            Email
+          </a>
+
+        </div>
+      </section>
+
+    </div><!-- /container -->
   </main>
 
-  <footer>
-    <div class="container footer-row">
-      <span>© 2026 Lampros Konstantellos</span>
-      <div class="footer-links">
-        <a href="https://www.linkedin.com/in/lampros-konstantellos/" target="_blank" rel="noopener">LinkedIn</a>
-        <a href="https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" target="_blank" rel="noopener">Google Scholar</a>
-        <a href="mailto:lampros.kosntantellos@gmail.com">Email</a>
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-inner">
+        <span class="footer-copy">&copy; 2026 Lampros Konstantellos</span>
+        <div class="footer-links">
+          <a href="https://www.linkedin.com/in/lampros-konstantellos/" target="_blank" rel="noopener">LinkedIn</a>
+          <a href="https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" target="_blank" rel="noopener">Google Scholar</a>
+          <a href="mailto:lampros.konstantellos@gmail.com">Email</a>
+        </div>
       </div>
     </div>
   </footer>
+
 </body>
 </html>
