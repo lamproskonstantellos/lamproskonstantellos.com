@@ -8,13 +8,13 @@ const PROFILE = {
   hero: {
     headlinePre: "Electrical & Computer Engineer working on",
     headlineEm: "renewable energy, grid flexibility, and storage.",
-    sub: "Applied energy systems modelling, techno-economic evaluation, and industry-driven research for PV, wind, battery storage, and flexible electricity systems.",
+    sub: "Focused on applied energy system modelling, techno-economic assessment, and industry-driven research for PV, wind, storage, and flexible electricity systems.",
   },
   about: [
-    "I am an Electrical & Computer Engineer focused on renewable energy systems, grid integration, and techno-economic evaluation of PV, wind, and battery energy storage projects.",
-    "I currently work as a Renewable Energy Consultant, supporting technical due diligence, feasibility studies, and financial assessments for energy investments across public and private-sector contexts.",
-    "My research experience includes real-time Hardware-in-the-Loop grid simulation at TUM, AI-based electric vehicle charging modelling at Fraunhofer ISE, and an award-winning IEEE publication on Vehicle-to-Grid integration in autonomous island systems.",
-    "I am particularly interested in applied energy system modelling, grid flexibility, storage integration, and industry-driven research at the intersection of engineering, energy markets, and finance.",
+    "Electrical & Computer Engineer working at the intersection of renewable energy, grid flexibility, and battery storage.",
+    "Focused on techno-economic evaluation, feasibility assessment, and investment-oriented analysis for PV, wind, battery energy storage, and flexible electricity systems.",
+    "Currently working as a Renewable Energy Consultant, supporting technical due diligence, feasibility studies, and financial assessments for energy projects across public and private-sector contexts.",
+    "Research experience includes real-time Hardware-in-the-Loop grid simulation at TUM, BiGRU-based EV charging modelling at Fraunhofer ISE, and associated peer-reviewed publications in EV charging behaviour and Vehicle-to-Grid integration, including a 3rd Best Paper Award at IEEE PESS 2025.",
   ],
   publications: [
     {
