@@ -324,6 +324,17 @@ section.block:first-of-type { border-top: none; }
   .about-side { position: static; }
 }
 
+@media (max-width: 600px) {
+  .pub-award {
+    position: static;
+    align-self: flex-start;
+    margin-bottom: 12px;
+  }
+  .pub-meta {
+    padding-right: 0;
+  }
+}
+
 /* ===== Publications ===== */
 .pub-list {
   display: grid;
