@@ -1,7 +1,6 @@
 /* global React, ReactDOM, PROFILE, Icon */
 const { useState, useEffect, useMemo, useCallback } = React;
 
-/* Render markdown-ish bold (**word**) inline */
 function renderInline(text) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((p, i) => {
@@ -350,7 +349,13 @@ function Contact() {
         {PROFILE.contact.map(c => {
           const { I, tint } = map[c.id];
           return (
-            <a className="contact-card" key={c.id} href={c.href} target={c.href.startsWith("mailto") ? undefined : "_blank"} rel="noopener noreferrer">
+            <a
+              className="contact-card"
+              key={c.id}
+              href={c.href}
+              target={c.href.startsWith("mailto") ? undefined : "_blank"}
+              rel="noopener noreferrer"
+            >
               <span className="ico-badge" style={{ background: tint }}>
                 <I style={{ width: 22, height: 22 }} />
               </span>
@@ -372,7 +377,7 @@ function Footer() {
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
-        <div>© 2026 {PROFILE.name}</div>
+        <div className="copy">© 2026 {PROFILE.name}</div>
         <div className="site-footer-links">
           {PROFILE.footer.links.map((l, i) => (
             <a key={i} href={l.href} target={l.href.startsWith("mailto") ? undefined : "_blank"} rel="noopener noreferrer">
@@ -398,7 +403,7 @@ function App() {
       requestAnimationFrame(() => {
         const el = document.getElementById(next.section);
         if (el) {
-          const y = el.getBoundingClientRect().top + window.scrollY - 72;
+          const y = el.getBoundingClientRect().top + window.scrollY - 70;
           window.scrollTo({ top: y, behavior: "smooth" });
         }
       });
