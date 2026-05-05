@@ -324,17 +324,6 @@ section.block:first-of-type { border-top: none; }
   .about-side { position: static; }
 }
 
-@media (max-width: 600px) {
-  .pub-award {
-    position: static;
-    align-self: flex-start;
-    margin-bottom: 12px;
-  }
-  .pub-meta {
-    padding-right: 0;
-  }
-}
-
 /* ===== Publications ===== */
 .pub-list {
   display: grid;
@@ -397,21 +386,30 @@ section.block:first-of-type { border-top: none; }
   gap: 6px;
   font-family: "Inter", sans-serif;
   font-size: 10.5px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.01em;
-  background: linear-gradient(180deg, #fff7e0 0%, #fff0c8 100%);
-  color: #8a5a00;
-  border: 1px solid #f3e1a8;
+  background: #fdf8ee;
+  color: #aa7c2e;
+  border: 1px solid #e8d4a0;
   padding: 4px 11px 4px 9px;
   border-radius: 999px;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset;
   z-index: 1;
 }
 .pub-award svg {
   width: 11px;
   height: 11px;
-  color: #b88200;
+  color: #c49030;
   flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .pub-award {
+    position: static;
+    align-self: flex-start;
+    margin-bottom: 10px;
+  }
+  .pub-meta {
+    padding-right: 0;
+  }
 }
 .pub-card h3 {
   font-size: 16.5px;
