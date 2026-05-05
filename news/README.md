@@ -1,37 +1,56 @@
 # News Articles
 
-Each article lives in its own folder. To add a new article:
+Each article lives in its own folder under `news/`. Articles are sorted automatically by `date` (newest first) — both on the homepage News preview (capped at 3) and on the full `/news` list page.
+
+## Add a new article
 
 1. Create a new folder: `news/<slug>/`
-2. Add entry to `PROFILE.news` array in `/data.js`
-3. Optionally drop images:
-   - `cover.jpg` — card thumbnail (16:10 ratio works best)
-   - `photo-01.jpg`, `photo-02.jpg`, … — in-article gallery
+2. Drop the cover image as `news/<slug>/cover.jpg` (16:10 ratio works best for the card thumbnail).
+3. Optionally drop in-article photos as `photo-01.jpg`, `photo-02.jpg`, …
+4. Add a new entry to `PROFILE.news` in `/data.js`:
+
+```js
+{
+  slug: "my-article-slug",
+  date: "2026-05-12",                       // YYYY-MM-DD — used for sorting
+  dateLabel: "May 12, 2026",                // human-readable
+  location: "Athens",                       // optional
+  title: "Title of the article",
+  excerpt: "One- or two-sentence preview shown on the card.",
+  cover: "news/my-article-slug/cover.jpg",  // optional
+  photos: [                                 // optional
+    "news/my-article-slug/photo-01.jpg",
+    "news/my-article-slug/photo-02.jpg",
+  ],
+  body: [
+    "First paragraph. Use **double asterisks** for inline bold.",
+    "Second paragraph.",
+  ],
+  sources: [                                // optional
+    { label: "Source name", href: "https://example.com" },
+  ],
+}
+```
+
+That's it — the article will appear at `/news/my-article-slug`, on the homepage News preview (if among the 3 most recent), and on the `/news` list page.
 
 ## Folder structure
 
 ```
 news/
-├── README.md                          ← this file
+├── README.md
 └── 7th-power-gas-forum-athens/
-    ├── cover.jpg                      ← card cover image
-    ├── photo-01.jpg                   ← article gallery
+    ├── cover.jpg              ← card / article cover
+    ├── photo-01.jpg           ← optional in-article gallery
     └── photo-02.jpg
 ```
 
-## Adding photos to an existing article
+## Routes
 
-Drop images into the article folder, then update the `photos` array in `data.js`:
+- `/`               — homepage with News preview (max 3, newest first)
+- `/news`           — full list of all articles
+- `/news/<slug>`    — single article view
 
-```js
-photos: [
-  "news/7th-power-gas-forum-athens/photo-01.jpg",
-  "news/7th-power-gas-forum-athens/photo-02.jpg",
-],
-```
+## Tweaking the homepage cap
 
-And set the cover:
-
-```js
-cover: "news/7th-power-gas-forum-athens/cover.jpg",
-```
+Edit `LIMITS.newsPreview` in `/data.js` (default: `3`). The "All N articles" link automatically appears on the homepage when there are more articles than the cap.
