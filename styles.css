@@ -333,6 +333,9 @@ section.block:first-of-type { border-top: none; }
 @media (min-width: 720px) {
   .pub-list { grid-template-columns: 1fr 1fr; }
 }
+@media (max-width: 719px) {
+  .pub-card { min-height: 340px; }
+}
 .pub-card {
   position: relative;
   background: var(--surface);
