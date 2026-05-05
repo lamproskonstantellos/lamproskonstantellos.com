@@ -1,5 +1,18 @@
 /* ============================================================
-   PROFILE DATA
+   PROFILE DATA  —  single source of truth
+   ------------------------------------------------------------
+   Add new entries to `publications` or `news` and they will
+   automatically appear on the homepage previews and on the
+   /publications and /news list pages, sorted newest-first.
+
+   Publications fields:
+     - venue, year, title, authors, links   (required)
+     - location, description, award         (optional)
+
+   News fields:
+     - slug, date (YYYY-MM-DD), dateLabel,
+       title, excerpt, body                 (required)
+     - location, cover, photos, sources     (optional)
    ============================================================ */
 
 const PROFILE = {
@@ -84,4 +97,39 @@ const PROFILE = {
   },
 };
 
-Object.assign(window, { PROFILE });
+/* ---- Display caps for homepage previews ---- */
+const LIMITS = {
+  newsPreview: 3,
+  publicationsPreview: 5,
+};
+
+/* ---- Selectors (auto-sorted, newest first) ---- */
+function sortedNews() {
+  return [...PROFILE.news].sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+function sortedPublications() {
+  return [...PROFILE.publications].sort((a, b) => Number(b.year) - Number(a.year));
+}
+
+function getRecentNews(limit) {
+  const items = sortedNews();
+  return typeof limit === "number" ? items.slice(0, limit) : items;
+}
+
+function getRecentPublications(limit) {
+  const items = sortedPublications();
+  return typeof limit === "number" ? items.slice(0, limit) : items;
+}
+
+function getArticle(slug) {
+  return PROFILE.news.find((n) => n.slug === slug);
+}
+
+Object.assign(window, {
+  PROFILE,
+  LIMITS,
+  getRecentNews,
+  getRecentPublications,
+  getArticle,
+});
