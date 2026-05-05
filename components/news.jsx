@@ -9,13 +9,13 @@
    - Article:         /news/<slug> full article view
    ============================================================ */
 
-function NewsCard({ article, index = 0, navigate, revealKey, isVisible }) {
+function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from }) {
   return (
     <article
       className={`news-card reveal ${isVisible ? "in" : ""}`}
       data-reveal={revealKey}
       style={{ transitionDelay: `${index * 80}ms` }}
-      onClick={() => navigate({ page: "article", slug: article.slug })}
+      onClick={() => navigate({ page: "article", slug: article.slug }, { from })}
     >
       <div className="cover">
         {article.cover
@@ -63,6 +63,7 @@ function NewsPreview({ navigate }) {
             navigate={navigate}
             revealKey={`news-${i}`}
             isVisible={visible.has(`news-${i}`)}
+            from="home"
           />
         ))}
       </div>
@@ -102,6 +103,7 @@ function NewsListPage({ navigate }) {
               navigate={navigate}
               revealKey={`news-list-${i}`}
               isVisible={visible.has(`news-list-${i}`)}
+              from="news-list"
             />
           ))}
         </div>
@@ -117,11 +119,18 @@ function Article({ slug, navigate }) {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [slug]);
 
+  const from = window.history.state?.from;
+  const goBack = () =>
+    from === "home"
+      ? navigate({ page: "home", section: "news" })
+      : navigate({ page: "news-list" });
+  const backLabel = from === "home" ? "Back to Home" : "Back to News";
+
   if (!article) {
     return (
       <div className="page article">
-        <button className="back-link" onClick={() => navigate({ page: "news-list" })}>
-          <Icon.arrowLeft style={{ width: 14, height: 14 }} /> Back to News
+        <button className="back-link" onClick={goBack}>
+          <Icon.arrowLeft style={{ width: 14, height: 14 }} /> {backLabel}
         </button>
         <p style={{ color: "var(--muted)" }}>Article not found.</p>
       </div>
@@ -130,8 +139,8 @@ function Article({ slug, navigate }) {
 
   return (
     <div className="page article">
-      <button className="back-link" onClick={() => navigate({ page: "news-list" })}>
-        <Icon.arrowLeft style={{ width: 14, height: 14 }} /> Back to News
+      <button className="back-link" onClick={goBack}>
+        <Icon.arrowLeft style={{ width: 14, height: 14 }} /> {backLabel}
       </button>
       <div className="article-meta">
         {article.dateLabel}{article.location ? ` · ${article.location}` : ""}
