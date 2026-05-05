@@ -192,10 +192,13 @@ function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  const navigate = useCallback((next) => {
+  const navigate = useCallback((next, opts = {}) => {
     const targetPath = routeToPath(next);
+    const stateData = opts.from !== undefined ? { from: opts.from } : {};
     if (window.location.pathname !== targetPath) {
-      window.history.pushState({}, "", targetPath);
+      window.history.pushState(stateData, "", targetPath);
+    } else if (opts.from !== undefined) {
+      window.history.replaceState(stateData, "", targetPath);
     }
     setRoute(next);
 
