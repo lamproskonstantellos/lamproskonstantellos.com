@@ -21,6 +21,8 @@ const mimeTypes = {
   ".pdf": "application/pdf"
 };
 
+const NO_CACHE_EXTS = new Set([".html", ".js", ".jsx", ".css"]);
+
 function sendFile(res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = mimeTypes[ext] || "application/octet-stream";
@@ -32,7 +34,13 @@ function sendFile(res, filePath) {
       return;
     }
 
-    res.writeHead(200, { "Content-Type": contentType });
+    const headers = { "Content-Type": contentType };
+    if (NO_CACHE_EXTS.has(ext)) {
+      headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+    } else {
+      headers["Cache-Control"] = "public, max-age=31536000, immutable";
+    }
+    res.writeHead(200, headers);
     res.end(data);
   });
 }
