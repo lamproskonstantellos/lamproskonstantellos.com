@@ -49,7 +49,7 @@ const PROFILE = {
       location: "Athens",
       title: "Insights from the 7th Power & Gas Forum in Athens",
       excerpt: "Reflections from two days of discussions on the Greek energy transition, grid bottlenecks, flexibility, and the rise of battery storage.",
-      cover: null,
+      cover: "news/7th-power-gas-forum-athens/cover.jpg",
       photos: [],
       body: [
         "On 6–7 April 2026, I attended the **7th Power & Gas Forum** in Athens, organised by **energypress** at **Zeus Wyndham Grand Athens**. The forum brought together representatives from the political leadership, regulators, system operators, market participants, utilities, investors, technology providers and the academic community to discuss the new realities shaping the Greek electricity and gas markets.",
