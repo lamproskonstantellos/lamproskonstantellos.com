@@ -286,10 +286,6 @@ function Article({ slug, navigate }) {
     );
   }
 
-  const gallery = article.photos && article.photos.length > 0
-    ? article.photos
-    : Array.from({ length: 2 }, () => null);
-
   return (
     <div className="page article">
       <button className="back-link" onClick={() => navigate({ page: "home", section: "news" })}>
@@ -297,19 +293,21 @@ function Article({ slug, navigate }) {
       </button>
       <div className="article-meta">{article.dateLabel} · {article.location}</div>
       <h1>{article.title}</h1>
+      {article.cover && (
+        <div className="article-cover">
+          <img src={article.cover} alt="" />
+        </div>
+      )}
       <div className="article-body">
         {article.body.map((p, i) => (
           <p key={i}>{renderInline(p)}</p>
         ))}
       </div>
-      {gallery.length > 0 && (
+      {article.photos && article.photos.length > 0 && (
         <div className="article-gallery">
-          {gallery.map((src, i) => (
+          {article.photos.map((src, i) => (
             <div className="photo" key={i}>
-              {src
-                ? <img src={src} alt="" />
-                : <div className="ph">[ news/{article.slug}/photo-0{i + 1}.jpg ]</div>
-              }
+              <img src={src} alt="" />
             </div>
           ))}
         </div>
