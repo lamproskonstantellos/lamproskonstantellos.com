@@ -193,13 +193,13 @@ function Publications() {
             data-reveal={`pub-${i}`}
             style={{ transitionDelay: `${i * 80}ms` }}
           >
-            {p.award && (
-              <div className="pub-award">
-                <Icon.trophy />
-                {p.award}
-              </div>
-            )}
             <div className="pub-body">
+              {p.award && (
+                <div className="pub-award">
+                  <Icon.trophy />
+                  {p.award}
+                </div>
+              )}
               <div className="pub-meta">
                 <span>{p.venue}</span>
                 <span className="dot" />
