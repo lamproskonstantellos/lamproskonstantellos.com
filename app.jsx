@@ -151,13 +151,6 @@ function Footer() {
     <footer className="site-footer">
       <div className="site-footer-inner">
         <div className="copy">© 2026 {PROFILE.name}</div>
-        <div className="site-footer-links">
-          {PROFILE.footer.links.map((l, i) => (
-            <a key={i} href={l.href} target={l.href.startsWith("mailto") ? undefined : "_blank"} rel="noopener noreferrer">
-              {l.label}
-            </a>
-          ))}
-        </div>
       </div>
     </footer>
   );

@@ -46,7 +46,7 @@ function About() {
           {PROFILE.about.map((p, i) => (
             <p
               key={i}
-              className="about-paragraph"
+              className={`about-paragraph${i === 0 ? " about-lead" : ""}`}
               style={{ transitionDelay: `${i * 90}ms` }}
             >
               {p}
