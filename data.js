@@ -86,13 +86,6 @@ const PROFILE = {
     { id: "zenodo",   label: "Zenodo",         href: "https://zenodo.org/search?page=1&size=20&q=Lampros+Konstantellos" },
     { id: "email",    label: "Email",          href: "mailto:lampros.konstantellos@gmail.com" },
   ],
-  footer: {
-    links: [
-      { label: "LinkedIn",       href: "https://www.linkedin.com/in/lampros-konstantellos/" },
-      { label: "Google Scholar", href: "https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" },
-      { label: "Email",          href: "mailto:lampros.konstantellos@gmail.com" },
-    ],
-  },
 };
 
 /* ---- Display caps for homepage previews ---- */
