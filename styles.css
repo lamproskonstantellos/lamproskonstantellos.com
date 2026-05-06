@@ -761,6 +761,7 @@ section.block:first-of-type { border-top: none; }
     gap: 40px;
     padding: 48px 0 32px;
   }
+  .hero-text h1 { line-height: 1.18; }
   .hero-photo { max-width: 320px; margin: 0 auto; }
   .nav { gap: 16px; }
   .nav button { font-size: 13px; }
