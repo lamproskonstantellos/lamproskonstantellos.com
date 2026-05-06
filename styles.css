@@ -100,7 +100,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 main {
   max-width: var(--container);
   margin: 0 auto;
-  padding: 0 28px 80px;
+  padding: 0 28px 24px;
 }
 .page {
   animation: fade-up 360ms cubic-bezier(.2,.7,.2,1);
@@ -740,8 +740,7 @@ section.block:first-of-type { border-top: none; }
 /* ===== Footer ===== */
 .site-footer {
   border-top: 1px solid var(--line);
-  padding: 28px 0;
-  margin-top: 40px;
+  padding: 24px 0;
 }
 .site-footer-inner {
   max-width: var(--container);
@@ -766,6 +765,6 @@ section.block:first-of-type { border-top: none; }
   .nav { gap: 16px; }
   .nav button { font-size: 13px; }
   .site-header-inner { padding: 14px 20px; }
-  main { padding: 0 20px 60px; }
+  main { padding: 0 20px 16px; }
   .site-footer-inner { padding: 0 20px; }
 }
