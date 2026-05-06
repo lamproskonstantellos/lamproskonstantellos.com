@@ -19,8 +19,8 @@ const PROFILE = {
   name: "Lampros Konstantellos",
   role: "Electrical & Computer Engineer",
   hero: {
-    headlinePre: "Electrical & Computer Engineer working on",
-    headlineEm: "renewable energy, grid flexibility, and storage.",
+    headlinePre: "Electrical & Computer Engineer focusing on",
+    headlineEm: "renewable energy, grid flexibility, and battery storage.",
     sub: "Focused on applied energy system modelling, techno-economic assessment, and industry-driven research for PV, wind, storage, and flexible electricity systems.",
   },
   about: [
