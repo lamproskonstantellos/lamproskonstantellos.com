@@ -24,8 +24,8 @@ const PROFILE = {
     sub: "Focused on applied energy system modelling, techno-economic assessment, and industry-driven research for PV, wind, storage, and flexible electricity systems.",
   },
   about: [
-    "Electrical & Computer Engineer working at the intersection of renewable energy, grid flexibility, and battery storage. Focused on techno-economic evaluation, feasibility assessment, and investment-oriented analysis for PV, wind, battery energy storage, and flexible electricity systems.",
-    "Currently working as a Renewable Energy Consultant, supporting technical due diligence, feasibility studies, and financial assessments for energy projects across public and private-sector contexts. Research experience includes real-time Hardware-in-the-Loop grid simulation at TUM, BiGRU-based EV charging modelling at Fraunhofer ISE, and associated peer-reviewed publications in EV charging behaviour and Vehicle-to-Grid integration, including a 3rd Best Paper Award at IEEE PESS 2025.",
+    "Electrical & Computer Engineer working at the intersection of renewable energy, grid flexibility, battery storage, and energy markets. Focused on techno-economic assessment, feasibility studies, and investment-oriented analysis for PV, wind, BESS, and flexible electricity systems.",
+    "Currently working as a Renewable Energy Consultant, supporting technical due diligence and feasibility work for energy projects across public- and private-sector contexts. Research experience includes real-time Hardware-in-the-Loop grid simulation at TUM, BiGRU-based EV charging modelling at Fraunhofer ISE, and peer-reviewed work on EV charging behaviour and Vehicle-to-Grid integration, including a 3rd Best Paper Award at IEEE PESS 2025.",
   ],
   publications: [
     {
