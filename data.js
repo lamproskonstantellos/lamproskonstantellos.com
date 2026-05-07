@@ -1,20 +1,31 @@
 /* ============================================================
-   PROFILE DATA
+   PROFILE DATA  —  single source of truth
+   ------------------------------------------------------------
+   Add new entries to `publications` or `news` and they will
+   automatically appear on the homepage previews and on the
+   /publications and /news list pages, sorted newest-first.
+
+   Publications fields:
+     - venue, year, title, authors, links   (required)
+     - location, description, award         (optional)
+
+   News fields:
+     - slug, date (YYYY-MM-DD), dateLabel,
+       title, excerpt, body                 (required)
+     - location, cover, photos, sources     (optional)
    ============================================================ */
 
 const PROFILE = {
   name: "Lampros Konstantellos",
   role: "Electrical & Computer Engineer",
   hero: {
-    headlinePre: "Electrical & Computer Engineer working on",
-    headlineEm: "renewable energy, grid flexibility, and storage.",
+    headlinePre: "Electrical & Computer Engineer focusing on",
+    headlineEm: "renewable energy, grid flexibility, and battery storage.",
     sub: "Focused on applied energy system modelling, techno-economic assessment, and industry-driven research for PV, wind, storage, and flexible electricity systems.",
   },
   about: [
-    "Electrical & Computer Engineer working at the intersection of renewable energy, grid flexibility, and battery storage.",
-    "Focused on techno-economic evaluation, feasibility assessment, and investment-oriented analysis for PV, wind, battery energy storage, and flexible electricity systems.",
-    "Currently working as a Renewable Energy Consultant, supporting technical due diligence, feasibility studies, and financial assessments for energy projects across public and private-sector contexts.",
-    "Research experience includes real-time Hardware-in-the-Loop grid simulation at TUM, BiGRU-based EV charging modelling at Fraunhofer ISE, and associated peer-reviewed publications in EV charging behaviour and Vehicle-to-Grid integration, including a 3rd Best Paper Award at IEEE PESS 2025.",
+    "Electrical & Computer Engineer working at the intersection of renewable energy, grid flexibility, battery storage, and energy markets. Focused on techno-economic assessment, feasibility studies, and investment-oriented analysis for PV, wind, BESS, and flexible electricity systems.",
+    "Currently working as a Renewable Energy Consultant, supporting technical due diligence and feasibility work for energy projects across public- and private-sector contexts. Research experience includes real-time Hardware-in-the-Loop grid simulation at TUM, BiGRU-based EV charging modelling at Fraunhofer ISE, and peer-reviewed work on EV charging behaviour and Vehicle-to-Grid integration, including a 3rd Best Paper Award at IEEE PESS 2025.",
   ],
   publications: [
     {
@@ -75,13 +86,41 @@ const PROFILE = {
     { id: "zenodo",   label: "Zenodo",         href: "https://zenodo.org/search?page=1&size=20&q=Lampros+Konstantellos" },
     { id: "email",    label: "Email",          href: "mailto:lampros.konstantellos@gmail.com" },
   ],
-  footer: {
-    links: [
-      { label: "LinkedIn",       href: "https://www.linkedin.com/in/lampros-konstantellos/" },
-      { label: "Google Scholar", href: "https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" },
-      { label: "Email",          href: "mailto:lampros.konstantellos@gmail.com" },
-    ],
-  },
 };
 
-Object.assign(window, { PROFILE });
+/* ---- Display caps for homepage previews ---- */
+const LIMITS = {
+  newsPreview: 3,
+  publicationsPreview: 5,
+};
+
+/* ---- Selectors (auto-sorted, newest first) ---- */
+function sortedNews() {
+  return [...PROFILE.news].sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+function sortedPublications() {
+  return [...PROFILE.publications].sort((a, b) => Number(b.year) - Number(a.year));
+}
+
+function getRecentNews(limit) {
+  const items = sortedNews();
+  return typeof limit === "number" ? items.slice(0, limit) : items;
+}
+
+function getRecentPublications(limit) {
+  const items = sortedPublications();
+  return typeof limit === "number" ? items.slice(0, limit) : items;
+}
+
+function getArticle(slug) {
+  return PROFILE.news.find((n) => n.slug === slug);
+}
+
+Object.assign(window, {
+  PROFILE,
+  LIMITS,
+  getRecentNews,
+  getRecentPublications,
+  getArticle,
+});
