@@ -112,8 +112,40 @@ function NewsListPage({ navigate }) {
   );
 }
 
+function Lightbox({ src, onClose }) {
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div className="lightbox" onClick={onClose} role="dialog" aria-modal="true">
+      <button
+        className="lightbox-close"
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+        aria-label="Close"
+      >
+        ×
+      </button>
+      <img
+        className="lightbox-img"
+        src={src}
+        alt=""
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
+
 function Article({ slug, navigate }) {
   const article = React.useMemo(() => getArticle(slug), [slug]);
+  const [lightboxSrc, setLightboxSrc] = React.useState(null);
 
   React.useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -159,10 +191,17 @@ function Article({ slug, navigate }) {
       {article.photos && article.photos.length > 0 && (
         <div className="article-gallery">
           {article.photos.map((src, i) => (
-            <div className="photo" key={i}><img src={asset(src)} alt="" /></div>
+            <div
+              className="photo"
+              key={i}
+              onClick={() => setLightboxSrc(asset(src))}
+            >
+              <img src={asset(src)} alt="" />
+            </div>
           ))}
         </div>
       )}
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       {article.sources && article.sources.length > 0 && (
         <div className="article-sources">
           Sources:{" "}
