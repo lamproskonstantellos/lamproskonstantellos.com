@@ -77,6 +77,31 @@ const PROFILE = {
         { label: "Forum Program",            href: "https://powergassupplyforum.gr/forum-program/" },
       ],
     },
+    {
+      slug: "ieee-pess-2025-best-paper-award",
+      date: "2025-10-10",
+      dateLabel: "October 8 to 10, 2025",
+      location: "Munich, Germany",
+      title: "Third Best Paper Award at IEEE PESS 2025",
+      excerpt: "Our paper on integrating PV and V2G technology in the island grid of Kastellorizo received the 3rd Best Paper Award at the IEEE Power and Energy Student Summit, hosted by the Technical University of Munich.",
+      cover: "news/ieee-pess-2025-best-paper-award/cover.jpg",
+      photos: [
+        "news/ieee-pess-2025-best-paper-award/photo-01.jpg",
+        "news/ieee-pess-2025-best-paper-award/photo-02.jpg",
+      ],
+      body: [
+        "From October 8 to 10, I had the chance to attend the **IEEE Power and Energy Student Summit (PESS) 2025**, hosted at the Technical University of Munich. It was three days of sharp discussions on smart grids, renewable systems, and the practical side of the energy transition, in a setting that made it easy to meet researchers working on similar problems from very different angles.",
+        "I'm proud to share that our paper, **\"Integration of PV and V2G Technology in an Island Grid: A Real-Time Simulation Study of Kastellorizo\"**, received the **3rd Best Paper Award**. The work originated from my thesis at the Electrical and Computer Engineering Department of the **University of Patras**, supervised by Prof. George Konstantopoulos, and was carried out in co-supervision with Prof. Thomas Hamacher at the Chair of Renewable and Sustainable Energy Systems, **TUM**.",
+        "The paper looks at how photovoltaic generation and vehicle-to-grid (V2G) technology can strengthen small, isolated power systems, using the Greek island of Kastellorizo as a real-world case. We modeled the island's medium-voltage network on the **Typhoon HIL** real-time simulation platform, with actual grid data from HEDNO, and added a 0.5 MW PV plant and two 250 kW bidirectional EV chargers.",
+        "The numbers speak clearly. V2G reduced the **frequency nadir by 20.6%** during PV disconnection events and by **21.9%** during sudden load increases, while CO₂ emissions and diesel generator output dropped across all V2G-enabled scenarios. Beyond the headline results, the study points to a workable path for combining renewables with electric mobility on small, vulnerable grids.",
+        "Many thanks to my co-authors **Theodoros Kavvathas**, Prof. **George Konstantopoulos**, Dr. **Anurag Mohapatra**, and Prof. **Thomas Hamacher** for the guidance and the collaboration. Thanks also to the conference chairs and keynote speakers for putting together a summit that genuinely felt like a community of people building the next grid.",
+        "I'm leaving PESS 2025 with new ideas, new contacts, and a clear sense that the work on island grids and storage is exactly where I want to keep contributing.",
+      ],
+      sources: [
+        { label: "IEEE Xplore, Paper", href: "https://lnkd.in/dfh9fpyc" },
+        { label: "VDE Verlag",         href: "https://lnkd.in/dbVGjNiV" },
+      ],
+    },
   ],
   contact: [
     { id: "linkedin", label: "LinkedIn",       href: "https://www.linkedin.com/in/lampros-konstantellos/" },
