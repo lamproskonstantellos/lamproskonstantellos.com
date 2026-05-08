@@ -123,6 +123,27 @@ const PROFILE = {
         "This visit marks the beginning of a promising collaboration aimed at using AI to make municipal services smarter and more responsive, and ultimately to improve daily life for residents of Western Achaia.",
       ],
     },
+    {
+      slug: "7th-renewable-storage-forum",
+      date: "2025-10-23",
+      dateLabel: "October 22 to 23, 2025",
+      location: "Athens, Greece",
+      title: "7th Renewable & Storage Forum",
+      excerpt: "Two days of sharp discussions on Greece's energy transition: stand-alone BESS, behind-the-meter storage in existing PV parks, and the regulatory framework that needs to keep up. Attended representing LDK Consultants.",
+      cover: "news/7th-renewable-storage-forum/cover.jpg",
+      body: [
+        "On **October 22 to 23, 2025**, I attended the **7th Renewable & Storage Forum**, organised by **energypress.gr** in Athens. This year's theme, *\"New environment, new markets, new protagonists in the era of the energy transition\"*, set the tone for two days of dense panels covering everything from EU strategy to the practical economics of storage.",
+        "I was there representing **LDK Consultants**, alongside my colleagues **Nick Papadopoulos**, **Konstantinos Koumkoudis**, **Thanos Vazakas**, and **Dr. Marios Stanitsas**. The agenda brought together the people actually shaping the Greek market, from the Ministry of Environment and Energy and IPTO to operators, developers, financiers, and technology vendors, and the discussions were noticeably more grounded than in previous years.",
+        "A few things stood out for me:",
+        "• The growing role of **stand-alone BESS** in the Greek energy mix, and the operational realities now that the first projects are moving from auction sheets to construction.",
+        "• The need to bring **behind-the-meter BESS** into existing PV parks, as a pragmatic answer to curtailment, negative prices, and constrained grid access.",
+        "• The importance of a **clear and stable regulatory framework** to unlock wider deployment and investment in storage.",
+        "Beyond the panels, the most useful conversations happened in the corridors, comparing notes with other engineers and analysts on what's actually working, what isn't, and where the next bottleneck is going to be. Greece's renewable landscape is at a turning point, and forums like this make that turn easier to read.",
+      ],
+      sources: [
+        { label: "Renewable & Storage Forum", href: "https://renewablestorageforum.gr/" },
+      ],
+    },
   ],
   contact: [
     { id: "linkedin", label: "LinkedIn",       href: "https://www.linkedin.com/in/lampros-konstantellos/" },
