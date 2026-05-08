@@ -102,6 +102,27 @@ const PROFILE = {
         { label: "VDE Verlag",         href: "https://lnkd.in/dbVGjNiV" },
       ],
     },
+    {
+      slug: "ai-hub-mayor-western-achaia",
+      date: "2024-07-25",
+      dateLabel: "July 25, 2024",
+      location: "Western Achaia, Greece",
+      title: "AI-Hub Meets the Mayor of Western Achaia",
+      excerpt: "As part of the AI-Hub team from the University of Patras, I joined a meeting with Mayor Grigoris Alexopoulos to discuss how AI can improve municipal services, and demonstrated a water-quality monitoring application we built.",
+      cover: "news/ai-hub-mayor-western-achaia/cover.jpg",
+      photos: [
+        "news/ai-hub-mayor-western-achaia/photo-01.jpg",
+        "news/ai-hub-mayor-western-achaia/photo-02.jpg",
+        "news/ai-hub-mayor-western-achaia/photo-03.jpg",
+      ],
+      body: [
+        "On July 25, 2024, the Mayor of Western Achaia, **Grigoris Alexopoulos**, welcomed the research team from the **Artificial Intelligence Hub (AI-Hub)** of the ECE Department at the University of Patras. The meeting focused on how new technologies can support the daily operations of a municipality, from street lighting and water quality to citizen services, and where a concrete collaboration between the AI-Hub and the Municipality could start.",
+        "The AI-Hub team in the meeting included Associate Professors **Kyriakos Sgarbas** and **Epaminondas Mitronikas**, **Fotis Sotiropoulos** from the administrative committee, and us as undergraduate students, **George Sotiropoulos** and myself.",
+        "On our side, we presented an AI application we developed to monitor **pH, temperature, and chlorine levels** in the municipal water distribution infrastructure. The aim is simple: turn data that already exists in the network into early warnings and clearer decisions for the people maintaining it.",
+        "I've been part of the AI-Hub since 2022, and it was genuinely meaningful to bring this work in front of the people whose communities it could serve. Walking the Mayor through the demo and hearing where it would actually slot into municipal operations made the technology feel less like a project and more like a tool.",
+        "This visit marks the beginning of a promising collaboration aimed at using AI to make municipal services smarter and more responsive, and ultimately to improve daily life for residents of Western Achaia.",
+      ],
+    },
   ],
   contact: [
     { id: "linkedin", label: "LinkedIn",       href: "https://www.linkedin.com/in/lampros-konstantellos/" },
