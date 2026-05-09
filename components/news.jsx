@@ -184,7 +184,12 @@ function Article({ slug, navigate }) {
         <div className="article-gallery">
           {article.photos.map((src, i) => (
             <div
-              className="photo"
+              className={
+                "photo" +
+                (src.includes("ieee-pess-2025-best-paper-award/photo-01.jpg")
+                  ? " photo-align-top"
+                  : "")
+              }
               key={i}
               onClick={() => setLightboxSrc(asset(src))}
             >
