@@ -97,8 +97,8 @@ const PROFILE = {
         "Beyond the award itself, PESS 2025 was a valuable opportunity to discuss energy system research with people working on similar challenges from different perspectives. It strengthened my interest in island grids, storage, electric mobility, and real-time simulation as part of the future power system.",
       ],
       sources: [
-        { label: "IEEE Xplore, Paper", href: "https://lnkd.in/dfh9fpyc" },
-        { label: "VDE Verlag",         href: "https://lnkd.in/dbVGjNiV" },
+        { label: "IEEE Xplore, Paper",     href: "https://ieeexplore.ieee.org/document/11443073" },
+        { label: "VDE Verlag, Proceedings", href: "https://www.vde-verlag.de/proceedings-de/566656006.html" },
       ],
     },
     {
