@@ -88,8 +88,7 @@ function NewsListPage({ navigate }) {
         <Icon.arrowLeft style={{ width: 14, height: 14 }} /> Back to Home
       </button>
       <header className="list-header">
-        <h1>News &amp; Articles</h1>
-        <p>All articles and updates, ordered from most recent.</p>
+        <h1>News</h1>
       </header>
       {items.length === 0 ? (
         <p className="list-empty">No articles yet.</p>
@@ -126,13 +125,6 @@ function Lightbox({ src, onClose }) {
 
   return (
     <div className="lightbox" onClick={onClose} role="dialog" aria-modal="true">
-      <button
-        className="lightbox-close"
-        onClick={(e) => { e.stopPropagation(); onClose(); }}
-        aria-label="Close"
-      >
-        ×
-      </button>
       <img
         className="lightbox-img"
         src={src}
