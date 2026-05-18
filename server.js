@@ -414,19 +414,27 @@ const server = http.createServer((req, res) => {
   }
 
   if (urlPathname === "/sitemap.xml") {
-    const buildDate = new Date().toISOString().slice(0, 10);
+    // Use the most recent article date as the lastmod for index pages
+    // (home, /news, /publications all surface news content), so the value
+    // only changes when content actually changes.
+    const articleDates = ARTICLE_SLUGS
+      .map((slug) => ARTICLE_META[slug]?.date)
+      .filter((d) => d && /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .sort()
+      .reverse();
+    const latestContentDate = articleDates[0] || "2026-01-01";
 
     const entries = [
-      { path: "/", lastmod: buildDate },
-      { path: "/news", lastmod: buildDate },
-      { path: "/publications", lastmod: buildDate },
+      { path: "/", lastmod: latestContentDate },
+      { path: "/news", lastmod: latestContentDate },
+      { path: "/publications", lastmod: latestContentDate },
     ];
 
     for (const slug of ARTICLE_SLUGS) {
       const article = ARTICLE_META[slug];
       entries.push({
         path: `/news/${slug}`,
-        lastmod: article && /^\d{4}-\d{2}-\d{2}$/.test(article.date) ? article.date : buildDate,
+        lastmod: article && /^\d{4}-\d{2}-\d{2}$/.test(article.date) ? article.date : latestContentDate,
       });
     }
 
