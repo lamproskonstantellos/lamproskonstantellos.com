@@ -52,6 +52,7 @@ See [`news/README.md`](./news/README.md). In short: create a folder under `news/
 - Article pages include `Article` schema JSON-LD with author, date, headline, and image. The home page includes `ProfilePage` / `Person` JSON-LD.
 - `sitemap.xml` is generated dynamically and includes every static page plus every auto-discovered article.
 - `robots.txt` allows all crawlers and points to the sitemap.
+- `rss.xml` is generated dynamically from the auto-discovered articles, newest first.
 
 ## License
 

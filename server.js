@@ -405,6 +405,54 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (urlPathname === "/rss.xml") {
+    const items = ARTICLE_SLUGS
+      .map((slug) => ARTICLE_META[slug])
+      .filter((a) => a && a.date)
+      .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+    const itemXml = items
+      .map((a) => {
+        const link = `${SITE_CFG.url}/news/${a.slug}`;
+        const pubDate = new Date(`${a.date}T00:00:00Z`).toUTCString();
+        return (
+          `  <item>\n` +
+          `    <title>${escapeHtml(a.title)}</title>\n` +
+          `    <link>${link}</link>\n` +
+          `    <guid isPermaLink="true">${link}</guid>\n` +
+          `    <pubDate>${pubDate}</pubDate>\n` +
+          `    <description>${escapeHtml(a.excerpt || "")}</description>\n` +
+          `  </item>`
+        );
+      })
+      .join("\n");
+
+    const lastBuildDate = items.length
+      ? new Date(`${items[0].date}T00:00:00Z`).toUTCString()
+      : new Date().toUTCString();
+
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n` +
+      `<channel>\n` +
+      `  <title>${escapeHtml(SITE_CFG.name)} — News</title>\n` +
+      `  <link>${SITE_CFG.url}/news</link>\n` +
+      `  <description>${escapeHtml(SITE_CFG.defaultDescription)}</description>\n` +
+      `  <language>en</language>\n` +
+      `  <lastBuildDate>${lastBuildDate}</lastBuildDate>\n` +
+      `  <atom:link href="${SITE_CFG.url}/rss.xml" rel="self" type="application/rss+xml" />\n` +
+      (itemXml ? itemXml + `\n` : "") +
+      `</channel>\n` +
+      `</rss>\n`;
+
+    res.writeHead(200, {
+      "Content-Type": "application/rss+xml; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
+    });
+    res.end(xml);
+    return;
+  }
+
   fs.stat(requestedPath, (err, stats) => {
     if (!err && stats.isFile()) {
       if (requestedPath.endsWith(".html")) {
