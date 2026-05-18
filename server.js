@@ -39,7 +39,18 @@ function discoverArticleScripts() {
     .join("\n");
 }
 
-function serveIndex(res, filePath) {
+// True when pathname maps to a route the SPA can render.
+function isValidSpaRoute(pathname) {
+  const p = pathname.replace(/\/+$/, "") || "/";
+  if (p === "/" || p === "/news" || p === "/publications") return true;
+  const m = p.match(/^\/news\/([^/]+)$/);
+  if (m) {
+    return fs.existsSync(path.join(PUBLIC_DIR, "news", m[1], "article.js"));
+  }
+  return false;
+}
+
+function serveIndex(res, filePath, statusCode = 200) {
   fs.readFile(filePath, "utf8", (err, html) => {
     if (err) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
@@ -59,7 +70,7 @@ function serveIndex(res, filePath) {
       /((?:src|href)=")(\/[^"?]+\.(?:css|js|jsx))(")/g,
       `$1$2?v=${DEPLOY_VERSION}$3`
     );
-    res.writeHead(200, {
+    res.writeHead(statusCode, {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-cache, no-store, must-revalidate",
     });
@@ -84,7 +95,8 @@ function sendFile(res, filePath) {
 
 const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
-  let pathname = decodeURIComponent(parsedUrl.pathname);
+  const urlPathname = decodeURIComponent(parsedUrl.pathname);
+  let pathname = urlPathname;
 
   if (pathname.endsWith("/")) {
     pathname += "index.html";
@@ -108,7 +120,17 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    serveIndex(res, path.join(PUBLIC_DIR, "index.html"));
+    // Path has an extension → it's an asset request that missed → real 404
+    if (path.extname(urlPathname) !== "") {
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("404 Not Found");
+      return;
+    }
+
+    // Clean URL → SPA fallback. Unknown routes get HTTP 404 but still serve the
+    // SPA HTML so the client can render a friendly 404 page.
+    const statusCode = isValidSpaRoute(urlPathname) ? 200 : 404;
+    serveIndex(res, path.join(PUBLIC_DIR, "index.html"), statusCode);
   });
 });
 
