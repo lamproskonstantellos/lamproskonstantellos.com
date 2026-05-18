@@ -8,8 +8,12 @@ const SITE_CFG = require("./site.config.js");
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
 
-// Unique per server start — forces browser to re-fetch JS/CSS on every deploy
-const DEPLOY_VERSION = Date.now();
+// Unique per server start — forces browser to re-fetch JS/CSS on every deploy.
+// Railway exposes the deploying commit SHA at build time; falling back to
+// the boot timestamp keeps local dev working.
+const DEPLOY_VERSION = process.env.RAILWAY_GIT_COMMIT_SHA
+  ? process.env.RAILWAY_GIT_COMMIT_SHA.slice(0, 12)
+  : Date.now();
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
