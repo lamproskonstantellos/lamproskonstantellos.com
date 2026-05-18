@@ -24,6 +24,21 @@ const mimeTypes = {
   ".pdf": "application/pdf"
 };
 
+// Scan news/ for subfolders containing an article.js and build <script> tags
+function discoverArticleScripts() {
+  const newsDir = path.join(PUBLIC_DIR, "news");
+  let entries;
+  try { entries = fs.readdirSync(newsDir, { withFileTypes: true }); }
+  catch { return ""; }
+  return entries
+    .filter((d) => d.isDirectory())
+    .map((d) => ({ slug: d.name, file: path.join(newsDir, d.name, "article.js") }))
+    .filter((x) => fs.existsSync(x.file))
+    .map((x) => `<script src="/news/${x.slug}/article.js"></script>`)
+    .sort()
+    .join("\n");
+}
+
 function serveIndex(res, filePath) {
   fs.readFile(filePath, "utf8", (err, html) => {
     if (err) {
@@ -31,8 +46,16 @@ function serveIndex(res, filePath) {
       res.end("404 Not Found");
       return;
     }
+    // Inject auto-discovered article scripts right after data.js
+    const articleScripts = discoverArticleScripts();
+    const withArticles = articleScripts
+      ? html.replace(
+          '<script src="/data.js"></script>',
+          `<script src="/data.js"></script>\n${articleScripts}`
+        )
+      : html;
     // Inject deploy version into all local asset URLs so browser always fetches fresh
-    const versioned = html.replace(
+    const versioned = withArticles.replace(
       /((?:src|href)=")(\/[^"?]+\.(?:css|js|jsx))(")/g,
       `$1$2?v=${DEPLOY_VERSION}$3`
     );
