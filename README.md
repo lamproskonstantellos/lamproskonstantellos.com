@@ -9,7 +9,7 @@ The personal website of **Lampros Konstantellos**, Electrical & Computer Enginee
 
 ## Stack
 
-- **Frontend:** React 18 loaded via UMD. JSX is compiled to plain JavaScript at build time with [esbuild](https://esbuild.github.io/) — no in-browser Babel. Plain CSS. Inter and JetBrains Mono via Google Fonts.
+- **Frontend:** React 18 loaded via self-hosted UMD builds (`vendor/`). JSX is compiled to plain JavaScript at build time with [esbuild](https://esbuild.github.io/) — no in-browser Babel. Plain CSS. Inter and JetBrains Mono via Google Fonts.
 - **Backend:** Minimal Node.js HTTP server (`server.js`) that serves static assets, auto-discovers and injects per-article scripts, injects per-route `<title>` / meta / Open Graph / Twitter / canonical / JSON-LD, generates `sitemap.xml` on the fly, applies brotli/gzip compression, sets appropriate `Cache-Control` headers, and adds a per-deploy version query string to local CSS/JS URLs to bust browser caches on every deploy.
 - **Container:** `node:20-alpine`. The Dockerfile runs `npm run build` (esbuild) inside the image before starting the server.
 - **Hosting:** [Railway](https://railway.com/). Auto-redeploys on every git push — no dashboard configuration needed.
@@ -35,6 +35,7 @@ While editing `.jsx` files, run `npm run watch` in a second terminal — esbuild
 ├── styles.css             Global stylesheet
 ├── index.html             Single HTML entry with meta placeholders
 ├── server.js              Static server, per-route meta, sitemap, compression
+├── vendor/                Self-hosted React UMD builds
 ├── Dockerfile             Production container (runs the build inside)
 ├── robots.txt             Search-engine directives
 ├── dist/                  Built JS (gitignored; produced by `npm run build`)
@@ -51,6 +52,7 @@ See [`news/README.md`](./news/README.md). In short: create a folder under `news/
 - Article pages include `Article` schema JSON-LD with author, date, headline, and image. The home page includes `ProfilePage` / `Person` JSON-LD.
 - `sitemap.xml` is generated dynamically and includes every static page plus every auto-discovered article.
 - `robots.txt` allows all crawlers and points to the sitemap.
+- `rss.xml` is generated dynamically from the auto-discovered articles, newest first.
 
 ## License
 

@@ -216,6 +216,20 @@ function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
+  // On first load, honor a #section hash (e.g. /#publications shared as a link).
+  // parseRoute ignores the hash, so this is the only place it gets handled.
+  useEffect(() => {
+    const id = window.location.hash.replace(/^#/, "");
+    if (!id) return;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.scrollY - 70;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+    });
+  }, []);
+
   const navigate = useCallback((next, opts = {}) => {
     const targetPath = routeToPath(next).split("#")[0] || "/";
     const stateData = opts.from !== undefined ? { from: opts.from } : {};

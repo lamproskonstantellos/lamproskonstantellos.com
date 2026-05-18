@@ -29,19 +29,17 @@ const mimeTypes = {
   ".xml": "application/xml; charset=utf-8"
 };
 
-// Scan news/ for subfolders containing an article.js and build <script> tags
-function discoverArticleScripts() {
+// Scan news/ for subfolders containing an article.js, returning sorted slugs.
+function discoverArticleSlugs() {
   const newsDir = path.join(PUBLIC_DIR, "news");
   let entries;
   try { entries = fs.readdirSync(newsDir, { withFileTypes: true }); }
-  catch { return ""; }
+  catch { return []; }
   return entries
     .filter((d) => d.isDirectory())
-    .map((d) => ({ slug: d.name, file: path.join(newsDir, d.name, "article.js") }))
-    .filter((x) => fs.existsSync(x.file))
-    .map((x) => `<script src="/news/${x.slug}/article.js"></script>`)
-    .sort()
-    .join("\n");
+    .filter((d) => fs.existsSync(path.join(newsDir, d.name, "article.js")))
+    .map((d) => d.name)
+    .sort();
 }
 
 // Read the esbuild metafile and map logical entry names → hashed output paths.
@@ -99,6 +97,25 @@ function loadArticleMeta(slug) {
   }
 }
 
+// Serialize JSON-LD for embedding inside <script type="application/ld+json">.
+// Escaping "<" keeps a stray "</script>" in article text from closing the tag.
+function jsonLdScript(obj) {
+  return JSON.stringify(obj).replace(/</g, "\\u003c");
+}
+
+// Built once at startup. Article folders and the esbuild asset map only change
+// between deploys, and every deploy starts a fresh process — so there is no
+// need to hit the filesystem on each request.
+const ARTICLE_SLUGS = discoverArticleSlugs();
+const ARTICLE_META = {};
+for (const slug of ARTICLE_SLUGS) {
+  ARTICLE_META[slug] = loadArticleMeta(slug);
+}
+const ARTICLE_SCRIPTS = ARTICLE_SLUGS
+  .map((slug) => `<script src="/news/${slug}/article.js"></script>`)
+  .join("\n");
+const ASSET_MAP = loadAssetMap();
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -148,7 +165,7 @@ function computePageMeta(pathname) {
 
   const m = p.match(/^\/news\/([^/]+)$/);
   if (m) {
-    const article = loadArticleMeta(m[1]);
+    const article = ARTICLE_META[m[1]];
     if (article) {
       const image = article.cover ? `${SITE_CFG.url}/${article.cover}` : DEFAULT_IMAGE;
       return {
@@ -246,7 +263,7 @@ function isValidSpaRoute(pathname) {
   if (p === "/" || p === "/news" || p === "/publications") return true;
   const m = p.match(/^\/news\/([^/]+)$/);
   if (m) {
-    return fs.existsSync(path.join(PUBLIC_DIR, "news", m[1], "article.js"));
+    return Object.prototype.hasOwnProperty.call(ARTICLE_META, m[1]);
   }
   return false;
 }
@@ -266,21 +283,19 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
       .replace(/__META_URL__/g, escapeHtml(meta.url))
       .replace(/__META_IMAGE__/g, escapeHtml(meta.image))
       .replace(/__META_OG_TYPE__/g, escapeHtml(meta.ogType))
-      .replace(/__META_JSONLD__/g, meta.jsonLd ? JSON.stringify(meta.jsonLd) : "");
+      .replace(/__META_JSONLD__/g, meta.jsonLd ? jsonLdScript(meta.jsonLd) : "");
     // Inject auto-discovered article scripts right after data.js
-    const articleScripts = discoverArticleScripts();
-    const withArticles = articleScripts
+    const withArticles = ARTICLE_SCRIPTS
       ? processedHtml.replace(
           '<script src="/data.js"></script>',
-          `<script src="/data.js"></script>\n${articleScripts}`
+          `<script src="/data.js"></script>\n${ARTICLE_SCRIPTS}`
         )
       : processedHtml;
     // Rewrite /dist/<name>.js references to their content-hashed filenames
-    const assetMap = loadAssetMap();
     const hashed = withArticles.replace(
       /(<script\s+src=")\/dist\/([^"?]+)\.js(")/g,
       (match, prefix, name, suffix) => {
-        const mapped = assetMap[name];
+        const mapped = ASSET_MAP[name];
         return mapped ? `${prefix}${mapped}${suffix}` : match;
       }
     );
@@ -315,7 +330,32 @@ function sendFile(req, res, filePath) {
   });
 }
 
+// Applied to every response. CSP is tuned to this site: self-hosted scripts
+// plus the Plausible analytics script, Google Fonts, and inline style
+// attributes emitted by React's style prop.
+const SECURITY_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "X-Frame-Options": "DENY",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Content-Security-Policy": [
+    "default-src 'self'",
+    "script-src 'self' https://plausible.io",
+    "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    "connect-src 'self' https://plausible.io",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+  ].join("; "),
+};
+
 const server = http.createServer((req, res) => {
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    res.setHeader(name, value);
+  }
+
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const urlPathname = decodeURIComponent(parsedUrl.pathname);
   let pathname = urlPathname;
@@ -334,15 +374,6 @@ const server = http.createServer((req, res) => {
 
   if (urlPathname === "/sitemap.xml") {
     const buildDate = new Date().toISOString().slice(0, 10);
-    const newsDir = path.join(PUBLIC_DIR, "news");
-    let articleSlugs = [];
-    try {
-      articleSlugs = fs.readdirSync(newsDir, { withFileTypes: true })
-        .filter((d) => d.isDirectory())
-        .filter((d) => fs.existsSync(path.join(newsDir, d.name, "article.js")))
-        .map((d) => d.name)
-        .sort();
-    } catch {}
 
     const entries = [
       { path: "/", lastmod: buildDate },
@@ -350,8 +381,8 @@ const server = http.createServer((req, res) => {
       { path: "/publications", lastmod: buildDate },
     ];
 
-    for (const slug of articleSlugs) {
-      const article = loadArticleMeta(slug);
+    for (const slug of ARTICLE_SLUGS) {
+      const article = ARTICLE_META[slug];
       entries.push({
         path: `/news/${slug}`,
         lastmod: article && /^\d{4}-\d{2}-\d{2}$/.test(article.date) ? article.date : buildDate,
@@ -368,6 +399,54 @@ const server = http.createServer((req, res) => {
 
     res.writeHead(200, {
       "Content-Type": "application/xml; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
+    });
+    res.end(xml);
+    return;
+  }
+
+  if (urlPathname === "/rss.xml") {
+    const items = ARTICLE_SLUGS
+      .map((slug) => ARTICLE_META[slug])
+      .filter((a) => a && a.date)
+      .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+    const itemXml = items
+      .map((a) => {
+        const link = `${SITE_CFG.url}/news/${a.slug}`;
+        const pubDate = new Date(`${a.date}T00:00:00Z`).toUTCString();
+        return (
+          `  <item>\n` +
+          `    <title>${escapeHtml(a.title)}</title>\n` +
+          `    <link>${link}</link>\n` +
+          `    <guid isPermaLink="true">${link}</guid>\n` +
+          `    <pubDate>${pubDate}</pubDate>\n` +
+          `    <description>${escapeHtml(a.excerpt || "")}</description>\n` +
+          `  </item>`
+        );
+      })
+      .join("\n");
+
+    const lastBuildDate = items.length
+      ? new Date(`${items[0].date}T00:00:00Z`).toUTCString()
+      : new Date().toUTCString();
+
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n` +
+      `<channel>\n` +
+      `  <title>${escapeHtml(SITE_CFG.name)} — News</title>\n` +
+      `  <link>${SITE_CFG.url}/news</link>\n` +
+      `  <description>${escapeHtml(SITE_CFG.defaultDescription)}</description>\n` +
+      `  <language>en</language>\n` +
+      `  <lastBuildDate>${lastBuildDate}</lastBuildDate>\n` +
+      `  <atom:link href="${SITE_CFG.url}/rss.xml" rel="self" type="application/rss+xml" />\n` +
+      (itemXml ? itemXml + `\n` : "") +
+      `</channel>\n` +
+      `</rss>\n`;
+
+    res.writeHead(200, {
+      "Content-Type": "application/rss+xml; charset=utf-8",
       "Cache-Control": "public, max-age=3600",
     });
     res.end(xml);

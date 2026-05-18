@@ -22,7 +22,7 @@ function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from }) 
     >
       <div className="cover">
         {article.cover
-          ? <img src={asset(article.cover)} alt="" width="640" height="400" loading="lazy" decoding="async" />
+          ? <img src={asset(article.cover)} alt={article.title} width="640" height="400" loading="lazy" decoding="async" />
           : <div className="ph">[ news/{article.slug}/cover.jpg ]</div>}
       </div>
       <div className="body">
@@ -116,24 +116,51 @@ function NewsListPage({ navigate }) {
   );
 }
 
-function Lightbox({ src, onClose }) {
+function Lightbox({ src, alt, onClose }) {
+  const closeRef = React.useRef(null);
+
   React.useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    const triggerEl = document.activeElement;
+    const onKey = (e) => {
+      if (e.key === "Escape") { onClose(); return; }
+      // Single focusable element — keep focus trapped inside the modal
+      if (e.key === "Tab") {
+        e.preventDefault();
+        if (closeRef.current) closeRef.current.focus();
+      }
+    };
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    if (closeRef.current) closeRef.current.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      if (triggerEl && typeof triggerEl.focus === "function") triggerEl.focus();
     };
   }, [onClose]);
 
   return (
-    <div className="lightbox" onClick={onClose} role="dialog" aria-modal="true">
+    <div
+      className="lightbox"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Photo viewer"
+    >
+      <button
+        type="button"
+        className="lightbox-close"
+        ref={closeRef}
+        aria-label="Close photo viewer"
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+      >
+        ×
+      </button>
       <img
         className="lightbox-img"
         src={src}
-        alt=""
+        alt={alt || ""}
         loading="eager"
         decoding="async"
         onClick={(e) => e.stopPropagation()}
@@ -145,6 +172,7 @@ function Lightbox({ src, onClose }) {
 function Article({ slug, navigate }) {
   const article = React.useMemo(() => getArticle(slug), [slug]);
   const [lightboxSrc, setLightboxSrc] = React.useState(null);
+  const closeLightbox = React.useCallback(() => setLightboxSrc(null), []);
 
   React.useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -183,7 +211,7 @@ function Article({ slug, navigate }) {
       <h1>{article.title}</h1>
       {article.cover && (
         <div className="article-cover">
-          <img src={asset(article.cover)} alt="" width="1280" height="720" loading="eager" decoding="async" />
+          <img src={asset(article.cover)} alt={article.title} width="1280" height="720" loading="eager" decoding="async" />
         </div>
       )}
       <div className="article-body">
@@ -193,23 +221,37 @@ function Article({ slug, navigate }) {
       </div>
       {article.photos && article.photos.length > 0 && (
         <div className="article-gallery">
-          {article.photos.map((src, i) => (
-            <div
-              className={
-                "photo" +
-                (src.includes("ieee-pess-2025-best-paper-award/photo-01.jpg")
-                  ? " photo-align-top"
-                  : "")
-              }
-              key={i}
-              onClick={() => setLightboxSrc(asset(src))}
-            >
-              <img src={asset(src)} alt="" width="800" height="600" loading="lazy" decoding="async" />
-            </div>
-          ))}
+          {article.photos.map((src, i) => {
+            const photoAlt = `Photo ${i + 1} from “${article.title}”`;
+            return (
+              <div
+                className={
+                  "photo" +
+                  (src.includes("ieee-pess-2025-best-paper-award/photo-01.jpg")
+                    ? " photo-align-top"
+                    : "")
+                }
+                key={i}
+                role="button"
+                tabIndex={0}
+                aria-label={`Open ${photoAlt} in full screen`}
+                onClick={() => setLightboxSrc({ src: asset(src), alt: photoAlt })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setLightboxSrc({ src: asset(src), alt: photoAlt });
+                  }
+                }}
+              >
+                <img src={asset(src)} alt={photoAlt} width="800" height="600" loading="lazy" decoding="async" />
+              </div>
+            );
+          })}
         </div>
       )}
-      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      {lightboxSrc && (
+        <Lightbox src={lightboxSrc.src} alt={lightboxSrc.alt} onClose={closeLightbox} />
+      )}
       {article.sources && article.sources.length > 0 && (
         <div className="article-sources">
           Sources:{" "}
