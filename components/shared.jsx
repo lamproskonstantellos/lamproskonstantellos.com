@@ -8,7 +8,7 @@
    - renderInline:  inline **bold** parser for body paragraphs
    - useReveal:     IntersectionObserver-driven reveal hook
    - SectionHeader: <h2> + optional right-aligned action
-   - ViewAllLink:   "All N publications →" CTA
+   - ViewAllLink:   "View all →" CTA
    ============================================================ */
 
 function asset(path) {
@@ -74,14 +74,10 @@ function SectionHeader({ title, action }) {
   );
 }
 
-function ViewAllLink({ label, navigate, route }) {
+function ViewAllLink({ href, onClick }) {
   return (
-    <a
-      className="view-all"
-      href={routeToPath(route)}
-      onClick={(e) => handleAnchorClick(e, navigate, route)}
-    >
-      {label} <Icon.arrowRight style={{ width: 13, height: 13 }} />
+    <a className="view-all" href={href} onClick={onClick}>
+      View all <Icon.arrowRight style={{ width: 13, height: 13 }} />
     </a>
   );
 }

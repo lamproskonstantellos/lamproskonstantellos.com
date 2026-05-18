@@ -61,4 +61,4 @@ news/
 
 ## Tweaking the homepage cap
 
-Edit `LIMITS.newsPreview` in `/data.js` (default: `3`). The "All N articles" link automatically appears on the homepage when there are more articles than the cap.
+Edit `LIMITS.newsPreview` in `/data.js` (default: `3`). The "View all" link automatically appears on the homepage when there are more articles than the cap.

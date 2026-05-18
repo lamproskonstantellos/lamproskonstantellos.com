@@ -5,9 +5,14 @@
   "description": "Personal website served on Railway.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx --outdir=dist --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --minify",
+    "watch": "esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx --outdir=dist --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --watch"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
   }
 }
