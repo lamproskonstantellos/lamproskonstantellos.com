@@ -330,9 +330,9 @@ function sendFile(req, res, filePath) {
   });
 }
 
-// Applied to every response. CSP is tuned to this site: all scripts are
-// self-hosted, plus Google Fonts and inline style attributes emitted by
-// React's style prop.
+// Applied to every response. CSP is tuned to this site: self-hosted scripts
+// plus the Plausible analytics script, Google Fonts, and inline style
+// attributes emitted by React's style prop.
 const SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -340,11 +340,11 @@ const SECURITY_HEADERS = {
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self'",
+    "script-src 'self' https://plausible.io",
     "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data:",
-    "connect-src 'self'",
+    "connect-src 'self' https://plausible.io",
     "object-src 'none'",
     "base-uri 'self'",
     "frame-ancestors 'none'",
