@@ -14,8 +14,8 @@
    ============================================================ */
 
 const PROFILE = {
-  name: "Lampros Konstantellos",
-  role: "Electrical & Computer Engineer",
+  name: window.SITE.name,
+  role: window.SITE.jobTitle,
   hero: {
     headlinePre: "Electrical & Computer Engineer focusing on",
     headlineEm: "renewable energy, grid flexibility, and battery storage.",
@@ -56,7 +56,7 @@ const PROFILE = {
     { id: "ieee",     label: "IEEE Xplore",    href: "https://ieeexplore.ieee.org/author/975219948451552" },
     { id: "orcid",    label: "ORCID",          href: "https://orcid.org/0009-0006-9424-2087" },
     { id: "zenodo",   label: "Zenodo",         href: "https://zenodo.org/search?page=1&size=20&q=Lampros+Konstantellos" },
-    { id: "email",    label: "Email",          href: "mailto:info@lamproskonstantellos.com" },
+    { id: "email",    label: "Email",          href: `mailto:${window.SITE.email}` },
   ],
 };
 

@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
 const { URL } = require("url");
+const SITE_CFG = require("./site.config.js");
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
@@ -42,27 +43,19 @@ function discoverArticleScripts() {
     .join("\n");
 }
 
-const SITE = "https://lamproskonstantellos.com";
-const DEFAULT_IMAGE = `${SITE}/lampros-konstantellos-picture.jpg`;
-const DEFAULT_DESCRIPTION =
-  "Exploring renewable energy, battery storage, grid flexibility, and electricity markets through engineering, modelling, and applied research.";
+const DEFAULT_IMAGE = `${SITE_CFG.url}${SITE_CFG.defaultImage}`;
+const DEFAULT_DESCRIPTION = SITE_CFG.defaultDescription;
 
 const PROFILE_JSONLD = {
   "@context": "https://schema.org",
   "@type": "ProfilePage",
   "mainEntity": {
     "@type": "Person",
-    "name": "Lampros Konstantellos",
-    "jobTitle": "Electrical & Computer Engineer",
-    "url": SITE,
+    "name": SITE_CFG.name,
+    "jobTitle": SITE_CFG.jobTitle,
+    "url": SITE_CFG.url,
     "image": DEFAULT_IMAGE,
-    "sameAs": [
-      "https://www.linkedin.com/in/lampros-konstantellos/",
-      "https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en",
-      "https://ieeexplore.ieee.org/author/975219948451552",
-      "https://orcid.org/0009-0006-9424-2087",
-      "https://zenodo.org/search?page=1&size=20&q=Lampros+Konstantellos"
-    ]
+    "sameAs": SITE_CFG.socialLinks
   }
 };
 
@@ -98,9 +91,9 @@ function computePageMeta(pathname) {
 
   if (p === "/") {
     return {
-      title: "Lampros Konstantellos — Electrical & Computer Engineer",
+      title: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
       description: DEFAULT_DESCRIPTION,
-      url: `${SITE}/`,
+      url: `${SITE_CFG.url}/`,
       image: DEFAULT_IMAGE,
       ogType: "website",
       jsonLd: PROFILE_JSONLD,
@@ -109,10 +102,10 @@ function computePageMeta(pathname) {
 
   if (p === "/news") {
     return {
-      title: "News — Lampros Konstantellos",
+      title: `News — ${SITE_CFG.name}`,
       description:
         "Reflections from conferences, forums, awards, and projects in renewable energy, battery storage, grid flexibility, and electricity markets.",
-      url: `${SITE}/news`,
+      url: `${SITE_CFG.url}/news`,
       image: DEFAULT_IMAGE,
       ogType: "website",
       jsonLd: null,
@@ -121,10 +114,10 @@ function computePageMeta(pathname) {
 
   if (p === "/publications") {
     return {
-      title: "Publications — Lampros Konstantellos",
+      title: `Publications — ${SITE_CFG.name}`,
       description:
         "Peer-reviewed publications and conference papers on renewable energy, V2G integration, real-time grid simulation, and EV charging.",
-      url: `${SITE}/publications`,
+      url: `${SITE_CFG.url}/publications`,
       image: DEFAULT_IMAGE,
       ogType: "website",
       jsonLd: null,
@@ -135,11 +128,11 @@ function computePageMeta(pathname) {
   if (m) {
     const article = loadArticleMeta(m[1]);
     if (article) {
-      const image = article.cover ? `${SITE}/${article.cover}` : DEFAULT_IMAGE;
+      const image = article.cover ? `${SITE_CFG.url}/${article.cover}` : DEFAULT_IMAGE;
       return {
-        title: `${article.title} — Lampros Konstantellos`,
+        title: `${article.title} — ${SITE_CFG.name}`,
         description: article.excerpt,
-        url: `${SITE}/news/${article.slug}`,
+        url: `${SITE_CFG.url}/news/${article.slug}`,
         image,
         ogType: "article",
         jsonLd: {
@@ -152,15 +145,15 @@ function computePageMeta(pathname) {
           "dateModified": article.date,
           "author": {
             "@type": "Person",
-            "name": "Lampros Konstantellos",
-            "url": SITE,
+            "name": SITE_CFG.name,
+            "url": SITE_CFG.url,
           },
           "publisher": {
             "@type": "Person",
-            "name": "Lampros Konstantellos",
-            "url": SITE,
+            "name": SITE_CFG.name,
+            "url": SITE_CFG.url,
           },
-          "mainEntityOfPage": `${SITE}/news/${article.slug}`,
+          "mainEntityOfPage": `${SITE_CFG.url}/news/${article.slug}`,
         },
       };
     }
@@ -168,9 +161,9 @@ function computePageMeta(pathname) {
 
   // Unknown route — used by the SPA NotFound page
   return {
-    title: "Page not found — Lampros Konstantellos",
+    title: `Page not found — ${SITE_CFG.name}`,
     description: DEFAULT_DESCRIPTION,
-    url: `${SITE}${pathname}`,
+    url: `${SITE_CFG.url}${pathname}`,
     image: DEFAULT_IMAGE,
     ogType: "website",
     jsonLd: null,
