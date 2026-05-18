@@ -15,23 +15,22 @@ Each article is a self-contained package inside its own folder under `news/<slug
    Title of the article
    ============================================================ */
 
-(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({
+defineArticle({
   slug: "my-article-slug",
-  date: "2026-05-12",                       // YYYY-MM-DD — used for sorting
-  dateLabel: "May 12, 2026",                // human-readable
-  location: "Athens",                       // optional
+  date: "2026-05-12",                        // YYYY-MM-DD — used for sorting
+  dateLabel: "May 12, 2026",                 // human-readable
+  location: "Athens",                        // optional
   title: "Title of the article",
   excerpt: "One- or two-sentence preview shown on the card.",
-  cover: "news/my-article-slug/cover.jpg",  // optional
-  photos: [                                 // optional
+  cover: "news/my-article-slug/cover.jpg",   // optional
+  photos: [                                  // optional
     "news/my-article-slug/photo-01.jpg",
-    "news/my-article-slug/photo-02.jpg",
   ],
   body: [
     "First paragraph. Use **double asterisks** for inline bold.",
     "Second paragraph.",
   ],
-  sources: [                                // optional
+  sources: [                                 // optional
     { label: "Source name", href: "https://example.com" },
   ],
 });
@@ -39,7 +38,7 @@ Each article is a self-contained package inside its own folder under `news/<slug
 
 4. That's it — the article is auto-discovered on the next request and will appear at `/news/my-article-slug`, on the homepage News preview (if among the 3 most recent), and on the `/news` list page. No edits to `data.js` or `index.html` needed.
 
-The `window.NEWS_ARTICLES = window.NEWS_ARTICLES || []` guard means file load order between articles does not matter.
+`defineArticle` validates the required fields (`slug`, `date`, `dateLabel`, `title`, `excerpt`, `body`) at load time and throws a clear error in the browser console if any are missing or malformed (it also checks that `date` is `YYYY-MM-DD` and that `body`, `photos`, and `sources` are arrays). The legacy `(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({ ... })` form still works if you ever need it.
 
 ## Folder structure
 

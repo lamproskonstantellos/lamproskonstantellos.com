@@ -66,10 +66,12 @@ function loadArticleMeta(slug) {
   try {
     const code = fs.readFileSync(file, "utf8");
     let captured = null;
+    const capture = (article) => { captured = article; };
     const fakeWindow = {
-      NEWS_ARTICLES: { push: (article) => { captured = article; } }
+      NEWS_ARTICLES: { push: capture },
+      defineArticle: capture,
     };
-    new Function("window", code)(fakeWindow);
+    new Function("window", "defineArticle", code)(fakeWindow, capture);
     return captured;
   } catch (e) {
     console.error(`Failed to parse article meta for "${slug}":`, e.message);
