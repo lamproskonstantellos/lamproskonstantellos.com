@@ -43,8 +43,7 @@ function NewsPreview({ navigate }) {
   const visible = useReveal();
   const limit = LIMITS.newsPreview;
   const items = getRecentNews(limit);
-  const total = getRecentNews().length;
-  const showViewAll = total > limit;
+  const showViewAll = getRecentNews().length > limit;
 
   return (
     <section className="block" id="news">
@@ -52,9 +51,8 @@ function NewsPreview({ navigate }) {
         title="News"
         action={showViewAll ? (
           <ViewAllLink
-            label={`All ${total} articles`}
-            navigate={navigate}
-            route={{ page: "news-list" }}
+            href="/news"
+            onClick={(e) => handleAnchorClick(e, navigate, { page: "news-list" })}
           />
         ) : null}
       />

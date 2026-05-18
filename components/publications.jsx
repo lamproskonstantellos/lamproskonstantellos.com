@@ -56,8 +56,7 @@ function PublicationsPreview({ navigate }) {
   const visible = useReveal();
   const limit = LIMITS.publicationsPreview;
   const items = getRecentPublications(limit);
-  const total = getRecentPublications().length;
-  const showViewAll = total > limit;
+  const showViewAll = getRecentPublications().length > limit;
 
   return (
     <section className="block" id="publications">
@@ -65,9 +64,8 @@ function PublicationsPreview({ navigate }) {
         title="Publications"
         action={showViewAll ? (
           <ViewAllLink
-            label={`All ${total} publications`}
-            navigate={navigate}
-            route={{ page: "publications-list" }}
+            href="/publications"
+            onClick={(e) => handleAnchorClick(e, navigate, { page: "publications-list" })}
           />
         ) : null}
       />
