@@ -42,6 +42,141 @@ function discoverArticleScripts() {
     .join("\n");
 }
 
+const SITE = "https://lamproskonstantellos.com";
+const DEFAULT_IMAGE = `${SITE}/lampros-konstantellos-picture.jpg`;
+const DEFAULT_DESCRIPTION =
+  "Exploring renewable energy, battery storage, grid flexibility, and electricity markets through engineering, modelling, and applied research.";
+
+const PROFILE_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "ProfilePage",
+  "mainEntity": {
+    "@type": "Person",
+    "name": "Lampros Konstantellos",
+    "jobTitle": "Electrical & Computer Engineer",
+    "url": SITE,
+    "image": DEFAULT_IMAGE,
+    "sameAs": [
+      "https://www.linkedin.com/in/lampros-konstantellos/",
+      "https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en",
+      "https://ieeexplore.ieee.org/author/975219948451552",
+      "https://orcid.org/0009-0006-9424-2087",
+      "https://zenodo.org/search?page=1&size=20&q=Lampros+Konstantellos"
+    ]
+  }
+};
+
+// Evaluate a single article.js in a tiny sandbox to extract its metadata.
+function loadArticleMeta(slug) {
+  const file = path.join(PUBLIC_DIR, "news", slug, "article.js");
+  if (!fs.existsSync(file)) return null;
+  try {
+    const code = fs.readFileSync(file, "utf8");
+    let captured = null;
+    const fakeWindow = {
+      NEWS_ARTICLES: { push: (article) => { captured = article; } }
+    };
+    new Function("window", code)(fakeWindow);
+    return captured;
+  } catch (e) {
+    console.error(`Failed to parse article meta for "${slug}":`, e.message);
+    return null;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function computePageMeta(pathname) {
+  const p = pathname.replace(/\/+$/, "") || "/";
+
+  if (p === "/") {
+    return {
+      title: "Lampros Konstantellos — Electrical & Computer Engineer",
+      description: DEFAULT_DESCRIPTION,
+      url: `${SITE}/`,
+      image: DEFAULT_IMAGE,
+      ogType: "website",
+      jsonLd: PROFILE_JSONLD,
+    };
+  }
+
+  if (p === "/news") {
+    return {
+      title: "News — Lampros Konstantellos",
+      description:
+        "Reflections from conferences, forums, awards, and projects in renewable energy, battery storage, grid flexibility, and electricity markets.",
+      url: `${SITE}/news`,
+      image: DEFAULT_IMAGE,
+      ogType: "website",
+      jsonLd: null,
+    };
+  }
+
+  if (p === "/publications") {
+    return {
+      title: "Publications — Lampros Konstantellos",
+      description:
+        "Peer-reviewed publications and conference papers on renewable energy, V2G integration, real-time grid simulation, and EV charging.",
+      url: `${SITE}/publications`,
+      image: DEFAULT_IMAGE,
+      ogType: "website",
+      jsonLd: null,
+    };
+  }
+
+  const m = p.match(/^\/news\/([^/]+)$/);
+  if (m) {
+    const article = loadArticleMeta(m[1]);
+    if (article) {
+      const image = article.cover ? `${SITE}/${article.cover}` : DEFAULT_IMAGE;
+      return {
+        title: `${article.title} — Lampros Konstantellos`,
+        description: article.excerpt,
+        url: `${SITE}/news/${article.slug}`,
+        image,
+        ogType: "article",
+        jsonLd: {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          "headline": article.title,
+          "description": article.excerpt,
+          "image": image,
+          "datePublished": article.date,
+          "dateModified": article.date,
+          "author": {
+            "@type": "Person",
+            "name": "Lampros Konstantellos",
+            "url": SITE,
+          },
+          "publisher": {
+            "@type": "Person",
+            "name": "Lampros Konstantellos",
+            "url": SITE,
+          },
+          "mainEntityOfPage": `${SITE}/news/${article.slug}`,
+        },
+      };
+    }
+  }
+
+  // Unknown route — used by the SPA NotFound page
+  return {
+    title: "Page not found — Lampros Konstantellos",
+    description: DEFAULT_DESCRIPTION,
+    url: `${SITE}${pathname}`,
+    image: DEFAULT_IMAGE,
+    ogType: "website",
+    jsonLd: null,
+  };
+}
+
 function cacheHeaderFor(req, contentType) {
   if (contentType.startsWith("text/html")) {
     return "no-cache, no-store, must-revalidate";
@@ -101,21 +236,30 @@ function isValidSpaRoute(pathname) {
   return false;
 }
 
-function serveIndex(req, res, filePath, statusCode = 200) {
+function serveIndex(req, res, filePath, pathname, statusCode = 200) {
   fs.readFile(filePath, "utf8", (err, html) => {
     if (err) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("404 Not Found");
       return;
     }
+    // Inject per-route meta first so later replacements see the populated HTML
+    const meta = computePageMeta(pathname);
+    const processedHtml = html
+      .replace(/__META_TITLE__/g, escapeHtml(meta.title))
+      .replace(/__META_DESCRIPTION__/g, escapeHtml(meta.description))
+      .replace(/__META_URL__/g, escapeHtml(meta.url))
+      .replace(/__META_IMAGE__/g, escapeHtml(meta.image))
+      .replace(/__META_OG_TYPE__/g, escapeHtml(meta.ogType))
+      .replace(/__META_JSONLD__/g, meta.jsonLd ? JSON.stringify(meta.jsonLd) : "");
     // Inject auto-discovered article scripts right after data.js
     const articleScripts = discoverArticleScripts();
     const withArticles = articleScripts
-      ? html.replace(
+      ? processedHtml.replace(
           '<script src="/data.js"></script>',
           `<script src="/data.js"></script>\n${articleScripts}`
         )
-      : html;
+      : processedHtml;
     // Inject deploy version into all local asset URLs so browser always fetches fresh
     const versioned = withArticles.replace(
       /((?:src|href)=")(\/[^"?]+\.(?:css|js|jsx))(")/g,
@@ -197,7 +341,7 @@ const server = http.createServer((req, res) => {
   fs.stat(requestedPath, (err, stats) => {
     if (!err && stats.isFile()) {
       if (requestedPath.endsWith(".html")) {
-        serveIndex(req, res, requestedPath);
+        serveIndex(req, res, requestedPath, urlPathname);
       } else {
         sendFile(req, res, requestedPath);
       }
@@ -214,7 +358,7 @@ const server = http.createServer((req, res) => {
     // Clean URL → SPA fallback. Unknown routes get HTTP 404 but still serve the
     // SPA HTML so the client can render a friendly 404 page.
     const statusCode = isValidSpaRoute(urlPathname) ? 200 : 404;
-    serveIndex(req, res, path.join(PUBLIC_DIR, "index.html"), statusCode);
+    serveIndex(req, res, path.join(PUBLIC_DIR, "index.html"), urlPathname, statusCode);
   });
 });
 
