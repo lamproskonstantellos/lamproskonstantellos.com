@@ -6,13 +6,15 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx --outdir=dist --entry-names=[dir]/[name]-[hash] --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --minify --metafile=dist/manifest.json",
-    "watch": "esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx --outdir=dist --entry-names=[dir]/[name]-[hash] --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --watch --metafile=dist/manifest.json"
+    "optimize-images": "node scripts/optimize-images.js",
+    "build": "npm run optimize-images && esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx components/picture.jsx --outdir=dist --entry-names=[dir]/[name]-[hash] --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --minify --metafile=dist/manifest.json",
+    "watch": "esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx components/picture.jsx --outdir=dist --entry-names=[dir]/[name]-[hash] --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --watch --metafile=dist/manifest.json"
   },
   "engines": {
     "node": ">=18"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "sharp": "^0.34.5"
   }
 }

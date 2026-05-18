@@ -1,4 +1,4 @@
-/* global React, ReactDOM, PROFILE, Icon, SectionHeader,
+/* global React, ReactDOM, PROFILE, Icon, SectionHeader, Picture,
    routeToPath, handleAnchorClick,
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
@@ -110,8 +110,14 @@ function Hero({ navigate }) {
         </div>
       </div>
       <div className="hero-photo">
-        <img src="/lampros-konstantellos-picture.jpg" alt={PROFILE.name}
-             width="720" height="900" loading="eager" decoding="async" fetchpriority="high" />
+        <Picture
+          src="/lampros-konstantellos-picture.jpg"
+          alt={PROFILE.name}
+          width="720"
+          height="900"
+          loading="eager"
+          fetchPriority="high"
+        />
       </div>
     </section>
   );

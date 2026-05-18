@@ -1,4 +1,4 @@
-/* global React, Icon, getRecentNews, getArticle, LIMITS,
+/* global React, Icon, Picture, getRecentNews, getArticle, LIMITS,
    asset, routeToPath, handleAnchorClick,
    useReveal, renderInline, SectionHeader, ViewAllLink */
 
@@ -22,7 +22,7 @@ function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from }) 
     >
       <div className="cover">
         {article.cover
-          ? <img src={asset(article.cover)} alt={article.title} width="640" height="400" loading="lazy" decoding="async" />
+          ? <Picture src={asset(article.cover)} alt={article.title} width="640" height="400" />
           : <div className="ph">[ news/{article.slug}/cover.jpg ]</div>}
       </div>
       <div className="body">
@@ -211,7 +211,13 @@ function Article({ slug, navigate }) {
       <h1>{article.title}</h1>
       {article.cover && (
         <div className="article-cover">
-          <img src={asset(article.cover)} alt={article.title} width="1280" height="720" loading="eager" decoding="async" />
+          <Picture
+            src={asset(article.cover)}
+            alt={article.title}
+            width="1280"
+            height="720"
+            loading="eager"
+          />
         </div>
       )}
       <div className="article-body">
@@ -243,7 +249,7 @@ function Article({ slug, navigate }) {
                   }
                 }}
               >
-                <img src={asset(src)} alt={photoAlt} width="800" height="600" loading="lazy" decoding="async" />
+                <Picture src={asset(src)} alt={photoAlt} width="800" height="600" />
               </div>
             );
           })}
