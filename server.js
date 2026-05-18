@@ -29,19 +29,17 @@ const mimeTypes = {
   ".xml": "application/xml; charset=utf-8"
 };
 
-// Scan news/ for subfolders containing an article.js and build <script> tags
-function discoverArticleScripts() {
+// Scan news/ for subfolders containing an article.js, returning sorted slugs.
+function discoverArticleSlugs() {
   const newsDir = path.join(PUBLIC_DIR, "news");
   let entries;
   try { entries = fs.readdirSync(newsDir, { withFileTypes: true }); }
-  catch { return ""; }
+  catch { return []; }
   return entries
     .filter((d) => d.isDirectory())
-    .map((d) => ({ slug: d.name, file: path.join(newsDir, d.name, "article.js") }))
-    .filter((x) => fs.existsSync(x.file))
-    .map((x) => `<script src="/news/${x.slug}/article.js"></script>`)
-    .sort()
-    .join("\n");
+    .filter((d) => fs.existsSync(path.join(newsDir, d.name, "article.js")))
+    .map((d) => d.name)
+    .sort();
 }
 
 // Read the esbuild metafile and map logical entry names → hashed output paths.
@@ -105,6 +103,19 @@ function jsonLdScript(obj) {
   return JSON.stringify(obj).replace(/</g, "\\u003c");
 }
 
+// Built once at startup. Article folders and the esbuild asset map only change
+// between deploys, and every deploy starts a fresh process — so there is no
+// need to hit the filesystem on each request.
+const ARTICLE_SLUGS = discoverArticleSlugs();
+const ARTICLE_META = {};
+for (const slug of ARTICLE_SLUGS) {
+  ARTICLE_META[slug] = loadArticleMeta(slug);
+}
+const ARTICLE_SCRIPTS = ARTICLE_SLUGS
+  .map((slug) => `<script src="/news/${slug}/article.js"></script>`)
+  .join("\n");
+const ASSET_MAP = loadAssetMap();
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -154,7 +165,7 @@ function computePageMeta(pathname) {
 
   const m = p.match(/^\/news\/([^/]+)$/);
   if (m) {
-    const article = loadArticleMeta(m[1]);
+    const article = ARTICLE_META[m[1]];
     if (article) {
       const image = article.cover ? `${SITE_CFG.url}/${article.cover}` : DEFAULT_IMAGE;
       return {
@@ -252,7 +263,7 @@ function isValidSpaRoute(pathname) {
   if (p === "/" || p === "/news" || p === "/publications") return true;
   const m = p.match(/^\/news\/([^/]+)$/);
   if (m) {
-    return fs.existsSync(path.join(PUBLIC_DIR, "news", m[1], "article.js"));
+    return Object.prototype.hasOwnProperty.call(ARTICLE_META, m[1]);
   }
   return false;
 }
@@ -274,19 +285,17 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
       .replace(/__META_OG_TYPE__/g, escapeHtml(meta.ogType))
       .replace(/__META_JSONLD__/g, meta.jsonLd ? jsonLdScript(meta.jsonLd) : "");
     // Inject auto-discovered article scripts right after data.js
-    const articleScripts = discoverArticleScripts();
-    const withArticles = articleScripts
+    const withArticles = ARTICLE_SCRIPTS
       ? processedHtml.replace(
           '<script src="/data.js"></script>',
-          `<script src="/data.js"></script>\n${articleScripts}`
+          `<script src="/data.js"></script>\n${ARTICLE_SCRIPTS}`
         )
       : processedHtml;
     // Rewrite /dist/<name>.js references to their content-hashed filenames
-    const assetMap = loadAssetMap();
     const hashed = withArticles.replace(
       /(<script\s+src=")\/dist\/([^"?]+)\.js(")/g,
       (match, prefix, name, suffix) => {
-        const mapped = assetMap[name];
+        const mapped = ASSET_MAP[name];
         return mapped ? `${prefix}${mapped}${suffix}` : match;
       }
     );
@@ -365,15 +374,6 @@ const server = http.createServer((req, res) => {
 
   if (urlPathname === "/sitemap.xml") {
     const buildDate = new Date().toISOString().slice(0, 10);
-    const newsDir = path.join(PUBLIC_DIR, "news");
-    let articleSlugs = [];
-    try {
-      articleSlugs = fs.readdirSync(newsDir, { withFileTypes: true })
-        .filter((d) => d.isDirectory())
-        .filter((d) => fs.existsSync(path.join(newsDir, d.name, "article.js")))
-        .map((d) => d.name)
-        .sort();
-    } catch {}
 
     const entries = [
       { path: "/", lastmod: buildDate },
@@ -381,8 +381,8 @@ const server = http.createServer((req, res) => {
       { path: "/publications", lastmod: buildDate },
     ];
 
-    for (const slug of articleSlugs) {
-      const article = loadArticleMeta(slug);
+    for (const slug of ARTICLE_SLUGS) {
+      const article = ARTICLE_META[slug];
       entries.push({
         path: `/news/${slug}`,
         lastmod: article && /^\d{4}-\d{2}-\d{2}$/.test(article.date) ? article.date : buildDate,
