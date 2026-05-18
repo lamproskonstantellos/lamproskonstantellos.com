@@ -8,7 +8,7 @@ const SITE_CFG = require("./site.config.js");
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
 
-// Unique per server start — forces browser to re-fetch JS/CSS on every deploy.
+// Unique per server start - forces browser to re-fetch JS/CSS on every deploy.
 // Railway exposes the deploying commit SHA at build time; falling back to
 // the boot timestamp keeps local dev working.
 const DEPLOY_VERSION = process.env.RAILWAY_GIT_COMMIT_SHA
@@ -108,7 +108,7 @@ function jsonLdScript(obj) {
 }
 
 // Built once at startup. Article folders and the esbuild asset map only change
-// between deploys, and every deploy starts a fresh process — so there is no
+// between deploys, and every deploy starts a fresh process - so there is no
 // need to hit the filesystem on each request.
 const ARTICLE_SLUGS = discoverArticleSlugs();
 const ARTICLE_META = {};
@@ -134,7 +134,7 @@ function computePageMeta(pathname) {
 
   if (p === "/") {
     return {
-      title: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
+      title: `${SITE_CFG.name} - ${SITE_CFG.jobTitle}`,
       description: DEFAULT_DESCRIPTION,
       url: `${SITE_CFG.url}/`,
       image: DEFAULT_IMAGE,
@@ -145,7 +145,7 @@ function computePageMeta(pathname) {
 
   if (p === "/news") {
     return {
-      title: `News — ${SITE_CFG.name}`,
+      title: `News - ${SITE_CFG.name}`,
       description:
         "Reflections from conferences, forums, awards, and projects in renewable energy, battery storage, grid flexibility, and electricity markets.",
       url: `${SITE_CFG.url}/news`,
@@ -168,7 +168,7 @@ function computePageMeta(pathname) {
 
   if (p === "/publications") {
     return {
-      title: `Publications — ${SITE_CFG.name}`,
+      title: `Publications - ${SITE_CFG.name}`,
       description:
         "Peer-reviewed publications and conference papers on renewable energy, V2G integration, real-time grid simulation, and EV charging.",
       url: `${SITE_CFG.url}/publications`,
@@ -230,7 +230,7 @@ function computePageMeta(pathname) {
       };
 
       return {
-        title: `${article.title} — ${SITE_CFG.name}`,
+        title: `${article.title} - ${SITE_CFG.name}`,
         description: article.excerpt,
         url: `${SITE_CFG.url}/news/${article.slug}`,
         image,
@@ -243,9 +243,9 @@ function computePageMeta(pathname) {
     }
   }
 
-  // Unknown route — used by the SPA NotFound page
+  // Unknown route - used by the SPA NotFound page
   return {
-    title: `Page not found — ${SITE_CFG.name}`,
+    title: `Page not found - ${SITE_CFG.name}`,
     description: DEFAULT_DESCRIPTION,
     url: `${SITE_CFG.url}${pathname}`,
     image: DEFAULT_IMAGE,
@@ -488,7 +488,7 @@ const server = http.createServer((req, res) => {
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n` +
       `<channel>\n` +
-      `  <title>${escapeHtml(SITE_CFG.name)} — News</title>\n` +
+      `  <title>${escapeHtml(SITE_CFG.name)} - News</title>\n` +
       `  <link>${SITE_CFG.url}/news</link>\n` +
       `  <description>${escapeHtml(SITE_CFG.defaultDescription)}</description>\n` +
       `  <language>en</language>\n` +
