@@ -43,6 +43,25 @@ function discoverArticleScripts() {
     .join("\n");
 }
 
+// Read the esbuild metafile and map logical entry names → hashed output paths.
+function loadAssetMap() {
+  const manifestPath = path.join(PUBLIC_DIR, "dist", "manifest.json");
+  try {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    const map = {};
+    for (const [outputPath, info] of Object.entries(manifest.outputs || {})) {
+      if (!info.entryPoint) continue;
+      // entryPoint: "app.jsx" → key "app"
+      // entryPoint: "components/news.jsx" → key "components/news"
+      const key = info.entryPoint.replace(/\.jsx$/, "");
+      map[key] = "/" + outputPath.replace(/\\/g, "/");
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 const DEFAULT_IMAGE = `${SITE_CFG.url}${SITE_CFG.defaultImage}`;
 const DEFAULT_DESCRIPTION = SITE_CFG.defaultDescription;
 
@@ -177,7 +196,7 @@ function cacheHeaderFor(req, contentType) {
     return "no-cache, no-store, must-revalidate";
   }
   const url = new URL(req.url, `http://${req.headers.host}`);
-  if (url.searchParams.has("v")) {
+  if (url.searchParams.has("v") || url.pathname.startsWith("/dist/")) {
     return "public, max-age=31536000, immutable";
   }
   return "public, max-age=86400";
@@ -255,9 +274,18 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
           `<script src="/data.js"></script>\n${articleScripts}`
         )
       : processedHtml;
-    // Inject deploy version into all local asset URLs so browser always fetches fresh
-    const versioned = withArticles.replace(
-      /((?:src|href)=")(\/[^"?]+\.(?:css|js|jsx))(")/g,
+    // Rewrite /dist/<name>.js references to their content-hashed filenames
+    const assetMap = loadAssetMap();
+    const hashed = withArticles.replace(
+      /(<script\s+src=")\/dist\/([^"?]+)\.js(")/g,
+      (match, prefix, name, suffix) => {
+        const mapped = assetMap[name];
+        return mapped ? `${prefix}${mapped}${suffix}` : match;
+      }
+    );
+    // Inject deploy version into local asset URLs (except content-hashed /dist/)
+    const versioned = hashed.replace(
+      /((?:src|href)=")(\/(?!dist\/)[^"?]+\.(?:css|js|jsx))(")/g,
       `$1$2?v=${DEPLOY_VERSION}$3`
     );
     const contentType = "text/html; charset=utf-8";
