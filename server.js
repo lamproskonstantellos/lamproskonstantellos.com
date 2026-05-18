@@ -304,8 +304,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (urlPathname === "/sitemap.xml") {
-    const base = "https://lamproskonstantellos.com";
-    const today = new Date().toISOString().slice(0, 10);
+    const buildDate = new Date().toISOString().slice(0, 10);
     const newsDir = path.join(PUBLIC_DIR, "news");
     let articleSlugs = [];
     try {
@@ -316,12 +315,25 @@ const server = http.createServer((req, res) => {
         .sort();
     } catch {}
 
-    const urls = ["/", "/news", "/publications", ...articleSlugs.map((s) => `/news/${s}`)];
+    const entries = [
+      { path: "/", lastmod: buildDate },
+      { path: "/news", lastmod: buildDate },
+      { path: "/publications", lastmod: buildDate },
+    ];
+
+    for (const slug of articleSlugs) {
+      const article = loadArticleMeta(slug);
+      entries.push({
+        path: `/news/${slug}`,
+        lastmod: article && /^\d{4}-\d{2}-\d{2}$/.test(article.date) ? article.date : buildDate,
+      });
+    }
+
     const xml =
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-      urls
-        .map((u) => `  <url>\n    <loc>${base}${u}</loc>\n    <lastmod>${today}</lastmod>\n  </url>`)
+      entries
+        .map((e) => `  <url>\n    <loc>${SITE_CFG.url}${e.path}</loc>\n    <lastmod>${e.lastmod}</lastmod>\n  </url>`)
         .join("\n") +
       `\n</urlset>\n`;
 
