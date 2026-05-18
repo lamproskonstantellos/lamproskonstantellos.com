@@ -2,7 +2,7 @@
    Insights from the 7th Power & Gas Forum in Athens
    ============================================================ */
 
-(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({
+defineArticle({
   slug: "7th-power-gas-forum-athens",
   date: "2026-04-07",
   dateLabel: "April 7, 2026",

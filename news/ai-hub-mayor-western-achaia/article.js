@@ -2,7 +2,7 @@
    AI-Hub Meeting with the Mayor of Western Achaia
    ============================================================ */
 
-(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({
+defineArticle({
   slug: "ai-hub-mayor-western-achaia",
   date: "2024-07-25",
   dateLabel: "July 25, 2024",

@@ -2,7 +2,7 @@
    Third Best Paper Award at IEEE PESS 2025
    ============================================================ */
 
-(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({
+defineArticle({
   slug: "ieee-pess-2025-best-paper-award",
   date: "2025-10-10",
   dateLabel: "October 10, 2025",

@@ -14,8 +14,8 @@
    ============================================================ */
 
 const PROFILE = {
-  name: "Lampros Konstantellos",
-  role: "Electrical & Computer Engineer",
+  name: window.SITE.name,
+  role: window.SITE.jobTitle,
   hero: {
     headlinePre: "Electrical & Computer Engineer focusing on",
     headlineEm: "renewable energy, grid flexibility, and battery storage.",
@@ -56,7 +56,7 @@ const PROFILE = {
     { id: "ieee",     label: "IEEE Xplore",    href: "https://ieeexplore.ieee.org/author/975219948451552" },
     { id: "orcid",    label: "ORCID",          href: "https://orcid.org/0009-0006-9424-2087" },
     { id: "zenodo",   label: "Zenodo",         href: "https://zenodo.org/search?page=1&size=20&q=Lampros+Konstantellos" },
-    { id: "email",    label: "Email",          href: "mailto:info@lamproskonstantellos.com" },
+    { id: "email",    label: "Email",          href: `mailto:${window.SITE.email}` },
   ],
 };
 
@@ -91,10 +91,41 @@ function getArticle(slug) {
   return items.find((n) => n.slug === slug);
 }
 
+function defineArticle(article) {
+  const required = ["slug", "date", "dateLabel", "title", "excerpt", "body"];
+  for (const field of required) {
+    if (article[field] === undefined || article[field] === null || article[field] === "") {
+      throw new Error(
+        `[defineArticle] Article "${article.slug || "(no slug)"}" is missing required field: ${field}`
+      );
+    }
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(article.date)) {
+    throw new Error(
+      `[defineArticle] Article "${article.slug}" has invalid date "${article.date}" — expected YYYY-MM-DD`
+    );
+  }
+  if (!Array.isArray(article.body) || article.body.length === 0) {
+    throw new Error(
+      `[defineArticle] Article "${article.slug}" has empty or non-array body`
+    );
+  }
+  if (article.photos && !Array.isArray(article.photos)) {
+    throw new Error(`[defineArticle] Article "${article.slug}" has non-array photos`);
+  }
+  if (article.sources && !Array.isArray(article.sources)) {
+    throw new Error(`[defineArticle] Article "${article.slug}" has non-array sources`);
+  }
+  (window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push(article);
+}
+
+window.defineArticle = defineArticle;
+
 Object.assign(window, {
   PROFILE,
   LIMITS,
   getRecentNews,
   getRecentPublications,
   getArticle,
+  defineArticle,
 });

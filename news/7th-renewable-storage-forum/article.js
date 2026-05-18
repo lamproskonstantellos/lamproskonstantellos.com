@@ -2,7 +2,7 @@
    Reflections from the 7th Renewable & Storage Forum
    ============================================================ */
 
-(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({
+defineArticle({
   slug: "7th-renewable-storage-forum",
   date: "2025-10-23",
   dateLabel: "October 23, 2025",

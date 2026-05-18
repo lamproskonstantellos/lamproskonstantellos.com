@@ -6,8 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx --outdir=dist --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --minify",
-    "watch": "esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx --outdir=dist --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --watch"
+    "build": "esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx --outdir=dist --entry-names=[dir]/[name]-[hash] --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --minify --metafile=dist/manifest.json",
+    "watch": "esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx --outdir=dist --entry-names=[dir]/[name]-[hash] --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --watch --metafile=dist/manifest.json"
   },
   "engines": {
     "node": ">=18"
