@@ -20,7 +20,7 @@ function parseRoute(pathname) {
   if (p === "/publications") return { page: "publications-list" };
   const m = p.match(/^\/news\/([^/]+)$/);
   if (m) return { page: "article", slug: m[1] };
-  return { page: "home", section: null };
+  return { page: "not-found" };
 }
 
 /* ============================================================
@@ -187,6 +187,22 @@ function HomePage({ navigate }) {
 }
 
 /* ============================================================
+   NOT FOUND
+   ============================================================ */
+
+function NotFound({ navigate }) {
+  return (
+    <div className="page list-page" style={{ textAlign: "center", padding: "80px 0" }}>
+      <h1 style={{ fontSize: 48, margin: "0 0 12px", letterSpacing: "-0.02em" }}>404</h1>
+      <p style={{ color: "var(--muted)", marginBottom: 24 }}>This page doesn't exist.</p>
+      <a className="back-link" href="/" onClick={(e) => handleAnchorClick(e, navigate, { page: "home" })}>
+        Back to home
+      </a>
+    </div>
+  );
+}
+
+/* ============================================================
    APP
    ============================================================ */
 
@@ -230,6 +246,7 @@ function App() {
         {route.page === "news-list" && <NewsListPage navigate={navigate} />}
         {route.page === "publications-list" && <PublicationsListPage navigate={navigate} />}
         {route.page === "article" && <Article slug={route.slug} navigate={navigate} />}
+        {route.page === "not-found" && <NotFound navigate={navigate} />}
       </main>
       <Footer />
     </>
