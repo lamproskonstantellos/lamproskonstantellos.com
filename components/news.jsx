@@ -22,7 +22,7 @@ function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from }) 
     >
       <div className="cover">
         {article.cover
-          ? <img src={asset(article.cover)} alt="" width="640" height="400" loading="lazy" decoding="async" />
+          ? <img src={asset(article.cover)} alt={article.title} width="640" height="400" loading="lazy" decoding="async" />
           : <div className="ph">[ news/{article.slug}/cover.jpg ]</div>}
       </div>
       <div className="body">
@@ -211,7 +211,7 @@ function Article({ slug, navigate }) {
       <h1>{article.title}</h1>
       {article.cover && (
         <div className="article-cover">
-          <img src={asset(article.cover)} alt="" width="1280" height="720" loading="eager" decoding="async" />
+          <img src={asset(article.cover)} alt={article.title} width="1280" height="720" loading="eager" decoding="async" />
         </div>
       )}
       <div className="article-body">
