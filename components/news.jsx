@@ -22,7 +22,7 @@ function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from }) 
     >
       <div className="cover">
         {article.cover
-          ? <img src={asset(article.cover)} alt="" />
+          ? <img src={asset(article.cover)} alt="" width="640" height="400" loading="lazy" decoding="async" />
           : <div className="ph">[ news/{article.slug}/cover.jpg ]</div>}
       </div>
       <div className="body">
@@ -136,6 +136,8 @@ function Lightbox({ src, onClose }) {
         className="lightbox-img"
         src={src}
         alt=""
+        loading="eager"
+        decoding="async"
         onClick={(e) => e.stopPropagation()}
       />
     </div>
@@ -183,7 +185,7 @@ function Article({ slug, navigate }) {
       <h1>{article.title}</h1>
       {article.cover && (
         <div className="article-cover">
-          <img src={asset(article.cover)} alt="" />
+          <img src={asset(article.cover)} alt="" width="1280" height="720" loading="eager" decoding="async" />
         </div>
       )}
       <div className="article-body">
@@ -204,7 +206,7 @@ function Article({ slug, navigate }) {
               key={i}
               onClick={() => setLightboxSrc(asset(src))}
             >
-              <img src={asset(src)} alt="" />
+              <img src={asset(src)} alt="" width="800" height="600" loading="lazy" decoding="async" />
             </div>
           ))}
         </div>

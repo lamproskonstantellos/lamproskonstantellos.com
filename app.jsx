@@ -110,7 +110,8 @@ function Hero({ navigate }) {
         </div>
       </div>
       <div className="hero-photo">
-        <img src="/lampros-konstantellos-picture.jpg" alt={PROFILE.name} />
+        <img src="/lampros-konstantellos-picture.jpg" alt={PROFILE.name}
+             width="720" height="900" loading="eager" decoding="async" fetchpriority="high" />
       </div>
     </section>
   );
