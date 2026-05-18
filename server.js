@@ -70,15 +70,25 @@ const DEFAULT_DESCRIPTION = SITE_CFG.defaultDescription;
 
 const PROFILE_JSONLD = {
   "@context": "https://schema.org",
-  "@type": "ProfilePage",
-  "mainEntity": {
-    "@type": "Person",
-    "name": SITE_CFG.name,
-    "jobTitle": SITE_CFG.jobTitle,
-    "url": SITE_CFG.url,
-    "image": DEFAULT_IMAGE,
-    "sameAs": SITE_CFG.socialLinks
-  }
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "name": SITE_CFG.name,
+      "alternateName": "lamproskonstantellos.com",
+      "url": SITE_CFG.url
+    },
+    {
+      "@type": "ProfilePage",
+      "mainEntity": {
+        "@type": "Person",
+        "name": SITE_CFG.name,
+        "jobTitle": SITE_CFG.jobTitle,
+        "url": SITE_CFG.url,
+        "image": DEFAULT_IMAGE,
+        "sameAs": SITE_CFG.socialLinks
+      }
+    }
+  ]
 };
 
 // Evaluate a single article.js in a tiny sandbox to extract its metadata.
