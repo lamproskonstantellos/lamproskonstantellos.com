@@ -99,6 +99,12 @@ function loadArticleMeta(slug) {
   }
 }
 
+// Serialize JSON-LD for embedding inside <script type="application/ld+json">.
+// Escaping "<" keeps a stray "</script>" in article text from closing the tag.
+function jsonLdScript(obj) {
+  return JSON.stringify(obj).replace(/</g, "\\u003c");
+}
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -266,7 +272,7 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
       .replace(/__META_URL__/g, escapeHtml(meta.url))
       .replace(/__META_IMAGE__/g, escapeHtml(meta.image))
       .replace(/__META_OG_TYPE__/g, escapeHtml(meta.ogType))
-      .replace(/__META_JSONLD__/g, meta.jsonLd ? JSON.stringify(meta.jsonLd) : "");
+      .replace(/__META_JSONLD__/g, meta.jsonLd ? jsonLdScript(meta.jsonLd) : "");
     // Inject auto-discovered article scripts right after data.js
     const articleScripts = discoverArticleScripts();
     const withArticles = articleScripts
