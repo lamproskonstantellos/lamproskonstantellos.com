@@ -1,4 +1,5 @@
 /* global React, ReactDOM, PROFILE, Icon, SectionHeader,
+   routeToPath, handleAnchorClick,
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
 
@@ -22,13 +23,6 @@ function parseRoute(pathname) {
   return { page: "home", section: null };
 }
 
-function routeToPath(route) {
-  if (route.page === "news-list") return "/news";
-  if (route.page === "publications-list") return "/publications";
-  if (route.page === "article") return `/news/${route.slug}`;
-  return "/";
-}
-
 /* ============================================================
    HEADER
    ============================================================ */
@@ -50,20 +44,28 @@ function Header({ route, navigate }) {
   return (
     <header className="site-header">
       <div className="site-header-inner">
-        <div className="brand" onClick={() => navigate({ page: "home" })}>
+        <a
+          className="brand"
+          href="/"
+          onClick={(e) => handleAnchorClick(e, navigate, { page: "home" })}
+        >
           <span className="brand-name">{PROFILE.name}</span>
           <span className="brand-role">{PROFILE.role}</span>
-        </div>
+        </a>
         <nav className="nav">
-          {items.map((it) => (
-            <button
-              key={it.id}
-              className={isActive(it) ? "active" : ""}
-              onClick={() => navigate({ page: "home", section: it.id })}
-            >
-              {it.label}
-            </button>
-          ))}
+          {items.map((it) => {
+            const route = { page: "home", section: it.id };
+            return (
+              <a
+                key={it.id}
+                className={isActive(it) ? "active" : ""}
+                href={routeToPath(route)}
+                onClick={(e) => handleAnchorClick(e, navigate, route)}
+              >
+                {it.label}
+              </a>
+            );
+          })}
         </nav>
       </div>
     </header>
@@ -84,15 +86,27 @@ function Hero({ navigate }) {
         </h1>
         <p>{PROFILE.hero.sub}</p>
         <div className="hero-actions">
-          <button className="btn btn-primary" onClick={() => navigate({ page: "home", section: "publications" })}>
+          <a
+            className="btn btn-primary"
+            href="/#publications"
+            onClick={(e) => handleAnchorClick(e, navigate, { page: "home", section: "publications" })}
+          >
             View publications <Icon.arrowUR className="arrow" style={{ width: 14, height: 14 }} />
-          </button>
-          <button className="btn btn-ghost" onClick={() => navigate({ page: "home", section: "news" })}>
+          </a>
+          <a
+            className="btn btn-ghost"
+            href="/#news"
+            onClick={(e) => handleAnchorClick(e, navigate, { page: "home", section: "news" })}
+          >
             Read news
-          </button>
-          <button className="btn btn-ghost" onClick={() => navigate({ page: "home", section: "contact" })}>
+          </a>
+          <a
+            className="btn btn-ghost"
+            href="/#contact"
+            onClick={(e) => handleAnchorClick(e, navigate, { page: "home", section: "contact" })}
+          >
             Contact
-          </button>
+          </a>
         </div>
       </div>
       <div className="hero-photo">
@@ -186,7 +200,7 @@ function App() {
   }, []);
 
   const navigate = useCallback((next, opts = {}) => {
-    const targetPath = routeToPath(next);
+    const targetPath = routeToPath(next).split("#")[0] || "/";
     const stateData = opts.from !== undefined ? { from: opts.from } : {};
     if (window.location.pathname !== targetPath) {
       window.history.pushState(stateData, "", targetPath);
