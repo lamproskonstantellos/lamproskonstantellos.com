@@ -1,6 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 const { URL } = require("url");
 
 const PORT = process.env.PORT || 3000;
@@ -39,6 +40,54 @@ function discoverArticleScripts() {
     .join("\n");
 }
 
+function cacheHeaderFor(req, contentType) {
+  if (contentType.startsWith("text/html")) {
+    return "no-cache, no-store, must-revalidate";
+  }
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  if (url.searchParams.has("v")) {
+    return "public, max-age=31536000, immutable";
+  }
+  return "public, max-age=86400";
+}
+
+function isCompressible(contentType) {
+  return /^(text\/|application\/(javascript|json|xml|xhtml\+xml)|image\/svg)/.test(contentType);
+}
+
+function writeCompressed(req, res, headers, data) {
+  const status = headers.__status || 200;
+  delete headers.__status;
+  const accept = req.headers["accept-encoding"] || "";
+  const ct = headers["Content-Type"] || "";
+  if (isCompressible(ct) && data && data.length > 1024) {
+    if (/\bbr\b/.test(accept)) {
+      const compressed = zlib.brotliCompressSync(data);
+      res.writeHead(status, {
+        ...headers,
+        "Content-Encoding": "br",
+        "Content-Length": compressed.length,
+        "Vary": "Accept-Encoding",
+      });
+      res.end(compressed);
+      return;
+    }
+    if (/\bgzip\b/.test(accept)) {
+      const compressed = zlib.gzipSync(data);
+      res.writeHead(status, {
+        ...headers,
+        "Content-Encoding": "gzip",
+        "Content-Length": compressed.length,
+        "Vary": "Accept-Encoding",
+      });
+      res.end(compressed);
+      return;
+    }
+  }
+  res.writeHead(status, headers);
+  res.end(data);
+}
+
 // True when pathname maps to a route the SPA can render.
 function isValidSpaRoute(pathname) {
   const p = pathname.replace(/\/+$/, "") || "/";
@@ -50,7 +99,7 @@ function isValidSpaRoute(pathname) {
   return false;
 }
 
-function serveIndex(res, filePath, statusCode = 200) {
+function serveIndex(req, res, filePath, statusCode = 200) {
   fs.readFile(filePath, "utf8", (err, html) => {
     if (err) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
@@ -70,15 +119,16 @@ function serveIndex(res, filePath, statusCode = 200) {
       /((?:src|href)=")(\/[^"?]+\.(?:css|js|jsx))(")/g,
       `$1$2?v=${DEPLOY_VERSION}$3`
     );
-    res.writeHead(statusCode, {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    });
-    res.end(versioned);
+    const contentType = "text/html; charset=utf-8";
+    writeCompressed(req, res, {
+      "Content-Type": contentType,
+      "Cache-Control": cacheHeaderFor(req, contentType),
+      __status: statusCode,
+    }, versioned);
   });
 }
 
-function sendFile(res, filePath) {
+function sendFile(req, res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = mimeTypes[ext] || "application/octet-stream";
 
@@ -88,8 +138,10 @@ function sendFile(res, filePath) {
       res.end("404 Not Found");
       return;
     }
-    res.writeHead(200, { "Content-Type": contentType });
-    res.end(data);
+    writeCompressed(req, res, {
+      "Content-Type": contentType,
+      "Cache-Control": cacheHeaderFor(req, contentType),
+    }, data);
   });
 }
 
@@ -113,9 +165,9 @@ const server = http.createServer((req, res) => {
   fs.stat(requestedPath, (err, stats) => {
     if (!err && stats.isFile()) {
       if (requestedPath.endsWith(".html")) {
-        serveIndex(res, requestedPath);
+        serveIndex(req, res, requestedPath);
       } else {
-        sendFile(res, requestedPath);
+        sendFile(req, res, requestedPath);
       }
       return;
     }
@@ -130,7 +182,7 @@ const server = http.createServer((req, res) => {
     // Clean URL → SPA fallback. Unknown routes get HTTP 404 but still serve the
     // SPA HTML so the client can render a friendly 404 page.
     const statusCode = isValidSpaRoute(urlPathname) ? 200 : 404;
-    serveIndex(res, path.join(PUBLIC_DIR, "index.html"), statusCode);
+    serveIndex(req, res, path.join(PUBLIC_DIR, "index.html"), statusCode);
   });
 });
 
