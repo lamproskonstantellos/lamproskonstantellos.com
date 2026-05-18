@@ -1,4 +1,5 @@
 /* global React, Icon, getRecentPublications, LIMITS,
+   routeToPath, handleAnchorClick,
    useReveal, SectionHeader, ViewAllLink */
 
 /* ============================================================
@@ -65,7 +66,8 @@ function PublicationsPreview({ navigate }) {
         action={showViewAll ? (
           <ViewAllLink
             label={`All ${total} publications`}
-            onClick={() => navigate({ page: "publications-list" })}
+            navigate={navigate}
+            route={{ page: "publications-list" }}
           />
         ) : null}
       />
@@ -92,14 +94,17 @@ function PublicationsListPage({ navigate }) {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
 
+  const backRoute = { page: "home", section: "publications" };
+
   return (
     <div className="page list-page">
-      <button
+      <a
         className="back-link"
-        onClick={() => navigate({ page: "home", section: "publications" })}
+        href={routeToPath(backRoute)}
+        onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
       >
         <Icon.arrowLeft style={{ width: 14, height: 14 }} /> Back to Home
-      </button>
+      </a>
       <header className="list-header">
         <h1>Publications</h1>
         <p>Peer-reviewed publications and conference papers, ordered from most recent.</p>

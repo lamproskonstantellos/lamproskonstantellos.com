@@ -1,6 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 const { URL } = require("url");
 
 const PORT = process.env.PORT || 3000;
@@ -21,7 +22,9 @@ const mimeTypes = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".webp": "image/webp",
-  ".pdf": "application/pdf"
+  ".pdf": "application/pdf",
+  ".txt": "text/plain; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8"
 };
 
 // Scan news/ for subfolders containing an article.js and build <script> tags
@@ -39,7 +42,66 @@ function discoverArticleScripts() {
     .join("\n");
 }
 
-function serveIndex(res, filePath) {
+function cacheHeaderFor(req, contentType) {
+  if (contentType.startsWith("text/html")) {
+    return "no-cache, no-store, must-revalidate";
+  }
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  if (url.searchParams.has("v")) {
+    return "public, max-age=31536000, immutable";
+  }
+  return "public, max-age=86400";
+}
+
+function isCompressible(contentType) {
+  return /^(text\/|application\/(javascript|json|xml|xhtml\+xml)|image\/svg)/.test(contentType);
+}
+
+function writeCompressed(req, res, headers, data) {
+  const status = headers.__status || 200;
+  delete headers.__status;
+  const accept = req.headers["accept-encoding"] || "";
+  const ct = headers["Content-Type"] || "";
+  if (isCompressible(ct) && data && data.length > 1024) {
+    if (/\bbr\b/.test(accept)) {
+      const compressed = zlib.brotliCompressSync(data);
+      res.writeHead(status, {
+        ...headers,
+        "Content-Encoding": "br",
+        "Content-Length": compressed.length,
+        "Vary": "Accept-Encoding",
+      });
+      res.end(compressed);
+      return;
+    }
+    if (/\bgzip\b/.test(accept)) {
+      const compressed = zlib.gzipSync(data);
+      res.writeHead(status, {
+        ...headers,
+        "Content-Encoding": "gzip",
+        "Content-Length": compressed.length,
+        "Vary": "Accept-Encoding",
+      });
+      res.end(compressed);
+      return;
+    }
+  }
+  res.writeHead(status, headers);
+  res.end(data);
+}
+
+// True when pathname maps to a route the SPA can render.
+function isValidSpaRoute(pathname) {
+  const p = pathname.replace(/\/+$/, "") || "/";
+  if (p === "/" || p === "/news" || p === "/publications") return true;
+  const m = p.match(/^\/news\/([^/]+)$/);
+  if (m) {
+    return fs.existsSync(path.join(PUBLIC_DIR, "news", m[1], "article.js"));
+  }
+  return false;
+}
+
+function serveIndex(req, res, filePath, statusCode = 200) {
   fs.readFile(filePath, "utf8", (err, html) => {
     if (err) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
@@ -59,15 +121,16 @@ function serveIndex(res, filePath) {
       /((?:src|href)=")(\/[^"?]+\.(?:css|js|jsx))(")/g,
       `$1$2?v=${DEPLOY_VERSION}$3`
     );
-    res.writeHead(200, {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    });
-    res.end(versioned);
+    const contentType = "text/html; charset=utf-8";
+    writeCompressed(req, res, {
+      "Content-Type": contentType,
+      "Cache-Control": cacheHeaderFor(req, contentType),
+      __status: statusCode,
+    }, versioned);
   });
 }
 
-function sendFile(res, filePath) {
+function sendFile(req, res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = mimeTypes[ext] || "application/octet-stream";
 
@@ -77,14 +140,17 @@ function sendFile(res, filePath) {
       res.end("404 Not Found");
       return;
     }
-    res.writeHead(200, { "Content-Type": contentType });
-    res.end(data);
+    writeCompressed(req, res, {
+      "Content-Type": contentType,
+      "Cache-Control": cacheHeaderFor(req, contentType),
+    }, data);
   });
 }
 
 const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
-  let pathname = decodeURIComponent(parsedUrl.pathname);
+  const urlPathname = decodeURIComponent(parsedUrl.pathname);
+  let pathname = urlPathname;
 
   if (pathname.endsWith("/")) {
     pathname += "index.html";
@@ -98,17 +164,57 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (urlPathname === "/sitemap.xml") {
+    const base = "https://lamproskonstantellos.com";
+    const today = new Date().toISOString().slice(0, 10);
+    const newsDir = path.join(PUBLIC_DIR, "news");
+    let articleSlugs = [];
+    try {
+      articleSlugs = fs.readdirSync(newsDir, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .filter((d) => fs.existsSync(path.join(newsDir, d.name, "article.js")))
+        .map((d) => d.name)
+        .sort();
+    } catch {}
+
+    const urls = ["/", "/news", "/publications", ...articleSlugs.map((s) => `/news/${s}`)];
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      urls
+        .map((u) => `  <url>\n    <loc>${base}${u}</loc>\n    <lastmod>${today}</lastmod>\n  </url>`)
+        .join("\n") +
+      `\n</urlset>\n`;
+
+    res.writeHead(200, {
+      "Content-Type": "application/xml; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
+    });
+    res.end(xml);
+    return;
+  }
+
   fs.stat(requestedPath, (err, stats) => {
     if (!err && stats.isFile()) {
       if (requestedPath.endsWith(".html")) {
-        serveIndex(res, requestedPath);
+        serveIndex(req, res, requestedPath);
       } else {
-        sendFile(res, requestedPath);
+        sendFile(req, res, requestedPath);
       }
       return;
     }
 
-    serveIndex(res, path.join(PUBLIC_DIR, "index.html"));
+    // Path has an extension → it's an asset request that missed → real 404
+    if (path.extname(urlPathname) !== "") {
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("404 Not Found");
+      return;
+    }
+
+    // Clean URL → SPA fallback. Unknown routes get HTTP 404 but still serve the
+    // SPA HTML so the client can render a friendly 404 page.
+    const statusCode = isValidSpaRoute(urlPathname) ? 200 : 404;
+    serveIndex(req, res, path.join(PUBLIC_DIR, "index.html"), statusCode);
   });
 });
 

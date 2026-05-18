@@ -1,5 +1,6 @@
 /* global React, Icon, getRecentNews, getArticle, LIMITS,
-   asset, useReveal, renderInline, SectionHeader, ViewAllLink */
+   asset, routeToPath, handleAnchorClick,
+   useReveal, renderInline, SectionHeader, ViewAllLink */
 
 /* ============================================================
    NEWS / ARTICLES
@@ -10,16 +11,18 @@
    ============================================================ */
 
 function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from }) {
+  const route = { page: "article", slug: article.slug };
   return (
-    <article
+    <a
       className={`news-card reveal ${isVisible ? "in" : ""}`}
       data-reveal={revealKey}
       style={{ transitionDelay: `${index * 80}ms` }}
-      onClick={() => navigate({ page: "article", slug: article.slug }, { from })}
+      href={routeToPath(route)}
+      onClick={(e) => handleAnchorClick(e, navigate, route, { from })}
     >
       <div className="cover">
         {article.cover
-          ? <img src={asset(article.cover)} alt="" />
+          ? <img src={asset(article.cover)} alt="" width="640" height="400" loading="lazy" decoding="async" />
           : <div className="ph">[ news/{article.slug}/cover.jpg ]</div>}
       </div>
       <div className="body">
@@ -32,7 +35,7 @@ function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from }) 
           Read article <Icon.arrowRight style={{ width: 13, height: 13 }} />
         </span>
       </div>
-    </article>
+    </a>
   );
 }
 
@@ -50,7 +53,8 @@ function NewsPreview({ navigate }) {
         action={showViewAll ? (
           <ViewAllLink
             label={`All ${total} articles`}
-            onClick={() => navigate({ page: "news-list" })}
+            navigate={navigate}
+            route={{ page: "news-list" }}
           />
         ) : null}
       />
@@ -79,14 +83,17 @@ function NewsListPage({ navigate }) {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
 
+  const backRoute = { page: "home", section: "news" };
+
   return (
     <div className="page list-page">
-      <button
+      <a
         className="back-link"
-        onClick={() => navigate({ page: "home", section: "news" })}
+        href={routeToPath(backRoute)}
+        onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
       >
         <Icon.arrowLeft style={{ width: 14, height: 14 }} /> Back to Home
-      </button>
+      </a>
       <header className="list-header">
         <h1>News</h1>
       </header>
@@ -129,6 +136,8 @@ function Lightbox({ src, onClose }) {
         className="lightbox-img"
         src={src}
         alt=""
+        loading="eager"
+        decoding="async"
         onClick={(e) => e.stopPropagation()}
       />
     </div>
@@ -144,18 +153,24 @@ function Article({ slug, navigate }) {
   }, [slug]);
 
   const from = window.history.state?.from;
-  const goBack = () =>
-    from === "home"
-      ? navigate({ page: "home", section: "news" })
-      : navigate({ page: "news-list" });
+  const backRoute = from === "home"
+    ? { page: "home", section: "news" }
+    : { page: "news-list" };
   const backLabel = from === "home" ? "Back to Home" : "Back to News";
+  const backLink = (
+    <a
+      className="back-link"
+      href={routeToPath(backRoute)}
+      onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
+    >
+      <Icon.arrowLeft style={{ width: 14, height: 14 }} /> {backLabel}
+    </a>
+  );
 
   if (!article) {
     return (
       <div className="page article">
-        <button className="back-link" onClick={goBack}>
-          <Icon.arrowLeft style={{ width: 14, height: 14 }} /> {backLabel}
-        </button>
+        {backLink}
         <p style={{ color: "var(--muted)" }}>Article not found.</p>
       </div>
     );
@@ -163,16 +178,14 @@ function Article({ slug, navigate }) {
 
   return (
     <div className="page article">
-      <button className="back-link" onClick={goBack}>
-        <Icon.arrowLeft style={{ width: 14, height: 14 }} /> {backLabel}
-      </button>
+      {backLink}
       <div className="article-meta">
         {article.dateLabel}{article.location ? ` · ${article.location}` : ""}
       </div>
       <h1>{article.title}</h1>
       {article.cover && (
         <div className="article-cover">
-          <img src={asset(article.cover)} alt="" />
+          <img src={asset(article.cover)} alt="" width="1280" height="720" loading="eager" decoding="async" />
         </div>
       )}
       <div className="article-body">
@@ -193,7 +206,7 @@ function Article({ slug, navigate }) {
               key={i}
               onClick={() => setLightboxSrc(asset(src))}
             >
-              <img src={asset(src)} alt="" />
+              <img src={asset(src)} alt="" width="800" height="600" loading="lazy" decoding="async" />
             </div>
           ))}
         </div>

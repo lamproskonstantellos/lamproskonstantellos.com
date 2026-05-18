@@ -17,6 +17,24 @@ function asset(path) {
   return "/" + path;
 }
 
+function routeToPath(route) {
+  if (!route) return "/";
+  if (route.page === "news-list") return "/news";
+  if (route.page === "publications-list") return "/publications";
+  if (route.page === "article") return "/news/" + route.slug;
+  if (route.page === "home" && route.section) return "/#" + route.section;
+  return "/";
+}
+
+function handleAnchorClick(e, navigate, route, opts) {
+  // Let the browser handle modifier-clicks and non-left clicks normally
+  if (e.defaultPrevented) return;
+  if (e.button !== undefined && e.button !== 0) return;
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  navigate(route, opts);
+}
+
 function renderInline(text) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((p, i) => {
@@ -56,12 +74,19 @@ function SectionHeader({ title, action }) {
   );
 }
 
-function ViewAllLink({ label, onClick }) {
+function ViewAllLink({ label, navigate, route }) {
   return (
-    <button className="view-all" onClick={onClick}>
+    <a
+      className="view-all"
+      href={routeToPath(route)}
+      onClick={(e) => handleAnchorClick(e, navigate, route)}
+    >
       {label} <Icon.arrowRight style={{ width: 13, height: 13 }} />
-    </button>
+    </a>
   );
 }
 
-Object.assign(window, { asset, renderInline, useReveal, SectionHeader, ViewAllLink });
+Object.assign(window, {
+  asset, routeToPath, handleAnchorClick, renderInline,
+  useReveal, SectionHeader, ViewAllLink,
+});
