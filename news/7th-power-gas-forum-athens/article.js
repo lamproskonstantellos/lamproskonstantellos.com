@@ -9,6 +9,16 @@ defineArticle({
   location: "Athens",
   title: "Insights from the 7th Power & Gas Forum in Athens",
   excerpt: "Reflections on grid constraints, flexibility, storage, data infrastructure, and the increasingly operational nature of the Greek energy transition.",
+  keywords: [
+    "Greek electricity market",
+    "Power & Gas Forum",
+    "grid flexibility",
+    "battery storage",
+    "curtailment",
+    "data centers",
+    "energy transition",
+  ],
+  articleSection: "Energy Markets",
   cover: "news/7th-power-gas-forum-athens/cover.jpg",
   photos: [],
   body: [

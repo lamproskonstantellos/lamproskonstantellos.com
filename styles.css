@@ -825,3 +825,15 @@ section.block:first-of-type { border-top: none; }
   main { padding: 0 20px 16px; }
   .site-footer-inner { padding: 0 20px; }
 }
+
+/* ===== Accessibility: respect user motion preferences ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

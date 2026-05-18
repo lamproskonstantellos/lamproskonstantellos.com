@@ -8,8 +8,12 @@ const SITE_CFG = require("./site.config.js");
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
 
-// Unique per server start — forces browser to re-fetch JS/CSS on every deploy
-const DEPLOY_VERSION = Date.now();
+// Unique per server start — forces browser to re-fetch JS/CSS on every deploy.
+// Railway exposes the deploying commit SHA at build time; falling back to
+// the boot timestamp keeps local dev working.
+const DEPLOY_VERSION = process.env.RAILWAY_GIT_COMMIT_SHA
+  ? process.env.RAILWAY_GIT_COMMIT_SHA.slice(0, 12)
+  : Date.now();
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -147,7 +151,18 @@ function computePageMeta(pathname) {
       url: `${SITE_CFG.url}/news`,
       image: DEFAULT_IMAGE,
       ogType: "website",
-      jsonLd: null,
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+              { "@type": "ListItem", "position": 2, "name": "News", "item": `${SITE_CFG.url}/news` },
+            ],
+          },
+        ],
+      },
     };
   }
 
@@ -159,7 +174,18 @@ function computePageMeta(pathname) {
       url: `${SITE_CFG.url}/publications`,
       image: DEFAULT_IMAGE,
       ogType: "website",
-      jsonLd: null,
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+              { "@type": "ListItem", "position": 2, "name": "Publications", "item": `${SITE_CFG.url}/publications` },
+            ],
+          },
+        ],
+      },
     };
   }
 
@@ -168,6 +194,41 @@ function computePageMeta(pathname) {
     const article = ARTICLE_META[m[1]];
     if (article) {
       const image = article.cover ? `${SITE_CFG.url}/${article.cover}` : DEFAULT_IMAGE;
+
+      const articleSchema = {
+        "@type": "Article",
+        "headline": article.title,
+        "description": article.excerpt,
+        "image": image,
+        "datePublished": article.date,
+        "dateModified": article.date,
+        "author": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
+        "publisher": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
+        "mainEntityOfPage": `${SITE_CFG.url}/news/${article.slug}`,
+      };
+      if (article.keywords && article.keywords.length) {
+        articleSchema.keywords = article.keywords.join(", ");
+      }
+      if (article.articleSection) {
+        articleSchema.articleSection = article.articleSection;
+      }
+      if (article.topics && article.topics.length) {
+        articleSchema.about = article.topics.map((t) => ({
+          "@type": "Thing",
+          "name": t.name,
+          "sameAs": t.sameAs,
+        }));
+      }
+
+      const breadcrumbs = {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+          { "@type": "ListItem", "position": 2, "name": "News", "item": `${SITE_CFG.url}/news` },
+          { "@type": "ListItem", "position": 3, "name": article.title, "item": `${SITE_CFG.url}/news/${article.slug}` },
+        ],
+      };
+
       return {
         title: `${article.title} — ${SITE_CFG.name}`,
         description: article.excerpt,
@@ -176,23 +237,7 @@ function computePageMeta(pathname) {
         ogType: "article",
         jsonLd: {
           "@context": "https://schema.org",
-          "@type": "Article",
-          "headline": article.title,
-          "description": article.excerpt,
-          "image": image,
-          "datePublished": article.date,
-          "dateModified": article.date,
-          "author": {
-            "@type": "Person",
-            "name": SITE_CFG.name,
-            "url": SITE_CFG.url,
-          },
-          "publisher": {
-            "@type": "Person",
-            "name": SITE_CFG.name,
-            "url": SITE_CFG.url,
-          },
-          "mainEntityOfPage": `${SITE_CFG.url}/news/${article.slug}`,
+          "@graph": [breadcrumbs, articleSchema],
         },
       };
     }
@@ -373,19 +418,27 @@ const server = http.createServer((req, res) => {
   }
 
   if (urlPathname === "/sitemap.xml") {
-    const buildDate = new Date().toISOString().slice(0, 10);
+    // Use the most recent article date as the lastmod for index pages
+    // (home, /news, /publications all surface news content), so the value
+    // only changes when content actually changes.
+    const articleDates = ARTICLE_SLUGS
+      .map((slug) => ARTICLE_META[slug]?.date)
+      .filter((d) => d && /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .sort()
+      .reverse();
+    const latestContentDate = articleDates[0] || "2026-01-01";
 
     const entries = [
-      { path: "/", lastmod: buildDate },
-      { path: "/news", lastmod: buildDate },
-      { path: "/publications", lastmod: buildDate },
+      { path: "/", lastmod: latestContentDate },
+      { path: "/news", lastmod: latestContentDate },
+      { path: "/publications", lastmod: latestContentDate },
     ];
 
     for (const slug of ARTICLE_SLUGS) {
       const article = ARTICLE_META[slug];
       entries.push({
         path: `/news/${slug}`,
-        lastmod: article && /^\d{4}-\d{2}-\d{2}$/.test(article.date) ? article.date : buildDate,
+        lastmod: article && /^\d{4}-\d{2}-\d{2}$/.test(article.date) ? article.date : latestContentDate,
       });
     }
 

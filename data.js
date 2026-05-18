@@ -116,6 +116,13 @@ function defineArticle(article) {
   if (article.sources && !Array.isArray(article.sources)) {
     throw new Error(`[defineArticle] Article "${article.slug}" has non-array sources`);
   }
+  // Optional SEO fields validated for type only
+  if (article.keywords && !Array.isArray(article.keywords)) {
+    throw new Error(`[defineArticle] Article "${article.slug}" has non-array keywords`);
+  }
+  if (article.topics && !Array.isArray(article.topics)) {
+    throw new Error(`[defineArticle] Article "${article.slug}" has non-array topics`);
+  }
   (window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push(article);
 }
 

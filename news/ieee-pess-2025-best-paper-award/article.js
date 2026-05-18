@@ -9,6 +9,17 @@ defineArticle({
   location: "Munich, Germany",
   title: "Third Best Paper Award at IEEE PESS 2025",
   excerpt: "Our work on PV and Vehicle-to-Grid integration in the isolated island grid of Kastellorizo received the 3rd Best Paper Award at IEEE PESS 2025 in Munich.",
+  keywords: [
+    "IEEE PESS",
+    "V2G",
+    "Vehicle-to-Grid",
+    "PV integration",
+    "Kastellorizo",
+    "island grid",
+    "real-time simulation",
+    "Greece",
+  ],
+  articleSection: "Conferences and Awards",
   cover: "news/ieee-pess-2025-best-paper-award/cover.jpg",
   photos: [
     "news/ieee-pess-2025-best-paper-award/photo-01.jpg",
