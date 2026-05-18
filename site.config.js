@@ -12,7 +12,7 @@ const SITE = {
   name: "Lampros Konstantellos",
   jobTitle: "Electrical & Computer Engineer",
   email: "info@lamproskonstantellos.com",
-  defaultImage: "/lampros-konstantellos-picture.jpg",
+  defaultImage: "/og-image.png",
   defaultDescription:
     "Exploring renewable energy, battery storage, grid flexibility, and electricity markets through engineering, modelling, and applied research.",
   socialLinks: [
