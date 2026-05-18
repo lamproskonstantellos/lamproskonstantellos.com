@@ -315,7 +315,31 @@ function sendFile(req, res, filePath) {
   });
 }
 
+// Applied to every response. CSP is tuned to this site: React from unpkg,
+// Google Fonts, and inline style attributes emitted by React's style prop.
+const SECURITY_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "X-Frame-Options": "DENY",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Content-Security-Policy": [
+    "default-src 'self'",
+    "script-src 'self' https://unpkg.com",
+    "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+  ].join("; "),
+};
+
 const server = http.createServer((req, res) => {
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    res.setHeader(name, value);
+  }
+
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const urlPathname = decodeURIComponent(parsedUrl.pathname);
   let pathname = urlPathname;
