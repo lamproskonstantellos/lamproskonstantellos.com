@@ -321,8 +321,9 @@ function sendFile(req, res, filePath) {
   });
 }
 
-// Applied to every response. CSP is tuned to this site: React from unpkg,
-// Google Fonts, and inline style attributes emitted by React's style prop.
+// Applied to every response. CSP is tuned to this site: all scripts are
+// self-hosted, plus Google Fonts and inline style attributes emitted by
+// React's style prop.
 const SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -330,7 +331,7 @@ const SECURITY_HEADERS = {
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self' https://unpkg.com",
+    "script-src 'self'",
     "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data:",
