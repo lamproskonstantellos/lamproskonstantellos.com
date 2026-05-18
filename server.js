@@ -22,7 +22,9 @@ const mimeTypes = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".webp": "image/webp",
-  ".pdf": "application/pdf"
+  ".pdf": "application/pdf",
+  ".txt": "text/plain; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8"
 };
 
 // Scan news/ for subfolders containing an article.js and build <script> tags
@@ -159,6 +161,36 @@ const server = http.createServer((req, res) => {
   if (!requestedPath.startsWith(PUBLIC_DIR)) {
     res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
     res.end("403 Forbidden");
+    return;
+  }
+
+  if (urlPathname === "/sitemap.xml") {
+    const base = "https://lamproskonstantellos.com";
+    const today = new Date().toISOString().slice(0, 10);
+    const newsDir = path.join(PUBLIC_DIR, "news");
+    let articleSlugs = [];
+    try {
+      articleSlugs = fs.readdirSync(newsDir, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .filter((d) => fs.existsSync(path.join(newsDir, d.name, "article.js")))
+        .map((d) => d.name)
+        .sort();
+    } catch {}
+
+    const urls = ["/", "/news", "/publications", ...articleSlugs.map((s) => `/news/${s}`)];
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      urls
+        .map((u) => `  <url>\n    <loc>${base}${u}</loc>\n    <lastmod>${today}</lastmod>\n  </url>`)
+        .join("\n") +
+      `\n</urlset>\n`;
+
+    res.writeHead(200, {
+      "Content-Type": "application/xml; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
+    });
+    res.end(xml);
     return;
   }
 
