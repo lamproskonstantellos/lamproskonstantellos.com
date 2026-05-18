@@ -147,7 +147,18 @@ function computePageMeta(pathname) {
       url: `${SITE_CFG.url}/news`,
       image: DEFAULT_IMAGE,
       ogType: "website",
-      jsonLd: null,
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+              { "@type": "ListItem", "position": 2, "name": "News", "item": `${SITE_CFG.url}/news` },
+            ],
+          },
+        ],
+      },
     };
   }
 
@@ -159,7 +170,18 @@ function computePageMeta(pathname) {
       url: `${SITE_CFG.url}/publications`,
       image: DEFAULT_IMAGE,
       ogType: "website",
-      jsonLd: null,
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+              { "@type": "ListItem", "position": 2, "name": "Publications", "item": `${SITE_CFG.url}/publications` },
+            ],
+          },
+        ],
+      },
     };
   }
 
@@ -168,6 +190,41 @@ function computePageMeta(pathname) {
     const article = ARTICLE_META[m[1]];
     if (article) {
       const image = article.cover ? `${SITE_CFG.url}/${article.cover}` : DEFAULT_IMAGE;
+
+      const articleSchema = {
+        "@type": "Article",
+        "headline": article.title,
+        "description": article.excerpt,
+        "image": image,
+        "datePublished": article.date,
+        "dateModified": article.date,
+        "author": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
+        "publisher": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
+        "mainEntityOfPage": `${SITE_CFG.url}/news/${article.slug}`,
+      };
+      if (article.keywords && article.keywords.length) {
+        articleSchema.keywords = article.keywords.join(", ");
+      }
+      if (article.articleSection) {
+        articleSchema.articleSection = article.articleSection;
+      }
+      if (article.topics && article.topics.length) {
+        articleSchema.about = article.topics.map((t) => ({
+          "@type": "Thing",
+          "name": t.name,
+          "sameAs": t.sameAs,
+        }));
+      }
+
+      const breadcrumbs = {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+          { "@type": "ListItem", "position": 2, "name": "News", "item": `${SITE_CFG.url}/news` },
+          { "@type": "ListItem", "position": 3, "name": article.title, "item": `${SITE_CFG.url}/news/${article.slug}` },
+        ],
+      };
+
       return {
         title: `${article.title} — ${SITE_CFG.name}`,
         description: article.excerpt,
@@ -176,23 +233,7 @@ function computePageMeta(pathname) {
         ogType: "article",
         jsonLd: {
           "@context": "https://schema.org",
-          "@type": "Article",
-          "headline": article.title,
-          "description": article.excerpt,
-          "image": image,
-          "datePublished": article.date,
-          "dateModified": article.date,
-          "author": {
-            "@type": "Person",
-            "name": SITE_CFG.name,
-            "url": SITE_CFG.url,
-          },
-          "publisher": {
-            "@type": "Person",
-            "name": SITE_CFG.name,
-            "url": SITE_CFG.url,
-          },
-          "mainEntityOfPage": `${SITE_CFG.url}/news/${article.slug}`,
+          "@graph": [breadcrumbs, articleSchema],
         },
       };
     }

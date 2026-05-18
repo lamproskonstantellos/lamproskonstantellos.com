@@ -9,6 +9,16 @@ defineArticle({
   location: "Western Achaia, Greece",
   title: "AI-Hub Meeting with the Mayor of Western Achaia",
   excerpt: "A meeting between the University of Patras AI-Hub team and the Municipality of Western Achaia on practical AI applications for municipal services, including water-quality monitoring.",
+  keywords: [
+    "AI-Hub",
+    "artificial intelligence",
+    "Western Achaia",
+    "local government",
+    "water quality monitoring",
+    "University of Patras",
+    "Greece",
+  ],
+  articleSection: "Regional Policy",
   cover: "news/ai-hub-mayor-western-achaia/cover.jpg",
   photos: [
     "news/ai-hub-mayor-western-achaia/photo-01.jpg",

@@ -9,6 +9,16 @@ defineArticle({
   location: "Athens, Greece",
   title: "Reflections from the 7th Renewable & Storage Forum",
   excerpt: "Notes on renewable deployment, storage, curtailment, grid access, and the regulatory conditions shaping the next phase of the Greek electricity market.",
+  keywords: [
+    "BESS",
+    "battery energy storage",
+    "renewable energy",
+    "curtailment",
+    "energy storage",
+    "grid connection",
+    "Greece",
+  ],
+  articleSection: "Energy Storage",
   cover: "news/7th-renewable-storage-forum/cover.jpg",
   body: [
     "On 22–23 October 2025, I attended the **7th Renewable & Storage Forum** in Athens, organised by **energypress**. The forum focused on the next stage of the Greek energy transition, with particular emphasis on renewable energy development, storage deployment, grid constraints, curtailment, auctions, investment conditions, and the regulatory framework for new market participants.",
