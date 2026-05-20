@@ -150,6 +150,7 @@ function computePageMeta(pathname) {
       imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
       ogType: "website",
       jsonLd: PROFILE_JSONLD,
+      preloadImage: "/lampros-konstantellos-picture.avif",
     };
   }
 
@@ -349,7 +350,10 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
       .replace(/__META_IMAGE__/g, escapeHtml(meta.image))
       .replace(/__META_IMAGE_ALT__/g, escapeHtml(meta.imageAlt || meta.title))
       .replace(/__META_OG_TYPE__/g, escapeHtml(meta.ogType))
-      .replace(/__META_JSONLD__/g, meta.jsonLd ? jsonLdScript(meta.jsonLd) : "");
+      .replace(/__META_JSONLD__/g, meta.jsonLd ? jsonLdScript(meta.jsonLd) : "")
+      .replace(/__META_PRELOAD__/g, meta.preloadImage
+        ? `<link rel="preload" as="image" href="${escapeHtml(meta.preloadImage)}" type="image/avif" fetchpriority="high" />`
+        : "");
     // Inject auto-discovered article scripts right after data.js
     const withArticles = ARTICLE_SCRIPTS
       ? processedHtml.replace(
