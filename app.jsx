@@ -47,6 +47,7 @@ function Header({ route, navigate }) {
         <a
           className="brand"
           href="/"
+          aria-label={`${PROFILE.name} — home`}
           onClick={(e) => handleAnchorClick(e, navigate, { page: "home" })}
         >
           <span className="brand-name">{PROFILE.name}</span>
@@ -59,6 +60,7 @@ function Header({ route, navigate }) {
               <a
                 key={it.id}
                 className={isActive(it) ? "active" : ""}
+                aria-current={isActive(it) ? "page" : undefined}
                 href={routeToPath(route)}
                 onClick={(e) => handleAnchorClick(e, navigate, route)}
               >
@@ -262,7 +264,7 @@ function App() {
   return (
     <>
       <Header route={route} navigate={navigate} />
-      <main>
+      <main id="main-content">
         {route.page === "home" && <HomePage navigate={navigate} />}
         {route.page === "news-list" && <NewsListPage navigate={navigate} />}
         {route.page === "publications-list" && <PublicationsListPage navigate={navigate} />}

@@ -21,6 +21,11 @@ function Picture({
   className,
 }) {
   if (!src) return null;
+  if (!/\.(jpe?g|png)$/i.test(src)) {
+    return <img src={src} alt={alt} width={width} height={height}
+                loading={loading} decoding={decoding}
+                fetchPriority={fetchPriority} className={className} />;
+  }
   const base = src.replace(/\.(jpe?g|png)$/i, "");
 
   return (
@@ -34,7 +39,7 @@ function Picture({
         height={height}
         loading={loading}
         decoding={decoding}
-        fetchpriority={fetchPriority}
+        fetchPriority={fetchPriority}
         className={className}
       />
     </picture>

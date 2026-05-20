@@ -74,7 +74,6 @@ const PROFILE_JSONLD = {
     {
       "@type": "WebSite",
       "name": SITE_CFG.name,
-      "alternateName": "lamproskonstantellos.com",
       "url": SITE_CFG.url
     },
     {
@@ -148,8 +147,10 @@ function computePageMeta(pathname) {
       description: DEFAULT_DESCRIPTION,
       url: `${SITE_CFG.url}/`,
       image: DEFAULT_IMAGE,
+      imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
       ogType: "website",
       jsonLd: PROFILE_JSONLD,
+      preloadImage: "/lampros-konstantellos-picture.avif",
     };
   }
 
@@ -160,6 +161,7 @@ function computePageMeta(pathname) {
         "Reflections from conferences, forums, awards, and projects in renewable energy, battery storage, grid flexibility, and electricity markets.",
       url: `${SITE_CFG.url}/news`,
       image: DEFAULT_IMAGE,
+      imageAlt: `News from ${SITE_CFG.name}`,
       ogType: "website",
       jsonLd: {
         "@context": "https://schema.org",
@@ -183,6 +185,7 @@ function computePageMeta(pathname) {
         "Peer-reviewed publications and conference papers on renewable energy, V2G integration, real-time grid simulation, and EV charging.",
       url: `${SITE_CFG.url}/publications`,
       image: DEFAULT_IMAGE,
+      imageAlt: `Publications by ${SITE_CFG.name}`,
       ogType: "website",
       jsonLd: {
         "@context": "https://schema.org",
@@ -205,6 +208,9 @@ function computePageMeta(pathname) {
     if (article) {
       const image = article.cover ? `${SITE_CFG.url}/${article.cover}` : DEFAULT_IMAGE;
 
+      const articleBody = Array.isArray(article.body) ? article.body.join("\n\n") : "";
+      const wordCount = articleBody ? articleBody.trim().split(/\s+/).length : 0;
+
       const articleSchema = {
         "@type": "Article",
         "headline": article.title,
@@ -215,6 +221,9 @@ function computePageMeta(pathname) {
         "author": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
         "publisher": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
         "mainEntityOfPage": `${SITE_CFG.url}/news/${article.slug}`,
+        "articleBody": articleBody,
+        "wordCount": wordCount,
+        "inLanguage": "en",
       };
       if (article.keywords && article.keywords.length) {
         articleSchema.keywords = article.keywords.join(", ");
@@ -244,6 +253,7 @@ function computePageMeta(pathname) {
         description: article.excerpt,
         url: `${SITE_CFG.url}/news/${article.slug}`,
         image,
+        imageAlt: article.title,
         ogType: "article",
         jsonLd: {
           "@context": "https://schema.org",
@@ -259,6 +269,7 @@ function computePageMeta(pathname) {
     description: DEFAULT_DESCRIPTION,
     url: `${SITE_CFG.url}${pathname}`,
     image: DEFAULT_IMAGE,
+    imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
     ogType: "website",
     jsonLd: null,
   };
@@ -337,8 +348,12 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
       .replace(/__META_DESCRIPTION__/g, escapeHtml(meta.description))
       .replace(/__META_URL__/g, escapeHtml(meta.url))
       .replace(/__META_IMAGE__/g, escapeHtml(meta.image))
+      .replace(/__META_IMAGE_ALT__/g, escapeHtml(meta.imageAlt || meta.title))
       .replace(/__META_OG_TYPE__/g, escapeHtml(meta.ogType))
-      .replace(/__META_JSONLD__/g, meta.jsonLd ? jsonLdScript(meta.jsonLd) : "");
+      .replace(/__META_JSONLD__/g, meta.jsonLd ? jsonLdScript(meta.jsonLd) : "")
+      .replace(/__META_PRELOAD__/g, meta.preloadImage
+        ? `<link rel="preload" as="image" href="${escapeHtml(meta.preloadImage)}" type="image/avif" fetchpriority="high" />`
+        : "");
     // Inject auto-discovered article scripts right after data.js
     const withArticles = ARTICLE_SCRIPTS
       ? processedHtml.replace(
@@ -393,6 +408,8 @@ const SECURITY_HEADERS = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "DENY",
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=()",
+  "Cross-Origin-Opener-Policy": "same-origin",
   "Content-Security-Policy": [
     "default-src 'self'",
     "script-src 'self' https://plausible.io",
@@ -406,6 +423,24 @@ const SECURITY_HEADERS = {
   ].join("; "),
 };
 
+const PRIVATE_PATHS = new Set([
+  "/server.js",
+  "/package.json",
+  "/package-lock.json",
+  "/Dockerfile",
+  "/.dockerignore",
+  "/.gitignore",
+  "/LICENSE",
+  "/dist/manifest.json",
+]);
+
+function isPrivatePath(pathname) {
+  if (PRIVATE_PATHS.has(pathname)) return true;
+  if (pathname.startsWith("/scripts/")) return true;
+  if (pathname.startsWith("/.")) return true;
+  return false;
+}
+
 const server = http.createServer((req, res) => {
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
     res.setHeader(name, value);
@@ -414,6 +449,12 @@ const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const urlPathname = decodeURIComponent(parsedUrl.pathname);
   let pathname = urlPathname;
+
+  if (isPrivatePath(urlPathname)) {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("404 Not Found");
+    return;
+  }
 
   if (pathname.endsWith("/")) {
     pathname += "index.html";
@@ -465,6 +506,46 @@ const server = http.createServer((req, res) => {
       "Cache-Control": "public, max-age=3600",
     });
     res.end(xml);
+    return;
+  }
+
+  if (urlPathname === "/feed.json") {
+    const items = ARTICLE_SLUGS
+      .map((slug) => ARTICLE_META[slug])
+      .filter((a) => a && a.date)
+      .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+    const feed = {
+      version: "https://jsonfeed.org/version/1.1",
+      title: `${SITE_CFG.name} — News`,
+      home_page_url: `${SITE_CFG.url}/news`,
+      feed_url: `${SITE_CFG.url}/feed.json`,
+      description: SITE_CFG.defaultDescription,
+      language: "en",
+      authors: [
+        { name: SITE_CFG.name, url: SITE_CFG.url }
+      ],
+      items: items.map((a) => {
+        const url = `${SITE_CFG.url}/news/${a.slug}`;
+        const item = {
+          id: url,
+          url,
+          title: a.title,
+          content_text: Array.isArray(a.body) ? a.body.join("\n\n") : "",
+          summary: a.excerpt || "",
+          date_published: new Date(`${a.date}T00:00:00Z`).toISOString(),
+        };
+        if (a.cover) item.image = `${SITE_CFG.url}/${a.cover}`;
+        if (a.keywords && a.keywords.length) item.tags = a.keywords;
+        return item;
+      }),
+    };
+
+    res.writeHead(200, {
+      "Content-Type": "application/feed+json; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
+    });
+    res.end(JSON.stringify(feed, null, 2));
     return;
   }
 
