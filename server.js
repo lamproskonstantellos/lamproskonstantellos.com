@@ -393,6 +393,8 @@ const SECURITY_HEADERS = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "DENY",
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=()",
+  "Cross-Origin-Opener-Policy": "same-origin",
   "Content-Security-Policy": [
     "default-src 'self'",
     "script-src 'self' https://plausible.io",
@@ -406,6 +408,24 @@ const SECURITY_HEADERS = {
   ].join("; "),
 };
 
+const PRIVATE_PATHS = new Set([
+  "/server.js",
+  "/package.json",
+  "/package-lock.json",
+  "/Dockerfile",
+  "/.dockerignore",
+  "/.gitignore",
+  "/LICENSE",
+  "/dist/manifest.json",
+]);
+
+function isPrivatePath(pathname) {
+  if (PRIVATE_PATHS.has(pathname)) return true;
+  if (pathname.startsWith("/scripts/")) return true;
+  if (pathname.startsWith("/.")) return true;
+  return false;
+}
+
 const server = http.createServer((req, res) => {
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
     res.setHeader(name, value);
@@ -414,6 +434,12 @@ const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const urlPathname = decodeURIComponent(parsedUrl.pathname);
   let pathname = urlPathname;
+
+  if (isPrivatePath(urlPathname)) {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("404 Not Found");
+    return;
+  }
 
   if (pathname.endsWith("/")) {
     pathname += "index.html";
