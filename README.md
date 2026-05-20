@@ -53,6 +53,7 @@ See [`news/README.md`](./news/README.md). In short: create a folder under `news/
 - `sitemap.xml` is generated dynamically and includes every static page plus every auto-discovered article.
 - `robots.txt` allows all crawlers and points to the sitemap.
 - `rss.xml` is generated dynamically from the auto-discovered articles, newest first.
+- `feed.json` is generated dynamically alongside the RSS feed, conforming to JSON Feed 1.1.
 
 ## License
 

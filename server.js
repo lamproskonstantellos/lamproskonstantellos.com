@@ -509,6 +509,46 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (urlPathname === "/feed.json") {
+    const items = ARTICLE_SLUGS
+      .map((slug) => ARTICLE_META[slug])
+      .filter((a) => a && a.date)
+      .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+    const feed = {
+      version: "https://jsonfeed.org/version/1.1",
+      title: `${SITE_CFG.name} — News`,
+      home_page_url: `${SITE_CFG.url}/news`,
+      feed_url: `${SITE_CFG.url}/feed.json`,
+      description: SITE_CFG.defaultDescription,
+      language: "en",
+      authors: [
+        { name: SITE_CFG.name, url: SITE_CFG.url }
+      ],
+      items: items.map((a) => {
+        const url = `${SITE_CFG.url}/news/${a.slug}`;
+        const item = {
+          id: url,
+          url,
+          title: a.title,
+          content_text: Array.isArray(a.body) ? a.body.join("\n\n") : "",
+          summary: a.excerpt || "",
+          date_published: new Date(`${a.date}T00:00:00Z`).toISOString(),
+        };
+        if (a.cover) item.image = `${SITE_CFG.url}/${a.cover}`;
+        if (a.keywords && a.keywords.length) item.tags = a.keywords;
+        return item;
+      }),
+    };
+
+    res.writeHead(200, {
+      "Content-Type": "application/feed+json; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
+    });
+    res.end(JSON.stringify(feed, null, 2));
+    return;
+  }
+
   if (urlPathname === "/rss.xml") {
     const items = ARTICLE_SLUGS
       .map((slug) => ARTICLE_META[slug])
