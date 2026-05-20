@@ -78,7 +78,7 @@ function NewsListPage({ navigate }) {
   const items = getRecentNews();
 
   React.useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
+    window.scrollTo({ top: 0 });
   }, []);
 
   const backRoute = { page: "home", section: "news" };
@@ -175,7 +175,7 @@ function Article({ slug, navigate }) {
   const closeLightbox = React.useCallback(() => setLightboxSrc(null), []);
 
   React.useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
+    window.scrollTo({ top: 0 });
   }, [slug]);
 
   const from = window.history.state?.from;

@@ -89,7 +89,7 @@ function PublicationsListPage({ navigate }) {
   const items = getRecentPublications();
 
   React.useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
+    window.scrollTo({ top: 0 });
   }, []);
 
   const backRoute = { page: "home", section: "publications" };
