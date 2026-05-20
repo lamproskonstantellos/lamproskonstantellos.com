@@ -74,7 +74,6 @@ const PROFILE_JSONLD = {
     {
       "@type": "WebSite",
       "name": SITE_CFG.name,
-      "alternateName": "lamproskonstantellos.com",
       "url": SITE_CFG.url
     },
     {
@@ -148,6 +147,7 @@ function computePageMeta(pathname) {
       description: DEFAULT_DESCRIPTION,
       url: `${SITE_CFG.url}/`,
       image: DEFAULT_IMAGE,
+      imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
       ogType: "website",
       jsonLd: PROFILE_JSONLD,
     };
@@ -160,6 +160,7 @@ function computePageMeta(pathname) {
         "Reflections from conferences, forums, awards, and projects in renewable energy, battery storage, grid flexibility, and electricity markets.",
       url: `${SITE_CFG.url}/news`,
       image: DEFAULT_IMAGE,
+      imageAlt: `News from ${SITE_CFG.name}`,
       ogType: "website",
       jsonLd: {
         "@context": "https://schema.org",
@@ -183,6 +184,7 @@ function computePageMeta(pathname) {
         "Peer-reviewed publications and conference papers on renewable energy, V2G integration, real-time grid simulation, and EV charging.",
       url: `${SITE_CFG.url}/publications`,
       image: DEFAULT_IMAGE,
+      imageAlt: `Publications by ${SITE_CFG.name}`,
       ogType: "website",
       jsonLd: {
         "@context": "https://schema.org",
@@ -205,6 +207,9 @@ function computePageMeta(pathname) {
     if (article) {
       const image = article.cover ? `${SITE_CFG.url}/${article.cover}` : DEFAULT_IMAGE;
 
+      const articleBody = Array.isArray(article.body) ? article.body.join("\n\n") : "";
+      const wordCount = articleBody ? articleBody.trim().split(/\s+/).length : 0;
+
       const articleSchema = {
         "@type": "Article",
         "headline": article.title,
@@ -215,6 +220,9 @@ function computePageMeta(pathname) {
         "author": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
         "publisher": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
         "mainEntityOfPage": `${SITE_CFG.url}/news/${article.slug}`,
+        "articleBody": articleBody,
+        "wordCount": wordCount,
+        "inLanguage": "en",
       };
       if (article.keywords && article.keywords.length) {
         articleSchema.keywords = article.keywords.join(", ");
@@ -244,6 +252,7 @@ function computePageMeta(pathname) {
         description: article.excerpt,
         url: `${SITE_CFG.url}/news/${article.slug}`,
         image,
+        imageAlt: article.title,
         ogType: "article",
         jsonLd: {
           "@context": "https://schema.org",
@@ -259,6 +268,7 @@ function computePageMeta(pathname) {
     description: DEFAULT_DESCRIPTION,
     url: `${SITE_CFG.url}${pathname}`,
     image: DEFAULT_IMAGE,
+    imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
     ogType: "website",
     jsonLd: null,
   };
@@ -337,6 +347,7 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
       .replace(/__META_DESCRIPTION__/g, escapeHtml(meta.description))
       .replace(/__META_URL__/g, escapeHtml(meta.url))
       .replace(/__META_IMAGE__/g, escapeHtml(meta.image))
+      .replace(/__META_IMAGE_ALT__/g, escapeHtml(meta.imageAlt || meta.title))
       .replace(/__META_OG_TYPE__/g, escapeHtml(meta.ogType))
       .replace(/__META_JSONLD__/g, meta.jsonLd ? jsonLdScript(meta.jsonLd) : "");
     // Inject auto-discovered article scripts right after data.js
