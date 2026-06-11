@@ -199,10 +199,13 @@ main {
   transition: all var(--transition);
   border: 1px solid transparent;
 }
+/* The CTAs are <a> elements, and the global a:hover outranks a lone class,
+   so each :hover re-declares its text color — without this the .btn-primary
+   label turns --accent-hover on an --accent-hover background and vanishes. */
 .btn-primary { background: var(--ink); color: white; }
-.btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.btn-primary:hover { background: var(--accent-hover); color: white; transform: translateY(-1px); }
 .btn-ghost { border-color: var(--line); color: var(--ink); background: var(--surface); }
-.btn-ghost:hover { border-color: var(--ink); transform: translateY(-1px); }
+.btn-ghost:hover { border-color: var(--ink); color: var(--ink); transform: translateY(-1px); }
 .btn .arrow { transition: transform var(--transition); }
 .btn:hover .arrow { transform: translate(3px, -3px); }
 
