@@ -10,7 +10,7 @@ The personal website of **Lampros Konstantellos**, Electrical & Computer Enginee
 ## Stack
 
 - **Frontend:** React 18 loaded via self-hosted UMD builds (`vendor/`). JSX is compiled to plain JavaScript at build time with [esbuild](https://esbuild.github.io/) — no in-browser Babel. Plain CSS. Inter and JetBrains Mono via Google Fonts.
-- **Backend:** Minimal Node.js HTTP server (`server.js`) that serves static assets, auto-discovers and injects per-article scripts, injects per-route `<title>` / meta / Open Graph / Twitter / canonical / JSON-LD, generates `sitemap.xml` on the fly, applies brotli/gzip compression, sets appropriate `Cache-Control` headers, and adds a per-deploy version query string to local CSS/JS URLs to bust browser caches on every deploy.
+- **Backend:** Minimal, dependency-free Node.js HTTP server (`server.js`) that serves static assets, auto-discovers and injects per-article scripts, injects per-route `<title>` / meta / Open Graph / Twitter / canonical / JSON-LD, generates `sitemap.xml`, `rss.xml` and `feed.json` on the fly, applies cached brotli/gzip compression, sets security headers + CSP and class-appropriate `Cache-Control`, guards against malformed requests (no request can crash the process), and adds a per-deploy version query string to local CSS/JS URLs to bust browser caches on every deploy.
 - **Container:** `node:20-alpine`. The Dockerfile runs `npm run build` (esbuild) inside the image before starting the server.
 - **Hosting:** [Railway](https://railway.com/). Auto-redeploys on every git push — no dashboard configuration needed.
 
@@ -18,8 +18,9 @@ The personal website of **Lampros Konstantellos**, Electrical & Computer Enginee
 
 ```bash
 npm install
-npm run build     # one-time JSX → JS compile to dist/
+npm run build     # one-time JSX → JS compile to dist/ (also builds image siblings)
 npm start         # serve at http://localhost:3000
+npm test          # run the test suite (build first, so dist/ exists)
 ```
 
 While editing `.jsx` files, run `npm run watch` in a second terminal — esbuild rebuilds on every save and a browser refresh shows the change.
@@ -28,19 +29,42 @@ While editing `.jsx` files, run `npm run watch` in a second terminal — esbuild
 
 ```
 .
-├── app.jsx                Root React component and router (source)
-├── components/            About, Publications, News, and shared UI (source)
-├── data.js                Profile, hero, about, publications, contact, selectors
+├── app.jsx                Root React component and SPA shell (source)
+├── components/            About, Publications, News (incl. Lightbox), Picture, shared UI (source)
 ├── icons.jsx              Inline SVG icon set (source)
+├── site.config.js         Single source of truth for site identity (dual Node/browser)
+├── routes.js              Route table: parseRoute / routeToPath / isValidSpaRoute / pageTitle (dual)
+├── article-schema.js      Article validation + newest-first comparator (dual)
+├── data.js                Profile, hero, about, publications, contact, selectors
 ├── styles.css             Global stylesheet
-├── index.html             Single HTML entry with meta placeholders
-├── server.js              Static server, per-route meta, sitemap, compression
-├── vendor/                Self-hosted React UMD builds
+├── index.html             Single HTML entry with __META_*__ placeholders
+├── server.js              Static server: per-route meta, sitemap/rss/feed, compression, security
+├── scripts/               Build tooling (optimize-images.js)
+├── vendor/                Self-hosted React 18 UMD builds
+├── test/                  node:test suite + golden files (test/golden/)
+├── .github/workflows/     CI (npm ci → build → test)
 ├── Dockerfile             Production container (runs the build inside)
 ├── robots.txt             Search-engine directives
 ├── dist/                  Built JS (gitignored; produced by `npm run build`)
 └── news/                  Per-article folders, each with article.js + images
 ```
+
+The route table (`routes.js`) and article schema (`article-schema.js`) are loaded
+both in the browser (as `window` globals, before `data.js`) and in Node (via
+`require` from `server.js`), so the client and server share one definition of
+routes, titles, validation and sort order.
+
+## Testing
+
+```bash
+npm run build && npm test
+```
+
+`node:test` (zero extra dependencies) boots the real `server.js` on an ephemeral
+port and checks served status/headers/meta, the feeds, security and hostile-input
+handling, cross-module consistency, SEO/accessibility, and the image pipeline.
+Golden snapshots live in `test/golden/`; a deliberate output change is refreshed
+with `UPDATE_GOLDEN=1 npm test`. CI runs the same `build` + `test` on every push.
 
 ## Adding a new article
 

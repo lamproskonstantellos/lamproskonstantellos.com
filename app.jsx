@@ -46,14 +46,14 @@ function Header({ route, navigate }) {
         </a>
         <nav className="nav">
           {items.map((it) => {
-            const route = { page: "home", section: it.id };
+            const target = { page: "home", section: it.id };
             return (
               <a
                 key={it.id}
                 className={isActive(it) ? "active" : ""}
                 aria-current={isActive(it) ? "page" : undefined}
-                href={routeToPath(route)}
-                onClick={(e) => handleAnchorClick(e, navigate, route)}
+                href={routeToPath(target)}
+                onClick={(e) => handleAnchorClick(e, navigate, target)}
               >
                 {it.label}
               </a>

@@ -173,6 +173,10 @@ test("private paths are not served", async () => {
     "/dist/manifest.json",
     "/scripts/optimize-images.js",
     "/.git/config",
+    "/README.md",
+    "/news/README.md",
+    "/test/helper.js",
+    "/test/golden/home.html",
   ]) {
     const res = await request(base, p);
     assert.equal(res.status, 404, `${p} should be 404, got ${res.status}`);
