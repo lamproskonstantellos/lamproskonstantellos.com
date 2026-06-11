@@ -54,7 +54,28 @@
     return true;
   }
 
-  const api = { parseRoute, routeToPath, isValidSpaRoute };
+  // The document <title> for a route. Single source of truth shared by the
+  // server (computePageMeta, injected into the served HTML) and the client
+  // (navigate, which keeps the tab title correct after SPA navigation).
+  // ctx: { siteName, jobTitle, articleTitle }.
+  function pageTitle(route, ctx) {
+    switch (route && route.page) {
+      case "home":
+        return `${ctx.siteName} - ${ctx.jobTitle}`;
+      case "news-list":
+        return `News - ${ctx.siteName}`;
+      case "publications-list":
+        return `Publications - ${ctx.siteName}`;
+      case "article":
+        return ctx.articleTitle
+          ? `${ctx.articleTitle} - ${ctx.siteName}`
+          : `Page not found - ${ctx.siteName}`;
+      default:
+        return `Page not found - ${ctx.siteName}`;
+    }
+  }
+
+  const api = { parseRoute, routeToPath, isValidSpaRoute, pageTitle };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

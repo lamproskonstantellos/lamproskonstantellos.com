@@ -4,7 +4,7 @@ const path = require("path");
 const zlib = require("zlib");
 const { URL } = require("url");
 const SITE_CFG = require("./site.config.js");
-const { parseRoute, isValidSpaRoute: routeIsValidSpa } = require("./routes.js");
+const { parseRoute, isValidSpaRoute: routeIsValidSpa, pageTitle } = require("./routes.js");
 const { validateArticle, compareByDateDesc } = require("./article-schema.js");
 
 const PORT = process.env.PORT || 3000;
@@ -163,10 +163,11 @@ function computePageMeta(pathname) {
   // parseRoute is the shared route table (routes.js) — same matcher the client
   // and isValidSpaRoute use, so the meta branch can never drift from routing.
   const route = parseRoute(pathname);
+  const titleCtx = { siteName: SITE_CFG.name, jobTitle: SITE_CFG.jobTitle };
 
   if (route.page === "home") {
     return {
-      title: `${SITE_CFG.name} - ${SITE_CFG.jobTitle}`,
+      title: pageTitle(route, titleCtx),
       description: DEFAULT_DESCRIPTION,
       url: `${SITE_CFG.url}/`,
       image: DEFAULT_IMAGE,
@@ -179,7 +180,7 @@ function computePageMeta(pathname) {
 
   if (route.page === "news-list") {
     return {
-      title: `News - ${SITE_CFG.name}`,
+      title: pageTitle(route, titleCtx),
       description:
         "Reflections from conferences, forums, awards, and projects in renewable energy, battery storage, grid flexibility, and electricity markets.",
       url: `${SITE_CFG.url}/news`,
@@ -203,7 +204,7 @@ function computePageMeta(pathname) {
 
   if (route.page === "publications-list") {
     return {
-      title: `Publications - ${SITE_CFG.name}`,
+      title: pageTitle(route, titleCtx),
       description:
         "Peer-reviewed publications and conference papers on renewable energy, V2G integration, real-time grid simulation, and EV charging.",
       url: `${SITE_CFG.url}/publications`,
@@ -271,7 +272,7 @@ function computePageMeta(pathname) {
       };
 
       return {
-        title: `${article.title} - ${SITE_CFG.name}`,
+        title: pageTitle(route, { ...titleCtx, articleTitle: article.title }),
         description: article.excerpt,
         url: `${SITE_CFG.url}/news/${article.slug}`,
         image,
@@ -289,7 +290,7 @@ function computePageMeta(pathname) {
   // Canonical/og:url point at the home root rather than reflecting the
   // requested (attacker-controllable) pathname back into shared metadata.
   return {
-    title: `Page not found - ${SITE_CFG.name}`,
+    title: pageTitle(route, titleCtx),
     description: DEFAULT_DESCRIPTION,
     url: `${SITE_CFG.url}/`,
     image: DEFAULT_IMAGE,

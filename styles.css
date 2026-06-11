@@ -128,6 +128,10 @@ main {
   margin: 0 auto;
   padding: 0 28px 24px;
 }
+/* #main-content receives focus on client-side route changes (and via the skip
+   link) so screen-reader/keyboard users land in the new content. It is a focus
+   *target*, not a control, so no focus ring is drawn. */
+#main-content:focus { outline: none; }
 .page {
   animation: fade-up 360ms cubic-bezier(.2,.7,.2,1);
 }
