@@ -66,6 +66,9 @@ function request(base, path, opts = {}) {
         method: opts.method || "GET",
         path,
         headers: opts.headers || {},
+        // Fresh socket per request: avoids keep-alive pool desync when a test
+        // mixes HEAD / 204 / error responses with normal ones.
+        agent: false,
       },
       (res) => {
         const chunks = [];
