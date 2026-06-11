@@ -197,13 +197,43 @@ function HomePage({ navigate }) {
    ============================================================ */
 
 function NotFound({ navigate }) {
+  // Deliberately no search box: the site has no search index (yet) — routes
+  // onward beat a dead end.
   return (
-    <div className="page list-page" style={{ textAlign: "center", padding: "80px 0" }}>
-      <h1 style={{ fontSize: 48, margin: "0 0 12px", letterSpacing: "-0.02em" }}>404</h1>
-      <p style={{ color: "var(--muted)", marginBottom: 24 }}>This page doesn't exist.</p>
-      <a className="back-link" href="/" onClick={(e) => handleAnchorClick(e, navigate, { page: "home" })}>
-        Back to home
-      </a>
+    <div className="page notfound">
+      <div className="notfound-code" aria-hidden="true">404</div>
+      <h1>Page not found</h1>
+      <p className="notfound-sub">This page may have moved, or never existed.</p>
+      <div className="notfound-actions">
+        <a
+          className="btn btn-primary"
+          href="/"
+          onClick={(e) => handleAnchorClick(e, navigate, { page: "home" })}
+        >
+          Back to home
+        </a>
+        <a
+          className="btn btn-ghost"
+          href="/news"
+          onClick={(e) => handleAnchorClick(e, navigate, { page: "news-list" })}
+        >
+          News
+        </a>
+        <a
+          className="btn btn-ghost"
+          href="/publications"
+          onClick={(e) => handleAnchorClick(e, navigate, { page: "publications-list" })}
+        >
+          Publications
+        </a>
+        <a
+          className="btn btn-ghost"
+          href="/#contact"
+          onClick={(e) => handleAnchorClick(e, navigate, { page: "home", section: "contact" })}
+        >
+          Contact
+        </a>
+      </div>
     </div>
   );
 }

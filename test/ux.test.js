@@ -147,6 +147,25 @@ test("compiled news bundle carries the share row + copy handler", () => {
   assert.ok(code.includes("aria-live"), "bundle missing the copied announcement");
 });
 
+// ---- NotFound page -----------------------------------------------------------
+
+test("NotFound offers routes onward: home, /news, /publications, contact", () => {
+  const src = fs.readFileSync(path.join(ROOT, "app.jsx"), "utf8");
+  const notFound = src.slice(src.indexOf("function NotFound"), src.indexOf("function App"));
+  assert.match(notFound, /href="\/"/, "missing back-to-home link");
+  assert.match(notFound, /href="\/news"/, "missing /news link");
+  assert.match(notFound, /href="\/publications"/, "missing /publications link");
+  assert.match(notFound, /href="\/#contact"/, "missing contact link");
+  assert.ok(notFound.includes("handleAnchorClick"), "links must go through SPA navigation");
+  assert.ok(!notFound.includes("style={{"), "404 styling lives in styles.css, not inline");
+});
+
+test("compiled app bundle carries the redesigned 404", () => {
+  const code = compiledBundle("app.jsx");
+  assert.ok(code.includes("notfound"), "bundle missing the .notfound classes");
+  assert.ok(code.includes("Page not found"), "bundle missing the 404 headline");
+});
+
 // ---- View-all threshold is exactly "more than the cap" ---------------------
 
 test("news preview cap: View-all appears only when items exceed the limit", () => {
