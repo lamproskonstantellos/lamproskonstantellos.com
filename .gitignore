@@ -1,5 +1,6 @@
 node_modules/
 dist/
+scratch/
 .DS_Store
 verification-report.md
 *.webp

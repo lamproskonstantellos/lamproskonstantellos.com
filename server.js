@@ -621,6 +621,24 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Lampros Konstantellos website running on port ${PORT}`);
-});
+if (require.main === module) {
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`Lampros Konstantellos website running on port ${PORT}`);
+  });
+}
+
+// Exported for the test suite. Requiring this module (instead of running it as
+// the entrypoint) does NOT start the listener, so tests can drive the handler
+// on an ephemeral port and exercise the pure helpers directly.
+module.exports = {
+  server,
+  computePageMeta,
+  escapeHtml,
+  jsonLdScript,
+  cacheHeaderFor,
+  isValidSpaRoute,
+  loadArticleMeta,
+  discoverArticleSlugs,
+  SECURITY_HEADERS,
+  isPrivatePath,
+};
