@@ -122,12 +122,14 @@ function Hero({ navigate }) {
 
 function Contact() {
   const map = {
-    linkedin: { I: Icon.brandLinkedin, tint: "rgba(10,102,194,0.10)" },
-    scholar:  { I: Icon.brandScholar,  tint: "rgba(66,133,244,0.10)" },
-    ieee:     { I: Icon.brandIeee,     tint: "rgba(0,98,155,0.10)"   },
-    orcid:    { I: Icon.brandOrcid,    tint: "rgba(166,206,57,0.15)" },
-    zenodo:   { I: Icon.brandZenodo,   tint: "rgba(31,71,152,0.10)"  },
-    email:    { I: Icon.brandEmail,    tint: "rgba(10,31,68,0.08)"   },
+    linkedin:     { I: Icon.brandLinkedin,     tint: "rgba(10,102,194,0.10)" },
+    scholar:      { I: Icon.brandScholar,      tint: "rgba(66,133,244,0.10)" },
+    ieee:         { I: Icon.brandIeee,         tint: "rgba(0,98,155,0.10)"   },
+    orcid:        { I: Icon.brandOrcid,        tint: "rgba(166,206,57,0.15)" },
+    zenodo:       { I: Icon.brandZenodo,       tint: "rgba(31,71,152,0.10)"  },
+    researchgate: { I: Icon.brandResearchgate, tint: "rgba(0,204,187,0.12)"  },
+    github:       { I: Icon.brandGithub,       tint: "rgba(23,23,23,0.08)"   },
+    email:        { I: Icon.brandEmail,        tint: "rgba(10,31,68,0.08)"   },
   };
   return (
     <section className="block" id="contact">

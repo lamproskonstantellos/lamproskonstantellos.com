@@ -22,6 +22,8 @@ const SITE = {
     "https://ieeexplore.ieee.org/author/975219948451552",
     "https://orcid.org/0009-0006-9424-2087",
     "https://zenodo.org/search?page=1&size=20&q=Lampros+Konstantellos",
+    "https://www.researchgate.net/profile/Lampros-Konstantellos",
+    "https://github.com/lamproskonstantellos",
   ],
 };
 

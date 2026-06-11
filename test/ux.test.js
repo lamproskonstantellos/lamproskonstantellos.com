@@ -64,12 +64,30 @@ test("app.jsx moves focus to main on route change (a11y)", () => {
   assert.ok(/mainRef\.current\.focus\(/.test(src), "route change should focus main");
 });
 
-test("compiled app bundle carries the title + focus wiring", () => {
+function compiledBundle(entryPoint) {
   const manifest = require("../dist/manifest.json");
-  const out = Object.entries(manifest.outputs).find(([, v]) => v.entryPoint === "app.jsx")[0];
-  const code = fs.readFileSync(path.join(ROOT, out), "utf8");
+  const out = Object.entries(manifest.outputs).find(([, v]) => v.entryPoint === entryPoint)[0];
+  return fs.readFileSync(path.join(ROOT, out), "utf8");
+}
+
+test("compiled app bundle carries the title + focus wiring", () => {
+  const code = compiledBundle("app.jsx");
   assert.ok(code.includes("document.title"), "bundle missing document.title");
   assert.ok(code.includes("pageTitle"), "bundle missing pageTitle");
+});
+
+// ---- Contact: ResearchGate + GitHub cards ------------------------------------
+
+test("icons bundle defines the ResearchGate and GitHub brand icons", () => {
+  const code = compiledBundle("icons.jsx");
+  assert.ok(code.includes("brandResearchgate"), "Icon.brandResearchgate missing");
+  assert.ok(code.includes("brandGithub"), "Icon.brandGithub missing");
+});
+
+test("Contact maps the researchgate and github ids to their brand icons", () => {
+  const code = compiledBundle("app.jsx");
+  assert.ok(code.includes("brandResearchgate"), "Contact not wired to Icon.brandResearchgate");
+  assert.ok(code.includes("brandGithub"), "Contact not wired to Icon.brandGithub");
 });
 
 // ---- View-all threshold is exactly "more than the cap" ---------------------
