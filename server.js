@@ -30,6 +30,7 @@ const mimeTypes = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".webp": "image/webp",
+  ".avif": "image/avif",
   ".pdf": "application/pdf",
   ".txt": "text/plain; charset=utf-8",
   ".xml": "application/xml; charset=utf-8"
@@ -337,7 +338,15 @@ function cacheHeaderFor(req, contentType) {
 }
 
 function isCompressible(contentType) {
-  return /^(text\/|application\/(javascript|json|xml|xhtml\+xml)|image\/svg)/.test(contentType);
+  // text/*, SVG, the bare application/{javascript,json,xml}, and any structured
+  // syntax suffix (application/<x>+json or +xml — e.g. rss+xml, feed+json,
+  // manifest+json) which the bare alternation above would otherwise miss.
+  return (
+    /^text\//.test(contentType) ||
+    /^image\/svg/.test(contentType) ||
+    /^application\/(javascript|json|xml|xhtml\+xml)(;|$)/.test(contentType) ||
+    /^application\/[\w.+-]+\+(json|xml)(;|$)/.test(contentType)
+  );
 }
 
 // Quality 6 (not the zlib default of 11). For this content, q11 cost ~250ms of
@@ -670,11 +679,12 @@ const server = http.createServer((req, res) => {
         .join("\n") +
       `\n</urlset>\n`;
 
-    res.writeHead(200, {
+    // Compressed like every other text response (the body is deterministic per
+    // process, so it is keyed by a stable name and compressed at most once).
+    writeCompressed(req, res, {
       "Content-Type": "application/xml; charset=utf-8",
       "Cache-Control": "public, max-age=3600",
-    });
-    res.end(xml);
+    }, xml, "feed:sitemap");
     return;
   }
 
@@ -710,11 +720,10 @@ const server = http.createServer((req, res) => {
       }),
     };
 
-    res.writeHead(200, {
+    writeCompressed(req, res, {
       "Content-Type": "application/feed+json; charset=utf-8",
       "Cache-Control": "public, max-age=3600",
-    });
-    res.end(JSON.stringify(feed, null, 2));
+    }, JSON.stringify(feed, null, 2), "feed:json");
     return;
   }
 
@@ -758,11 +767,10 @@ const server = http.createServer((req, res) => {
       `</channel>\n` +
       `</rss>\n`;
 
-    res.writeHead(200, {
+    writeCompressed(req, res, {
       "Content-Type": "application/rss+xml; charset=utf-8",
       "Cache-Control": "public, max-age=3600",
-    });
-    res.end(xml);
+    }, xml, "feed:rss");
     return;
   }
 
