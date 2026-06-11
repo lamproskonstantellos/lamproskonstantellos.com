@@ -118,7 +118,20 @@ function loadArticleMeta(slug) {
       validateArticle,
     };
     new Function("window", "defineArticle", code)(fakeWindow, capture);
-    if (captured) validateArticle(captured);
+    if (captured) {
+      validateArticle(captured);
+      // The folder name is the single owner of the slug: it drives discovery,
+      // routing, the sitemap <loc> and the injected <script src>. The article's
+      // own `slug` field drives the RSS/feed <link>/guid and the canonical
+      // URL. If the two disagree the canonical/feed URLs point at a path the
+      // server cannot route — so reject the divergence here instead of shipping
+      // it (the same fail-loud policy as an invalid field).
+      if (captured.slug !== slug) {
+        throw new Error(
+          `folder "${slug}" does not match article slug "${captured.slug}"`
+        );
+      }
+    }
     return captured;
   } catch (e) {
     console.error(`Skipping article "${slug}" — ${e.message}`);
