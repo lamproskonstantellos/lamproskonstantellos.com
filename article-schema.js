@@ -24,6 +24,15 @@
         );
       }
     }
+    // The slug is a URL path segment (/news/<slug>) and a folder name, so it
+    // must be URL-safe. Constraining it here (both worlds) keeps a stray
+    // character out of the unescaped <loc>/<link>/<guid> interpolations in the
+    // sitemap and RSS feed and out of the injected <script src> path.
+    if (!/^[a-z0-9-]+$/.test(article.slug)) {
+      throw new Error(
+        `[article] "${article.slug}" has an invalid slug — use lowercase letters, digits and hyphens`
+      );
+    }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(article.date)) {
       throw new Error(
         `[article] "${article.slug}" has invalid date "${article.date}" — expected YYYY-MM-DD`

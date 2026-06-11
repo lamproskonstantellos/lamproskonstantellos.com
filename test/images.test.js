@@ -53,6 +53,33 @@ test("preloaded hero is a real, smaller AVIF (LCP win)", () => {
   assert.ok(buf.length < fs.statSync(jpg).size, "AVIF should be smaller than the JPG");
 });
 
+test("AVIF is served as image/avif (not octet-stream under nosniff)", async () => {
+  // The hero AVIF is preloaded (as=image, type=image/avif) and offered via
+  // <source type="image/avif">. Served as application/octet-stream with the
+  // site's X-Content-Type-Options: nosniff, the preload is dropped and the
+  // source can be refused — so the registered MIME must be image/avif.
+  const avifPath = "/" + SITE.heroImage.replace(/^\//, "").replace(/\.(jpe?g|png)$/i, ".avif");
+  const res = await request(base, avifPath);
+  assert.equal(res.status, 200, `${avifPath} should exist after build`);
+  assert.equal(res.headers["content-type"], "image/avif");
+});
+
+test("the generated feeds are compressed and round-trip (rss, feed.json)", async () => {
+  for (const path of ["/rss.xml", "/feed.json"]) {
+    const identity = await request(base, path);
+    const br = await request(base, path, { headers: { "Accept-Encoding": "br" } });
+    assert.equal(br.headers["content-encoding"], "br", `${path} not brotli-compressed`);
+    assert.equal(br.headers["vary"], "Accept-Encoding", `${path} missing Vary`);
+    assert.ok(br.body.length < identity.body.length, `${path} compressed not smaller`);
+    assert.ok(
+      zlib.brotliDecompressSync(br.body).equals(identity.body),
+      `${path} brotli payload does not round-trip`
+    );
+    // No Accept-Encoding → identity, byte-identical to the characterization golden.
+    assert.equal(identity.headers["content-encoding"], undefined, `${path} identity has an encoding`);
+  }
+});
+
 test("brotli and gzip responses round-trip to the original bytes", async () => {
   const original = fs.readFileSync(path.join(ROOT, "styles.css"));
   const br = await request(base, "/styles.css", { headers: { "Accept-Encoding": "br" } });

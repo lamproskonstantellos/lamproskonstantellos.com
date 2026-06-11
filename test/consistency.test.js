@@ -117,6 +117,58 @@ test("photo alignment lives in article data", () => {
   assert.equal(ieee.photos[0].align, "top");
 });
 
+// ---- C8: the folder name is the single owner of an article's slug ----------
+
+test("every discovered article's folder name equals its slug field", () => {
+  for (const slug of server.discoverArticleSlugs()) {
+    const a = server.loadArticleMeta(slug);
+    assert.ok(a, `${slug} failed to load`);
+    assert.equal(a.slug, slug, `folder "${slug}" diverges from slug field "${a.slug}"`);
+  }
+});
+
+test("loadArticleMeta skips an article whose slug field diverges from its folder", () => {
+  const folder = "__consistency_divergent__";
+  const dir = path.join(ROOT, "news", folder);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, "article.js"),
+    // Valid in every respect EXCEPT that slug !== folder — which would make the
+    // RSS/feed/canonical URL (/news/elsewhere) unroutable and break the browser
+    // getArticle(folder) lookup while the server still returns 200.
+    `defineArticle({ slug: "elsewhere", date: "2026-01-01", dateLabel: "x", title: "t", excerpt: "e", body: ["b"] });`
+  );
+  try {
+    assert.equal(server.loadArticleMeta(folder), null);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ---- C9: an article slug must be URL-safe (both worlds) --------------------
+
+test("validateArticle rejects a slug with URL-unsafe characters", () => {
+  const base = { date: "2026-01-01", dateLabel: "x", title: "t", excerpt: "e", body: ["b"] };
+  for (const bad of ["a/b", "a b", "R&D", "a<b", "Upper"]) {
+    assert.throws(() => schema.validateArticle({ ...base, slug: bad }), /invalid slug/, bad);
+  }
+  assert.doesNotThrow(() => schema.validateArticle({ ...base, slug: "7th-power-gas-forum-athens" }));
+});
+
+// ---- C10: contact links never diverge from site.config socialLinks ---------
+
+test("PROFILE.contact hrefs (minus email) are exactly site.config.socialLinks", () => {
+  const code = fs.readFileSync(path.join(ROOT, "data.js"), "utf8");
+  const window = { SITE, validateArticle: schema.validateArticle, compareByDateDesc: schema.compareByDateDesc };
+  // eslint-disable-next-line no-new-func
+  new Function("window", code)(window);
+  const social = window.PROFILE.contact
+    .filter((c) => c.id !== "email")
+    .map((c) => c.href);
+  // Same set, same order: the contact row and JSON-LD sameAs share one list.
+  assert.deepEqual(social, SITE.socialLinks, "contact links drifted from socialLinks");
+});
+
 // ---- C3: server and browser validate articles identically ------------------
 
 test("validateArticle rejects the same invalid article in both worlds", () => {

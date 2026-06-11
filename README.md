@@ -35,6 +35,7 @@ While editing `.jsx` files, run `npm run watch` in a second terminal — esbuild
 ├── site.config.js         Single source of truth for site identity (dual Node/browser)
 ├── routes.js              Route table: parseRoute / routeToPath / isValidSpaRoute / pageTitle (dual)
 ├── article-schema.js      Article validation + newest-first comparator (dual)
+├── ui-helpers.js          Share links + scroll-spy resolver (dual Node/browser)
 ├── data.js                Profile, hero, about, publications, contact, selectors
 ├── styles.css             Global stylesheet
 ├── index.html             Single HTML entry with __META_*__ placeholders
@@ -49,10 +50,12 @@ While editing `.jsx` files, run `npm run watch` in a second terminal — esbuild
 └── news/                  Per-article folders, each with article.js + images
 ```
 
-The route table (`routes.js`) and article schema (`article-schema.js`) are loaded
-both in the browser (as `window` globals, before `data.js`) and in Node (via
-`require` from `server.js`), so the client and server share one definition of
-routes, titles, validation and sort order.
+Four modules are loaded both in the browser (as `window` globals, before
+`data.js`) and in Node (via `require` from `server.js`): `site.config.js`
+(site identity), `routes.js` (the route table, titles), `article-schema.js`
+(article validation and sort order) and `ui-helpers.js` (share links and the
+scroll-spy resolver). Because both worlds share one definition, the client and
+server can never diverge on routes, titles, validation, sort order or identity.
 
 ## Testing
 

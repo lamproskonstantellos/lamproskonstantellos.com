@@ -72,18 +72,28 @@ test("article meta matches article.js source", () => {
   assert.equal(article.dateModified, a.date);
 });
 
-// ---- og:image is genuinely 1200x630 (read PNG IHDR, no deps) ---------------
+// ---- og:image:width/height are accurate per route (no hardcoded 1200x630) --
 
-test("og-image.png is 1200x630 and index.html declares those dimensions", () => {
+test("og:image dimensions are per-route accurate: default 1200x630, covers real", async () => {
+  // The default share image (home / list / 404) is genuinely 1200x630.
   const buf = fs.readFileSync(path.join(__dirname, "../og-image.png"));
   // PNG: 8-byte sig, then IHDR length(4)+type(4), width @16, height @20 (BE).
-  const width = buf.readUInt32BE(16);
-  const height = buf.readUInt32BE(20);
-  assert.equal(width, 1200);
-  assert.equal(height, 630);
-  const html = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
-  assert.match(html, /<meta property="og:image:width" content="1200"/);
-  assert.match(html, /<meta property="og:image:height" content="630"/);
+  assert.equal(buf.readUInt32BE(16), 1200);
+  assert.equal(buf.readUInt32BE(20), 630);
+
+  const home = (await request(base, "/")).body.toString("utf8");
+  assert.match(home, /<meta property="og:image:width" content="1200" \/>/);
+  assert.match(home, /<meta property="og:image:height" content="630" \/>/);
+
+  // The IEEE article's og:image is its cover, which is 3840x2160 — so the page
+  // must declare the cover's real pixels, never inherit the default 1200x630.
+  const article = (await request(base, `/news/${ARTICLE}`)).body.toString("utf8");
+  assert.match(article, /<meta property="og:image:width" content="3840" \/>/);
+  assert.match(article, /<meta property="og:image:height" content="2160" \/>/);
+  assert.ok(
+    !/og:image:width" content="1200"/.test(article),
+    "article must not declare the default image's dimensions"
+  );
 });
 
 // ---- JSON-LD Article: ISO dates, consistent author/publisher ---------------

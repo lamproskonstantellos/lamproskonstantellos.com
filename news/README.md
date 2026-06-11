@@ -50,7 +50,7 @@ defineArticle({
 
 | Field | Required | Type | Used for |
 |-------|----------|------|----------|
-| `slug` | ✅ | string | URL `/news/<slug>` (must match the folder name) |
+| `slug` | ✅ | string | URL `/news/<slug>` — must equal the folder name; lowercase letters, digits and hyphens only |
 | `date` | ✅ | `YYYY-MM-DD` | Sorting (newest first), sitemap/RSS/feed dates |
 | `dateLabel` | ✅ | string | Human-readable date on the card/article |
 | `title` | ✅ | string | Heading, `<title>`, JSON-LD headline |
