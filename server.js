@@ -68,7 +68,41 @@ function loadAssetMap() {
   }
 }
 
+// Read an image's pixel dimensions from its header bytes — the PNG IHDR or the
+// JPEG Start-Of-Frame marker — with no external dependency. Used to declare
+// accurate og:image:width/height per route: the article cover images are not
+// 1200x630, so a single hardcoded pair would misreport every article to social
+// crawlers. Returns { width, height }, or null if missing/unparseable.
+function imageDims(absPath) {
+  let buf;
+  try { buf = fs.readFileSync(absPath); } catch { return null; }
+  // PNG: 8-byte signature, IHDR length(4)+type(4), then width@16 height@20 (BE).
+  if (buf.length >= 24 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+  }
+  // JPEG: walk the segments to the SOF marker (SOF0..SOF15, excluding the
+  // non-frame C4/C8/CC); its payload is height then width as 16-bit BE.
+  if (buf.length >= 4 && buf[0] === 0xff && buf[1] === 0xd8) {
+    let i = 2;
+    while (i + 9 < buf.length) {
+      if (buf[i] !== 0xff) { i++; continue; }
+      const marker = buf[i + 1];
+      if (marker === 0xff) { i++; continue; } // padding fill byte
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        return { height: buf.readUInt16BE(i + 5), width: buf.readUInt16BE(i + 7) };
+      }
+      // Standalone markers carry no length: TEM (01), RSTn (D0-D7), SOI/EOI (D8/D9).
+      if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd9)) { i += 2; continue; }
+      const len = buf.readUInt16BE(i + 2);
+      if (len < 2) return null;
+      i += 2 + len;
+    }
+  }
+  return null;
+}
+
 const DEFAULT_IMAGE = `${SITE_CFG.url}${SITE_CFG.defaultImage}`;
+const DEFAULT_IMAGE_DIMS = imageDims(path.join(PUBLIC_DIR, SITE_CFG.defaultImage.replace(/^\//, "")));
 const DEFAULT_DESCRIPTION = SITE_CFG.defaultDescription;
 // The hero is the LCP image; preload the AVIF sibling the <picture> will pick.
 // Derived from the same SITE_CFG.heroImage the Hero component renders, so the
@@ -156,8 +190,16 @@ function jsonLdScript(obj) {
 // need to hit the filesystem on each request.
 const ARTICLE_SLUGS = discoverArticleSlugs();
 const ARTICLE_META = {};
+// Pixel dimensions of each article's cover (its og:image), read once at startup
+// so computePageMeta can declare accurate og:image:width/height without touching
+// the (multi-megabyte) image files on every request.
+const ARTICLE_COVER_DIMS = {};
 for (const slug of ARTICLE_SLUGS) {
-  ARTICLE_META[slug] = loadArticleMeta(slug);
+  const meta = loadArticleMeta(slug);
+  ARTICLE_META[slug] = meta;
+  if (meta && meta.cover) {
+    ARTICLE_COVER_DIMS[slug] = imageDims(path.join(PUBLIC_DIR, meta.cover));
+  }
 }
 const ARTICLE_SCRIPTS = ARTICLE_SLUGS
   .map((slug) => `<script src="/news/${slug}/article.js"></script>`)
@@ -185,6 +227,8 @@ function computePageMeta(pathname) {
       description: DEFAULT_DESCRIPTION,
       url: `${SITE_CFG.url}/`,
       image: DEFAULT_IMAGE,
+      imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
+      imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
       ogType: "website",
       jsonLd: PROFILE_JSONLD,
@@ -199,6 +243,8 @@ function computePageMeta(pathname) {
         "Reflections from conferences, forums, awards, and projects in renewable energy, battery storage, grid flexibility, and electricity markets.",
       url: `${SITE_CFG.url}/news`,
       image: DEFAULT_IMAGE,
+      imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
+      imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `News from ${SITE_CFG.name}`,
       ogType: "website",
       jsonLd: {
@@ -223,6 +269,8 @@ function computePageMeta(pathname) {
         "Peer-reviewed publications and conference papers on renewable energy, V2G integration, real-time grid simulation, and EV charging.",
       url: `${SITE_CFG.url}/publications`,
       image: DEFAULT_IMAGE,
+      imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
+      imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `Publications by ${SITE_CFG.name}`,
       ogType: "website",
       jsonLd: {
@@ -244,6 +292,9 @@ function computePageMeta(pathname) {
     const article = ARTICLE_META[route.slug];
     if (article) {
       const image = article.cover ? `${SITE_CFG.url}/${article.cover}` : DEFAULT_IMAGE;
+      // og:image dimensions track whichever image `image` points at: the
+      // article's own cover when it has one, else the default 1200x630 image.
+      const imageDimensions = article.cover ? ARTICLE_COVER_DIMS[route.slug] : DEFAULT_IMAGE_DIMS;
 
       const articleBody = Array.isArray(article.body) ? article.body.join("\n\n") : "";
       const wordCount = articleBody ? articleBody.trim().split(/\s+/).length : 0;
@@ -290,6 +341,8 @@ function computePageMeta(pathname) {
         description: article.excerpt,
         url: `${SITE_CFG.url}/news/${article.slug}`,
         image,
+        imageWidth: imageDimensions && imageDimensions.width,
+        imageHeight: imageDimensions && imageDimensions.height,
         imageAlt: article.title,
         ogType: "article",
         jsonLd: {
@@ -308,6 +361,8 @@ function computePageMeta(pathname) {
     description: DEFAULT_DESCRIPTION,
     url: `${SITE_CFG.url}/`,
     image: DEFAULT_IMAGE,
+    imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
+    imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
     imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
     ogType: "website",
     jsonLd: null,
@@ -443,6 +498,11 @@ function injectMeta(html, meta) {
     .replace(/__META_DESCRIPTION__/g, () => escapeHtml(meta.description))
     .replace(/__META_URL__/g, () => escapeHtml(meta.url))
     .replace(/__META_IMAGE__/g, () => escapeHtml(meta.image))
+    .replace(/__META_IMAGE_DIMS__/g, () =>
+      meta.imageWidth && meta.imageHeight
+        ? `<meta property="og:image:width" content="${meta.imageWidth}" />\n` +
+          `<meta property="og:image:height" content="${meta.imageHeight}" />`
+        : "")
     .replace(/__META_IMAGE_ALT__/g, () => escapeHtml(meta.imageAlt || meta.title))
     .replace(/__META_OG_TYPE__/g, () => escapeHtml(meta.ogType))
     .replace(/__META_JSONLD__/g, () => (meta.jsonLd ? jsonLdScript(meta.jsonLd) : ""))
