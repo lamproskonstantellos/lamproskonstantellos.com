@@ -1,5 +1,5 @@
-/* global React, Icon, Picture, getRecentNews, getArticle, LIMITS,
-   asset, routeToPath, handleAnchorClick,
+/* global React, Icon, Picture, SITE, getRecentNews, getArticle, LIMITS,
+   asset, routeToPath, handleAnchorClick, shareLinks,
    useReveal, renderInline, SectionHeader, ViewAllLink */
 
 /* ============================================================
@@ -169,6 +169,80 @@ function Lightbox({ src, alt, onClose }) {
   );
 }
 
+function ArticleShare({ article }) {
+  // Canonical URL from config — never window.location, which on this SPA can
+  // carry transient state (hash, history entries) that must not be shared.
+  const url = SITE.url + "/news/" + article.slug;
+  const [copied, setCopied] = React.useState(false);
+  const copyTimer = React.useRef(null);
+
+  React.useEffect(() => () => clearTimeout(copyTimer.current), []);
+
+  const markCopied = () => {
+    setCopied(true);
+    clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopied(false), 1800);
+  };
+
+  // Legacy path for browsers without the async clipboard API (or where it is
+  // blocked): execCommand("copy") needs a selected element in the document.
+  const fallbackCopy = () => {
+    const ta = document.createElement("textarea");
+    ta.value = url;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch { ok = false; }
+    document.body.removeChild(ta);
+    if (ok) markCopied();
+  };
+
+  const copyUrl = () => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(markCopied, fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  };
+
+  const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
+  const nativeShare = () => {
+    // Rejects with AbortError when the user dismisses the sheet — not an error.
+    navigator.share({ title: article.title, url }).catch(() => {});
+  };
+
+  return (
+    <div className="article-share">
+      <span className="share-label">Share:</span>
+      <a
+        href={shareLinks(url).linkedin}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Share on LinkedIn"
+      >
+        <Icon.brandLinkedin style={{ width: 14, height: 14 }} /> LinkedIn
+      </a>
+      <button type="button" className={copied ? "copied" : ""} onClick={copyUrl}>
+        {copied
+          ? <Icon.check style={{ width: 14, height: 14 }} />
+          : <Icon.link style={{ width: 14, height: 14 }} />}
+        {copied ? "Copied!" : "Copy link"}
+      </button>
+      {canNativeShare && (
+        <button type="button" onClick={nativeShare}>
+          <Icon.arrowUR style={{ width: 14, height: 14 }} /> Share
+        </button>
+      )}
+      <span className="sr-only" aria-live="polite">
+        {copied ? "Link copied to clipboard" : ""}
+      </span>
+    </div>
+  );
+}
+
 function Article({ slug, navigate }) {
   const article = React.useMemo(() => getArticle(slug), [slug]);
   const [lightboxSrc, setLightboxSrc] = React.useState(null);
@@ -258,6 +332,7 @@ function Article({ slug, navigate }) {
       {lightboxSrc && (
         <Lightbox src={lightboxSrc.src} alt={lightboxSrc.alt} onClose={closeLightbox} />
       )}
+      <ArticleShare article={article} />
       {article.sources && article.sources.length > 0 && (
         <div className="article-sources">
           Sources:{" "}

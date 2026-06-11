@@ -28,6 +28,18 @@ const Icon = {
       <path d="M5 9L9 5" /><path d="M6 5h3v3" />
     </svg>
   ),
+  link: (p) => (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M6.5 9.5l3-3" />
+      <path d="M7.5 4.5l1-1a2.5 2.5 0 0 1 3.5 3.5l-1 1" />
+      <path d="M8.5 11.5l-1 1a2.5 2.5 0 0 1-3.5-3.5l1-1" />
+    </svg>
+  ),
+  check: (p) => (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M3 8.5l3.5 3.5L13 4.5" />
+    </svg>
+  ),
   trophy: (p) => (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
       <path d="M5 2h6v3a3 3 0 0 1-6 0V2z" />

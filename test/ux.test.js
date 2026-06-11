@@ -90,6 +90,40 @@ test("Contact maps the researchgate and github ids to their brand icons", () => 
   assert.ok(code.includes("brandGithub"), "Contact not wired to Icon.brandGithub");
 });
 
+// ---- Article share row -------------------------------------------------------
+
+test("Article wires the share row above the sources block, URL from config", () => {
+  const src = fs.readFileSync(path.join(ROOT, "components/news.jsx"), "utf8");
+  assert.ok(
+    src.includes('SITE.url + "/news/" + article.slug'),
+    "share URL must be canonical (from config), not window.location"
+  );
+  assert.ok(src.includes("shareLinks(url).linkedin"), "LinkedIn href must come from shareLinks");
+  assert.match(src, /aria-label="Share on LinkedIn"/);
+  assert.match(src, /target="_blank"[\s\S]{0,40}rel="noopener noreferrer"/);
+  const shareAt = src.indexOf("<ArticleShare article={article} />");
+  const sourcesAt = src.indexOf("article.sources && article.sources.length > 0 &&");
+  assert.ok(shareAt !== -1, "Article must render ArticleShare");
+  assert.ok(sourcesAt !== -1 && shareAt < sourcesAt, "share row must sit above the sources block");
+});
+
+test("copy-link uses the clipboard API with an execCommand fallback and a live announcement", () => {
+  const src = fs.readFileSync(path.join(ROOT, "components/news.jsx"), "utf8");
+  assert.ok(src.includes("navigator.clipboard.writeText(url)"), "missing clipboard copy");
+  assert.ok(src.includes('document.execCommand("copy")'), "missing legacy clipboard fallback");
+  assert.match(src, /aria-live="polite"/, "copied state must be announced");
+  assert.ok(src.includes("clearTimeout(copyTimer.current)"), "copied-state timer must be cleared on unmount");
+});
+
+test("compiled news bundle carries the share row + copy handler", () => {
+  const code = compiledBundle("components/news.jsx");
+  assert.ok(code.includes("article-share"), "share row class missing from bundle");
+  assert.ok(code.includes("shareLinks"), "bundle must call the shared shareLinks helper");
+  assert.ok(code.includes("writeText"), "bundle missing clipboard copy");
+  assert.ok(code.includes("execCommand"), "bundle missing clipboard fallback");
+  assert.ok(code.includes("aria-live"), "bundle missing the copied announcement");
+});
+
 // ---- View-all threshold is exactly "more than the cap" ---------------------
 
 test("news preview cap: View-all appears only when items exceed the limit", () => {
