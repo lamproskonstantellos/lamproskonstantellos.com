@@ -188,6 +188,7 @@ test("private paths are not served", async () => {
 test("intended-public files are served", async () => {
   for (const p of [
     "/site.config.js",
+    "/ui-helpers.js",
     "/data.js",
     "/robots.txt",
     "/site.webmanifest",
