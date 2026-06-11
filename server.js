@@ -4,6 +4,8 @@ const path = require("path");
 const zlib = require("zlib");
 const { URL } = require("url");
 const SITE_CFG = require("./site.config.js");
+const { parseRoute, isValidSpaRoute: routeIsValidSpa } = require("./routes.js");
+const { validateArticle, compareByDateDesc } = require("./article-schema.js");
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
@@ -67,6 +69,10 @@ function loadAssetMap() {
 
 const DEFAULT_IMAGE = `${SITE_CFG.url}${SITE_CFG.defaultImage}`;
 const DEFAULT_DESCRIPTION = SITE_CFG.defaultDescription;
+// The hero is the LCP image; preload the AVIF sibling the <picture> will pick.
+// Derived from the same SITE_CFG.heroImage the Hero component renders, so the
+// preload can never point at a renamed/missing file.
+const HERO_PRELOAD_IMAGE = SITE_CFG.heroImage.replace(/\.(jpe?g|png)$/i, ".avif");
 
 const PROFILE_JSONLD = {
   "@context": "https://schema.org",
@@ -90,7 +96,15 @@ const PROFILE_JSONLD = {
   ]
 };
 
-// Evaluate a single article.js in a tiny sandbox to extract its metadata.
+// Execute a single article.js to extract its metadata.
+//
+// This is NOT a security sandbox: article.js files are first-party content in
+// this repo (the trust boundary is the repository, not the request), so they
+// are run with a plain Function. The fake `window`/`defineArticle` shim only
+// captures the object the article registers. The captured article is then run
+// through the SAME validateArticle the browser uses, so a field the client
+// would reject is logged and skipped here instead of silently shipping into
+// the RSS / JSON-LD / sitemap output.
 function loadArticleMeta(slug) {
   const file = path.join(PUBLIC_DIR, "news", slug, "article.js");
   if (!fs.existsSync(file)) return null;
@@ -101,11 +115,13 @@ function loadArticleMeta(slug) {
     const fakeWindow = {
       NEWS_ARTICLES: { push: capture },
       defineArticle: capture,
+      validateArticle,
     };
     new Function("window", "defineArticle", code)(fakeWindow, capture);
+    if (captured) validateArticle(captured);
     return captured;
   } catch (e) {
-    console.error(`Failed to parse article meta for "${slug}":`, e.message);
+    console.error(`Skipping article "${slug}" — ${e.message}`);
     return null;
   }
 }
@@ -139,9 +155,11 @@ function escapeHtml(s) {
 }
 
 function computePageMeta(pathname) {
-  const p = pathname.replace(/\/+$/, "") || "/";
+  // parseRoute is the shared route table (routes.js) — same matcher the client
+  // and isValidSpaRoute use, so the meta branch can never drift from routing.
+  const route = parseRoute(pathname);
 
-  if (p === "/") {
+  if (route.page === "home") {
     return {
       title: `${SITE_CFG.name} - ${SITE_CFG.jobTitle}`,
       description: DEFAULT_DESCRIPTION,
@@ -150,11 +168,11 @@ function computePageMeta(pathname) {
       imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
       ogType: "website",
       jsonLd: PROFILE_JSONLD,
-      preloadImage: "/lampros-konstantellos-picture.avif",
+      preloadImage: HERO_PRELOAD_IMAGE,
     };
   }
 
-  if (p === "/news") {
+  if (route.page === "news-list") {
     return {
       title: `News - ${SITE_CFG.name}`,
       description:
@@ -178,7 +196,7 @@ function computePageMeta(pathname) {
     };
   }
 
-  if (p === "/publications") {
+  if (route.page === "publications-list") {
     return {
       title: `Publications - ${SITE_CFG.name}`,
       description:
@@ -202,9 +220,8 @@ function computePageMeta(pathname) {
     };
   }
 
-  const m = p.match(/^\/news\/([^/]+)$/);
-  if (m) {
-    const article = ARTICLE_META[m[1]];
+  if (route.page === "article") {
+    const article = ARTICLE_META[route.slug];
     if (article) {
       const image = article.cover ? `${SITE_CFG.url}/${article.cover}` : DEFAULT_IMAGE;
 
@@ -323,15 +340,11 @@ function writeCompressed(req, res, headers, data) {
   res.end(data);
 }
 
-// True when pathname maps to a route the SPA can render.
+// True when pathname maps to a route the SPA can render. Delegates to the
+// shared route table; an article route is valid only if its slug was
+// discovered at startup.
 function isValidSpaRoute(pathname) {
-  const p = pathname.replace(/\/+$/, "") || "/";
-  if (p === "/" || p === "/news" || p === "/publications") return true;
-  const m = p.match(/^\/news\/([^/]+)$/);
-  if (m) {
-    return Object.prototype.hasOwnProperty.call(ARTICLE_META, m[1]);
-  }
-  return false;
+  return routeIsValidSpa(pathname, ARTICLE_SLUGS);
 }
 
 function serveIndex(req, res, filePath, pathname, statusCode = 200) {
@@ -344,6 +357,7 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
     // Inject per-route meta first so later replacements see the populated HTML
     const meta = computePageMeta(pathname);
     const processedHtml = html
+      .replace(/__META_SITE_NAME__/g, escapeHtml(SITE_CFG.name))
       .replace(/__META_TITLE__/g, escapeHtml(meta.title))
       .replace(/__META_DESCRIPTION__/g, escapeHtml(meta.description))
       .replace(/__META_URL__/g, escapeHtml(meta.url))
@@ -513,7 +527,7 @@ const server = http.createServer((req, res) => {
     const items = ARTICLE_SLUGS
       .map((slug) => ARTICLE_META[slug])
       .filter((a) => a && a.date)
-      .sort((a, b) => (a.date < b.date ? 1 : -1));
+      .sort(compareByDateDesc);
 
     const feed = {
       version: "https://jsonfeed.org/version/1.1",
@@ -553,7 +567,7 @@ const server = http.createServer((req, res) => {
     const items = ARTICLE_SLUGS
       .map((slug) => ARTICLE_META[slug])
       .filter((a) => a && a.date)
-      .sort((a, b) => (a.date < b.date ? 1 : -1));
+      .sort(compareByDateDesc);
 
     const itemXml = items
       .map((a) => {

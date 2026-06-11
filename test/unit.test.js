@@ -96,7 +96,14 @@ test("computePageMeta unknown route → not-found meta", () => {
 
 function loadDefineArticle() {
   const code = fs.readFileSync(path.join(__dirname, "../data.js"), "utf8");
-  const window = { SITE: require("../site.config.js") };
+  // data.js relies on the same globals the browser loads before it: SITE
+  // (site.config.js) and validateArticle/compareByDateDesc (article-schema.js).
+  const schema = require("../article-schema.js");
+  const window = {
+    SITE: require("../site.config.js"),
+    validateArticle: schema.validateArticle,
+    compareByDateDesc: schema.compareByDateDesc,
+  };
   // eslint-disable-next-line no-new-func
   new Function("window", code)(window);
   return window.defineArticle;
@@ -141,25 +148,34 @@ test("defineArticle rejects non-array body / photos / keywords / topics", () => 
   assert.throws(() => defineArticle(bad((a) => (a.topics = "no"))), /non-array topics/);
 });
 
-// ---- routeToPath from COMPILED shared bundle -------------------------------
+// ---- shared route table (routes.js, used by client AND server) -------------
 
-function loadCompiledRouteToPath() {
-  const dir = path.join(__dirname, "../dist/components");
-  const file = fs.readdirSync(dir).find((f) => /^shared-[A-Z0-9]+\.js$/.test(f));
-  const code = fs.readFileSync(path.join(dir, file), "utf8");
-  const window = {};
-  const React = { createElement: () => ({}), Fragment: "F" };
-  // eslint-disable-next-line no-new-func
-  new Function("window", "React", code)(window, React);
-  return window.routeToPath;
-}
+const routes = require("../routes.js");
 
-test("routeToPath (compiled) corpus", () => {
-  const routeToPath = loadCompiledRouteToPath();
-  assert.equal(routeToPath({ page: "home" }), "/");
-  assert.equal(routeToPath({ page: "news-list" }), "/news");
-  assert.equal(routeToPath({ page: "publications-list" }), "/publications");
-  assert.equal(routeToPath({ page: "article", slug: "s" }), "/news/s");
-  assert.equal(routeToPath({ page: "home", section: "contact" }), "/#contact");
-  assert.equal(routeToPath(null), "/");
+test("parseRoute corpus", () => {
+  assert.deepEqual(routes.parseRoute("/"), { page: "home", section: null });
+  assert.deepEqual(routes.parseRoute(""), { page: "home", section: null });
+  assert.deepEqual(routes.parseRoute("/news"), { page: "news-list" });
+  assert.deepEqual(routes.parseRoute("/news/"), { page: "news-list" });
+  assert.deepEqual(routes.parseRoute("/publications"), { page: "publications-list" });
+  assert.deepEqual(routes.parseRoute("/news/some-slug"), { page: "article", slug: "some-slug" });
+  assert.deepEqual(routes.parseRoute("/news/a/b"), { page: "not-found" });
+  assert.deepEqual(routes.parseRoute("/random"), { page: "not-found" });
+});
+
+test("routeToPath corpus (inverse of parseRoute)", () => {
+  assert.equal(routes.routeToPath({ page: "home" }), "/");
+  assert.equal(routes.routeToPath({ page: "news-list" }), "/news");
+  assert.equal(routes.routeToPath({ page: "publications-list" }), "/publications");
+  assert.equal(routes.routeToPath({ page: "article", slug: "s" }), "/news/s");
+  assert.equal(routes.routeToPath({ page: "home", section: "contact" }), "/#contact");
+  assert.equal(routes.routeToPath(null), "/");
+});
+
+test("isValidSpaRoute respects known slugs", () => {
+  const known = ["a", "b"];
+  assert.equal(routes.isValidSpaRoute("/news/a", known), true);
+  assert.equal(routes.isValidSpaRoute("/news/c", known), false);
+  assert.equal(routes.isValidSpaRoute("/news/a", undefined), true); // client: any slug
+  assert.equal(routes.isValidSpaRoute("/random", known), false);
 });

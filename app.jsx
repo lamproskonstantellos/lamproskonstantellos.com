@@ -1,27 +1,18 @@
-/* global React, ReactDOM, PROFILE, Icon, SectionHeader, Picture,
-   routeToPath, handleAnchorClick,
+/* global React, ReactDOM, SITE, PROFILE, Icon, SectionHeader, Picture,
+   parseRoute, routeToPath, handleAnchorClick,
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
 
 const { useState, useEffect, useCallback } = React;
 
 /* ============================================================
-   ROUTING — URL-based
+   ROUTING — URL-based (parseRoute lives in routes.js, shared
+   with server.js so the route table can never diverge)
    /                     home
    /news                 news list page
    /news/<slug>          single article
    /publications         publications list page
    ============================================================ */
-
-function parseRoute(pathname) {
-  const p = pathname.replace(/\/+$/, "") || "/";
-  if (p === "/" || p === "") return { page: "home", section: null };
-  if (p === "/news") return { page: "news-list" };
-  if (p === "/publications") return { page: "publications-list" };
-  const m = p.match(/^\/news\/([^/]+)$/);
-  if (m) return { page: "article", slug: m[1] };
-  return { page: "not-found" };
-}
 
 /* ============================================================
    HEADER
@@ -113,7 +104,7 @@ function Hero({ navigate }) {
       </div>
       <div className="hero-photo">
         <Picture
-          src="/lampros-konstantellos-picture.jpg"
+          src={SITE.heroImage}
           alt={PROFILE.name}
           width="720"
           height="900"
@@ -173,7 +164,7 @@ function Footer() {
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
-        <div className="copy">© 2026 {PROFILE.name}</div>
+        <div className="copy">© {new Date().getFullYear()} {PROFILE.name}</div>
       </div>
     </footer>
   );
