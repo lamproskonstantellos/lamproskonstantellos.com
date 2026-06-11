@@ -285,11 +285,13 @@ function computePageMeta(pathname) {
     }
   }
 
-  // Unknown route - used by the SPA NotFound page
+  // Unknown route — used by the SPA NotFound page (served with HTTP 404).
+  // Canonical/og:url point at the home root rather than reflecting the
+  // requested (attacker-controllable) pathname back into shared metadata.
   return {
     title: `Page not found - ${SITE_CFG.name}`,
     description: DEFAULT_DESCRIPTION,
-    url: `${SITE_CFG.url}${pathname}`,
+    url: `${SITE_CFG.url}/`,
     image: DEFAULT_IMAGE,
     imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
     ogType: "website",
@@ -583,6 +585,16 @@ const server = http.createServer((req, res) => {
       sendStatus(res, 400, "400 Bad Request");
       return;
     }
+
+    // /index.html is the home page under a second URL. Redirect to "/" so there
+    // is one canonical home (previously it served 200 with "Page not found"
+    // meta and a self-canonical to /index.html — a duplicate-content bug).
+    if (urlPathname === "/index.html") {
+      res.writeHead(301, { "Location": "/", "Content-Type": "text/plain; charset=utf-8" });
+      res.end("Moved Permanently");
+      return;
+    }
+
     let pathname = urlPathname;
 
     if (isPrivatePath(urlPathname)) {
