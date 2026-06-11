@@ -94,7 +94,7 @@ test("computePageMeta unknown route → not-found meta", () => {
 
 // ---- defineArticle validation (data.js via window shim) --------------------
 
-function loadDefineArticle() {
+function loadDataWindow() {
   const code = fs.readFileSync(path.join(__dirname, "../data.js"), "utf8");
   // data.js relies on the same globals the browser loads before it: SITE
   // (site.config.js) and validateArticle/compareByDateDesc (article-schema.js).
@@ -106,7 +106,11 @@ function loadDefineArticle() {
   };
   // eslint-disable-next-line no-new-func
   new Function("window", code)(window);
-  return window.defineArticle;
+  return window;
+}
+
+function loadDefineArticle() {
+  return loadDataWindow().defineArticle;
 }
 
 const validArticle = () => ({
@@ -146,6 +150,22 @@ test("defineArticle rejects non-array body / photos / keywords / topics", () => 
   assert.throws(() => defineArticle(bad((a) => (a.photos = "no"))), /non-array photos/);
   assert.throws(() => defineArticle(bad((a) => (a.keywords = "no"))), /non-array keywords/);
   assert.throws(() => defineArticle(bad((a) => (a.topics = "no"))), /non-array topics/);
+});
+
+// ---- PROFILE.contact entries (data.js via window shim) ----------------------
+
+test("PROFILE.contact lists ResearchGate and GitHub, with email kept last", () => {
+  const { PROFILE } = loadDataWindow();
+  const hrefs = PROFILE.contact.map((c) => c.href);
+  assert.ok(
+    hrefs.includes("https://www.researchgate.net/profile/Lampros-Konstantellos"),
+    "ResearchGate contact link missing"
+  );
+  assert.ok(
+    hrefs.includes("https://github.com/lamproskonstantellos"),
+    "GitHub contact link missing"
+  );
+  assert.equal(PROFILE.contact[PROFILE.contact.length - 1].id, "email", "email must stay last");
 });
 
 // ---- shared route table (routes.js, used by client AND server) -------------

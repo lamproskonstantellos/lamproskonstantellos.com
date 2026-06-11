@@ -64,12 +64,106 @@ test("app.jsx moves focus to main on route change (a11y)", () => {
   assert.ok(/mainRef\.current\.focus\(/.test(src), "route change should focus main");
 });
 
-test("compiled app bundle carries the title + focus wiring", () => {
+function compiledBundle(entryPoint) {
   const manifest = require("../dist/manifest.json");
-  const out = Object.entries(manifest.outputs).find(([, v]) => v.entryPoint === "app.jsx")[0];
-  const code = fs.readFileSync(path.join(ROOT, out), "utf8");
+  const out = Object.entries(manifest.outputs).find(([, v]) => v.entryPoint === entryPoint)[0];
+  return fs.readFileSync(path.join(ROOT, out), "utf8");
+}
+
+test("compiled app bundle carries the title + focus wiring", () => {
+  const code = compiledBundle("app.jsx");
   assert.ok(code.includes("document.title"), "bundle missing document.title");
   assert.ok(code.includes("pageTitle"), "bundle missing pageTitle");
+});
+
+// ---- Contact: ResearchGate + GitHub cards ------------------------------------
+
+test("icons bundle defines the ResearchGate and GitHub brand icons", () => {
+  const code = compiledBundle("icons.jsx");
+  assert.ok(code.includes("brandResearchgate"), "Icon.brandResearchgate missing");
+  assert.ok(code.includes("brandGithub"), "Icon.brandGithub missing");
+});
+
+test("Contact maps the researchgate and github ids to their brand icons", () => {
+  const code = compiledBundle("app.jsx");
+  assert.ok(code.includes("brandResearchgate"), "Contact not wired to Icon.brandResearchgate");
+  assert.ok(code.includes("brandGithub"), "Contact not wired to Icon.brandGithub");
+});
+
+// ---- Homepage scroll-spy nav -------------------------------------------------
+
+test("App observes the home sections and drives the Header via activeSection", () => {
+  const src = fs.readFileSync(path.join(ROOT, "app.jsx"), "utf8");
+  assert.match(src, /rootMargin:\s*"-45% 0px -50% 0px"/, "thin-band rootMargin missing");
+  assert.ok(src.includes("pickActiveSection("), "App must resolve the section via pickActiveSection");
+  assert.match(src, /\["about",\s*"publications",\s*"news",\s*"contact"\]/, "section order missing");
+  assert.ok(src.includes("activeSection={activeSection}"), "Header must receive activeSection");
+  assert.match(
+    src,
+    /route\.page === "home" && activeSection === it\.id/,
+    "home nav highlight must follow the scroll-spy"
+  );
+  assert.ok(src.includes("io.disconnect()"), "observer must be disconnected on leave");
+});
+
+test("compiled app bundle carries the scroll-spy wiring", () => {
+  const code = compiledBundle("app.jsx");
+  assert.ok(code.includes("IntersectionObserver"), "bundle missing the observer");
+  assert.ok(code.includes("pickActiveSection"), "bundle must call the shared helper");
+  assert.ok(code.includes("-45% 0px -50% 0px"), "bundle missing the band rootMargin");
+});
+
+// ---- Article share row -------------------------------------------------------
+
+test("Article wires the share row above the sources block, URL from config", () => {
+  const src = fs.readFileSync(path.join(ROOT, "components/news.jsx"), "utf8");
+  assert.ok(
+    src.includes('SITE.url + "/news/" + article.slug'),
+    "share URL must be canonical (from config), not window.location"
+  );
+  assert.ok(src.includes("shareLinks(url).linkedin"), "LinkedIn href must come from shareLinks");
+  assert.match(src, /aria-label="Share on LinkedIn"/);
+  assert.match(src, /target="_blank"[\s\S]{0,40}rel="noopener noreferrer"/);
+  const shareAt = src.indexOf("<ArticleShare article={article} />");
+  const sourcesAt = src.indexOf("article.sources && article.sources.length > 0 &&");
+  assert.ok(shareAt !== -1, "Article must render ArticleShare");
+  assert.ok(sourcesAt !== -1 && shareAt < sourcesAt, "share row must sit above the sources block");
+});
+
+test("copy-link uses the clipboard API with an execCommand fallback and a live announcement", () => {
+  const src = fs.readFileSync(path.join(ROOT, "components/news.jsx"), "utf8");
+  assert.ok(src.includes("navigator.clipboard.writeText(url)"), "missing clipboard copy");
+  assert.ok(src.includes('document.execCommand("copy")'), "missing legacy clipboard fallback");
+  assert.match(src, /aria-live="polite"/, "copied state must be announced");
+  assert.ok(src.includes("clearTimeout(copyTimer.current)"), "copied-state timer must be cleared on unmount");
+});
+
+test("compiled news bundle carries the share row + copy handler", () => {
+  const code = compiledBundle("components/news.jsx");
+  assert.ok(code.includes("article-share"), "share row class missing from bundle");
+  assert.ok(code.includes("shareLinks"), "bundle must call the shared shareLinks helper");
+  assert.ok(code.includes("writeText"), "bundle missing clipboard copy");
+  assert.ok(code.includes("execCommand"), "bundle missing clipboard fallback");
+  assert.ok(code.includes("aria-live"), "bundle missing the copied announcement");
+});
+
+// ---- NotFound page -----------------------------------------------------------
+
+test("NotFound offers routes onward: home, /news, /publications, contact", () => {
+  const src = fs.readFileSync(path.join(ROOT, "app.jsx"), "utf8");
+  const notFound = src.slice(src.indexOf("function NotFound"), src.indexOf("function App"));
+  assert.match(notFound, /href="\/"/, "missing back-to-home link");
+  assert.match(notFound, /href="\/news"/, "missing /news link");
+  assert.match(notFound, /href="\/publications"/, "missing /publications link");
+  assert.match(notFound, /href="\/#contact"/, "missing contact link");
+  assert.ok(notFound.includes("handleAnchorClick"), "links must go through SPA navigation");
+  assert.ok(!notFound.includes("style={{"), "404 styling lives in styles.css, not inline");
+});
+
+test("compiled app bundle carries the redesigned 404", () => {
+  const code = compiledBundle("app.jsx");
+  assert.ok(code.includes("notfound"), "bundle missing the .notfound classes");
+  assert.ok(code.includes("Page not found"), "bundle missing the 404 headline");
 });
 
 // ---- View-all threshold is exactly "more than the cap" ---------------------

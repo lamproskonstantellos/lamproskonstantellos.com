@@ -101,6 +101,19 @@ test("JSON-LD Article is schema-correct", async () => {
   assert.ok(graph.some((n) => n["@type"] === "BreadcrumbList"));
 });
 
+// ---- JSON-LD Person sameAs mirrors socialLinks ------------------------------
+
+test("home JSON-LD Person sameAs is exactly site.config socialLinks (incl. ResearchGate + GitHub)", async () => {
+  const html = (await request(base, "/")).body.toString("utf8");
+  const block = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1];
+  const graph = JSON.parse(block)["@graph"];
+  const person = graph.find((n) => n["@type"] === "ProfilePage").mainEntity;
+  assert.equal(person["@type"], "Person");
+  assert.deepEqual(person.sameAs, SITE.socialLinks, "sameAs drifted from socialLinks");
+  assert.ok(person.sameAs.includes("https://www.researchgate.net/profile/Lampros-Konstantellos"));
+  assert.ok(person.sameAs.includes("https://github.com/lamproskonstantellos"));
+});
+
 // ---- RSS 2.0 spec checks ----------------------------------------------------
 
 test("rss.xml is RSS 2.0 with RFC-822 dates, guid and atom:link self", async () => {

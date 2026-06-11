@@ -51,12 +51,14 @@ const PROFILE = {
     },
   ],
   contact: [
-    { id: "linkedin", label: "LinkedIn",       href: "https://www.linkedin.com/in/lampros-konstantellos/" },
-    { id: "scholar",  label: "Google Scholar", href: "https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" },
-    { id: "ieee",     label: "IEEE Xplore",    href: "https://ieeexplore.ieee.org/author/975219948451552" },
-    { id: "orcid",    label: "ORCID",          href: "https://orcid.org/0009-0006-9424-2087" },
-    { id: "zenodo",   label: "Zenodo",         href: "https://zenodo.org/search?page=1&size=20&q=Lampros+Konstantellos" },
-    { id: "email",    label: "Email",          href: `mailto:${window.SITE.email}` },
+    { id: "linkedin",     label: "LinkedIn",       href: "https://www.linkedin.com/in/lampros-konstantellos/" },
+    { id: "scholar",      label: "Google Scholar", href: "https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en" },
+    { id: "ieee",         label: "IEEE Xplore",    href: "https://ieeexplore.ieee.org/author/975219948451552" },
+    { id: "orcid",        label: "ORCID",          href: "https://orcid.org/0009-0006-9424-2087" },
+    { id: "zenodo",       label: "Zenodo",         href: "https://zenodo.org/search?page=1&size=20&q=Lampros+Konstantellos" },
+    { id: "researchgate", label: "ResearchGate",   href: "https://www.researchgate.net/profile/Lampros-Konstantellos" },
+    { id: "github",       label: "GitHub",         href: "https://github.com/lamproskonstantellos" },
+    { id: "email",        label: "Email",          href: `mailto:${window.SITE.email}` },
   ],
 };
 

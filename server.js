@@ -518,7 +518,7 @@ const SECURITY_HEADERS = {
 
 // The repo root is the document root, so anything not listed here is public.
 // Intended public set: index.html, styles.css, the app scripts (site.config.js,
-// routes.js, article-schema.js, data.js), dist/* bundles, vendor/* React,
+// routes.js, article-schema.js, ui-helpers.js, data.js), dist/* bundles, vendor/* React,
 // favicons/og-image/manifest/robots, and news/<slug>/article.js + images.
 // Everything below is source, config, tooling or docs and is blocked.
 const PRIVATE_PATHS = new Set([
