@@ -90,6 +90,29 @@ test("Contact maps the researchgate and github ids to their brand icons", () => 
   assert.ok(code.includes("brandGithub"), "Contact not wired to Icon.brandGithub");
 });
 
+// ---- Homepage scroll-spy nav -------------------------------------------------
+
+test("App observes the home sections and drives the Header via activeSection", () => {
+  const src = fs.readFileSync(path.join(ROOT, "app.jsx"), "utf8");
+  assert.match(src, /rootMargin:\s*"-45% 0px -50% 0px"/, "thin-band rootMargin missing");
+  assert.ok(src.includes("pickActiveSection("), "App must resolve the section via pickActiveSection");
+  assert.match(src, /\["about",\s*"publications",\s*"news",\s*"contact"\]/, "section order missing");
+  assert.ok(src.includes("activeSection={activeSection}"), "Header must receive activeSection");
+  assert.match(
+    src,
+    /route\.page === "home" && activeSection === it\.id/,
+    "home nav highlight must follow the scroll-spy"
+  );
+  assert.ok(src.includes("io.disconnect()"), "observer must be disconnected on leave");
+});
+
+test("compiled app bundle carries the scroll-spy wiring", () => {
+  const code = compiledBundle("app.jsx");
+  assert.ok(code.includes("IntersectionObserver"), "bundle missing the observer");
+  assert.ok(code.includes("pickActiveSection"), "bundle must call the shared helper");
+  assert.ok(code.includes("-45% 0px -50% 0px"), "bundle missing the band rootMargin");
+});
+
 // ---- Article share row -------------------------------------------------------
 
 test("Article wires the share row above the sources block, URL from config", () => {

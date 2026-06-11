@@ -1,5 +1,6 @@
 /* global React, ReactDOM, SITE, PROFILE, Icon, SectionHeader, Picture,
    parseRoute, routeToPath, pageTitle, getArticle, handleAnchorClick,
+   pickActiveSection,
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
 
@@ -18,7 +19,7 @@ const { useState, useEffect, useCallback, useRef } = React;
    HEADER
    ============================================================ */
 
-function Header({ route, navigate }) {
+function Header({ route, navigate, activeSection }) {
   const items = [
     { id: "about",        label: "About" },
     { id: "publications", label: "Publications" },
@@ -26,8 +27,11 @@ function Header({ route, navigate }) {
     { id: "contact",      label: "Contact" },
   ];
 
+  // On the homepage the highlight follows the scroll-spy (activeSection,
+  // null while the hero is in view); list and article pages keep their
+  // route-derived highlight.
   const isActive = (it) =>
-    (route.page === "home" && route.section === it.id) ||
+    (route.page === "home" && activeSection === it.id) ||
     (route.page === "publications-list" && it.id === "publications") ||
     (route.page === "news-list" && it.id === "news") ||
     (route.page === "article" && it.id === "news");
@@ -208,8 +212,11 @@ function NotFound({ navigate }) {
    APP
    ============================================================ */
 
+const HOME_SECTION_IDS = ["about", "publications", "news", "contact"];
+
 function App() {
   const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
+  const [activeSection, setActiveSection] = useState(null);
   const mainRef = useRef(null);
   const firstRender = useRef(true);
 
@@ -243,6 +250,43 @@ function App() {
     // preventScroll: the page components manage their own scroll-to-top.
     if (mainRef.current) mainRef.current.focus({ preventScroll: true });
   }, [route]);
+
+  // Scroll-spy (homepage only): observe the four sections against a thin band
+  // near the top of the viewport (between 45% and 50%, via rootMargin) and
+  // highlight the one crossing it. The observer reports only entries that
+  // CHANGED, so `latest` keeps the most recent observation per section and
+  // pickActiveSection (ui-helpers.js) resolves the winner — null while the
+  // hero is in view. Disconnected when leaving home.
+  useEffect(() => {
+    if (route.page !== "home") {
+      setActiveSection(null);
+      return;
+    }
+    const sections = HOME_SECTION_IDS
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+    if (!sections.length) return;
+    const latest = new Map();
+    const io = new IntersectionObserver(
+      (entries) => {
+        const bandTop = window.innerHeight * 0.45;
+        for (const e of entries) {
+          latest.set(e.target.id, {
+            id: e.target.id,
+            // isIntersecting is the authoritative "crosses the band" signal: a
+            // tall section barely overlapping the thin band can round its
+            // ratio down to 0, so clamp crossing entries to a positive value.
+            ratio: e.isIntersecting ? Math.max(e.intersectionRatio, 1e-6) : 0,
+            top: e.boundingClientRect.top - bandTop,
+          });
+        }
+        setActiveSection(pickActiveSection([...latest.values()], HOME_SECTION_IDS));
+      },
+      { rootMargin: "-45% 0px -50% 0px" }
+    );
+    sections.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [route.page]);
 
   // On first load, honor a #section hash (e.g. /#publications shared as a link).
   // parseRoute ignores the hash, so this is the only place it gets handled.
@@ -283,7 +327,7 @@ function App() {
 
   return (
     <>
-      <Header route={route} navigate={navigate} />
+      <Header route={route} navigate={navigate} activeSection={activeSection} />
       <main id="main-content" ref={mainRef} tabIndex={-1}>
         {route.page === "home" && <HomePage navigate={navigate} />}
         {route.page === "news-list" && <NewsListPage navigate={navigate} />}
