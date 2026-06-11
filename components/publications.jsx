@@ -19,7 +19,7 @@ function PublicationCard({ pub, index = 0, revealKey, isVisible }) {
       <div className="pub-body">
         {pub.award && (
           <div className="pub-award">
-            <Icon.trophy />
+            <Icon.medal />
             {pub.award}
           </div>
         )}

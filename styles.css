@@ -421,15 +421,15 @@ section.block:first-of-type { border-top: none; }
 }
 .pub-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 10px;
   font-size: 11.5px;
   color: var(--muted-2);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 10px;
   font-feature-settings: "tnum";
-  padding-right: 110px;
 }
 .pub-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted-2); }
 .pub-award {
@@ -440,22 +440,28 @@ section.block:first-of-type { border-top: none; }
   align-items: center;
   gap: 6px;
   font-family: "Inter", sans-serif;
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
   background: #fdf8ee;
   /* #8a6420: WCAG AA — 5.06:1 on the #fdf8ee badge (was #aa7c2e at 3.52:1). */
   color: #8a6420;
   border: 1px solid #e8d4a0;
-  padding: 4px 11px 4px 9px;
-  border-radius: 999px;
+  padding: 5px 10px;
+  border-radius: 6px;
   z-index: 1;
 }
 .pub-award svg {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   color: #c49030;
   flex-shrink: 0;
+}
+/* Keep the meta line clear of the absolute badge: it wraps ~7px before the
+   badge edge at any card width (badge ≈176px wide + 16px right offset). */
+.pub-award + .pub-meta {
+  padding-right: 145px;
 }
 @media (max-width: 600px) {
   .pub-award {
@@ -463,7 +469,7 @@ section.block:first-of-type { border-top: none; }
     align-self: flex-start;
     margin-bottom: 10px;
   }
-  .pub-meta {
+  .pub-award + .pub-meta {
     padding-right: 0;
   }
 }

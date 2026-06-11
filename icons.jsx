@@ -40,13 +40,10 @@ const Icon = {
       <path d="M3 8.5l3.5 3.5L13 4.5" />
     </svg>
   ),
-  trophy: (p) => (
+  medal: (p) => (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M5 2h6v3a3 3 0 0 1-6 0V2z" />
-      <path d="M5 3.5H3v1a2 2 0 0 0 2 2" />
-      <path d="M11 3.5h2v1a2 2 0 0 1-2 2" />
-      <path d="M8 8v2.5" />
-      <path d="M5.5 13h5l-.3-2.5h-4.4L5.5 13z" />
+      <circle cx="8" cy="5.5" r="3.5" />
+      <path d="M10.1 8.4 11 13.5 8 11.7 5 13.5 5.9 8.4" />
     </svg>
   ),
 
