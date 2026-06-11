@@ -227,29 +227,29 @@ function Article({ slug, navigate }) {
       </div>
       {article.photos && article.photos.length > 0 && (
         <div className="article-gallery">
-          {article.photos.map((src, i) => {
+          {article.photos.map((photo, i) => {
+            // A photo is a path string or { src, align } — alignment is article
+            // data, never a filename check inside the component.
+            const photoSrc = typeof photo === "string" ? photo : photo.src;
+            const alignTop = typeof photo === "object" && photo.align === "top";
             const photoAlt = `Photo ${i + 1} from “${article.title}”`;
+            const open = () => setLightboxSrc({ src: asset(photoSrc), alt: photoAlt });
             return (
               <div
-                className={
-                  "photo" +
-                  (src.includes("ieee-pess-2025-best-paper-award/photo-01.jpg")
-                    ? " photo-align-top"
-                    : "")
-                }
+                className={"photo" + (alignTop ? " photo-align-top" : "")}
                 key={i}
                 role="button"
                 tabIndex={0}
                 aria-label={`Open ${photoAlt} in full screen`}
-                onClick={() => setLightboxSrc({ src: asset(src), alt: photoAlt })}
+                onClick={open}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    setLightboxSrc({ src: asset(src), alt: photoAlt });
+                    open();
                   }
                 }}
               >
-                <Picture src={asset(src)} alt={photoAlt} width="800" height="600" />
+                <Picture src={asset(photoSrc)} alt={photoAlt} width="800" height="600" />
               </div>
             );
           })}

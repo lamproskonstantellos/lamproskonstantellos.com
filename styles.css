@@ -10,7 +10,9 @@
   --ink: #0a1f44;
   --ink-soft: #1f2d4a;
   --muted: #5a6680;
-  --muted-2: #6c7790;
+  /* #646e88: WCAG AA for small meta text — 4.70:1 on --bg / 5.09:1 on --surface
+     (was #6c7790 at 4.15 / 4.49, below the 4.5:1 threshold for normal text). */
+  --muted-2: #646e88;
   --line: #e3e7ee;
   --line-soft: #eef1f6;
   --accent: #1f3a8a;
@@ -128,6 +130,10 @@ main {
   margin: 0 auto;
   padding: 0 28px 24px;
 }
+/* #main-content receives focus on client-side route changes (and via the skip
+   link) so screen-reader/keyboard users land in the new content. It is a focus
+   *target*, not a control, so no focus ring is drawn. */
+#main-content:focus { outline: none; }
 .page {
   animation: fade-up 360ms cubic-bezier(.2,.7,.2,1);
 }
@@ -438,7 +444,8 @@ section.block:first-of-type { border-top: none; }
   font-weight: 500;
   letter-spacing: 0.01em;
   background: #fdf8ee;
-  color: #aa7c2e;
+  /* #8a6420: WCAG AA — 5.06:1 on the #fdf8ee badge (was #aa7c2e at 3.52:1). */
+  color: #8a6420;
   border: 1px solid #e8d4a0;
   padding: 4px 11px 4px 9px;
   border-radius: 999px;

@@ -1,27 +1,18 @@
-/* global React, ReactDOM, PROFILE, Icon, SectionHeader, Picture,
-   routeToPath, handleAnchorClick,
+/* global React, ReactDOM, SITE, PROFILE, Icon, SectionHeader, Picture,
+   parseRoute, routeToPath, pageTitle, getArticle, handleAnchorClick,
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
 
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useRef } = React;
 
 /* ============================================================
-   ROUTING — URL-based
+   ROUTING — URL-based (parseRoute lives in routes.js, shared
+   with server.js so the route table can never diverge)
    /                     home
    /news                 news list page
    /news/<slug>          single article
    /publications         publications list page
    ============================================================ */
-
-function parseRoute(pathname) {
-  const p = pathname.replace(/\/+$/, "") || "/";
-  if (p === "/" || p === "") return { page: "home", section: null };
-  if (p === "/news") return { page: "news-list" };
-  if (p === "/publications") return { page: "publications-list" };
-  const m = p.match(/^\/news\/([^/]+)$/);
-  if (m) return { page: "article", slug: m[1] };
-  return { page: "not-found" };
-}
 
 /* ============================================================
    HEADER
@@ -55,14 +46,14 @@ function Header({ route, navigate }) {
         </a>
         <nav className="nav">
           {items.map((it) => {
-            const route = { page: "home", section: it.id };
+            const target = { page: "home", section: it.id };
             return (
               <a
                 key={it.id}
                 className={isActive(it) ? "active" : ""}
                 aria-current={isActive(it) ? "page" : undefined}
-                href={routeToPath(route)}
-                onClick={(e) => handleAnchorClick(e, navigate, route)}
+                href={routeToPath(target)}
+                onClick={(e) => handleAnchorClick(e, navigate, target)}
               >
                 {it.label}
               </a>
@@ -113,7 +104,7 @@ function Hero({ navigate }) {
       </div>
       <div className="hero-photo">
         <Picture
-          src="/lampros-konstantellos-picture.jpg"
+          src={SITE.heroImage}
           alt={PROFILE.name}
           width="720"
           height="900"
@@ -173,7 +164,7 @@ function Footer() {
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
-        <div className="copy">© 2026 {PROFILE.name}</div>
+        <div className="copy">© {new Date().getFullYear()} {PROFILE.name}</div>
       </div>
     </footer>
   );
@@ -217,12 +208,39 @@ function NotFound({ navigate }) {
 
 function App() {
   const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
+  const mainRef = useRef(null);
+  const firstRender = useRef(true);
 
   useEffect(() => {
     const onPop = () => setRoute(parseRoute(window.location.pathname));
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  // Keep the tab title correct after client-side navigation (and back/forward).
+  // Derived from the SAME pageTitle the server injects, so they cannot diverge.
+  useEffect(() => {
+    const articleTitle =
+      route.page === "article" ? (getArticle(route.slug) || {}).title : undefined;
+    document.title = pageTitle(route, {
+      siteName: SITE.name,
+      jobTitle: SITE.jobTitle,
+      articleTitle,
+    });
+  }, [route]);
+
+  // Move focus to the main region on a full page change so keyboard and
+  // screen-reader users land in the new content. Skipped on first render and
+  // during in-page section scrolls (which manage their own scroll position).
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    if (route.page === "home" && route.section) return;
+    // preventScroll: the page components manage their own scroll-to-top.
+    if (mainRef.current) mainRef.current.focus({ preventScroll: true });
+  }, [route]);
 
   // On first load, honor a #section hash (e.g. /#publications shared as a link).
   // parseRoute ignores the hash, so this is the only place it gets handled.
@@ -264,7 +282,7 @@ function App() {
   return (
     <>
       <Header route={route} navigate={navigate} />
-      <main id="main-content">
+      <main id="main-content" ref={mainRef} tabIndex={-1}>
         {route.page === "home" && <HomePage navigate={navigate} />}
         {route.page === "news-list" && <NewsListPage navigate={navigate} />}
         {route.page === "publications-list" && <PublicationsListPage navigate={navigate} />}

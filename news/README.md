@@ -18,19 +18,27 @@ Each article is a self-contained package inside its own folder under `news/<slug
 defineArticle({
   slug: "my-article-slug",
   date: "2026-05-12",                        // YYYY-MM-DD — used for sorting
-  dateLabel: "May 12, 2026",                 // human-readable
-  location: "Athens",                        // optional
+  dateLabel: "May 12, 2026",                 // human-readable, shown on the card
+  location: "Athens",                        // optional — shown after the date
   title: "Title of the article",
   excerpt: "One- or two-sentence preview shown on the card.",
-  cover: "news/my-article-slug/cover.jpg",   // optional
-  photos: [                                  // optional
+  cover: "news/my-article-slug/cover.jpg",   // optional — card + article cover
+  photos: [                                  // optional — gallery
     "news/my-article-slug/photo-01.jpg",
+    // Or, to crop a photo from its top instead of centre:
+    { src: "news/my-article-slug/photo-02.jpg", align: "top" },
   ],
   body: [
     "First paragraph. Use **double asterisks** for inline bold.",
     "Second paragraph.",
   ],
-  sources: [                                 // optional
+  // ---- Optional SEO fields (used in JSON-LD / RSS / JSON Feed) ----
+  keywords: ["topic one", "topic two"],      // string[] → Article.keywords + feed tags
+  articleSection: "Conferences and Awards",  // string   → Article.articleSection
+  topics: [                                  // {name, sameAs}[] → Article.about
+    { name: "Vehicle-to-Grid", sameAs: "https://en.wikipedia.org/wiki/Vehicle-to-grid" },
+  ],
+  sources: [                                 // optional — shown under the article
     { label: "Source name", href: "https://example.com" },
   ],
 });
@@ -38,7 +46,31 @@ defineArticle({
 
 4. That's it — the article is auto-discovered on the next request and will appear at `/news/my-article-slug`, on the homepage News preview (if among the 3 most recent), and on the `/news` list page. No edits to `data.js` or `index.html` needed.
 
-`defineArticle` validates the required fields (`slug`, `date`, `dateLabel`, `title`, `excerpt`, `body`) at load time and throws a clear error in the browser console if any are missing or malformed (it also checks that `date` is `YYYY-MM-DD` and that `body`, `photos`, and `sources` are arrays). The legacy `(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({ ... })` form still works if you ever need it.
+### Fields
+
+| Field | Required | Type | Used for |
+|-------|----------|------|----------|
+| `slug` | ✅ | string | URL `/news/<slug>` (must match the folder name) |
+| `date` | ✅ | `YYYY-MM-DD` | Sorting (newest first), sitemap/RSS/feed dates |
+| `dateLabel` | ✅ | string | Human-readable date on the card/article |
+| `title` | ✅ | string | Heading, `<title>`, JSON-LD headline |
+| `excerpt` | ✅ | string | Card preview, meta description, RSS/feed summary |
+| `body` | ✅ | string[] | Article paragraphs (`**bold**` supported); also JSON-LD `articleBody` |
+| `location` | optional | string | Shown after the date |
+| `cover` | optional | path | Card thumbnail + article cover (`og:image` for the article) |
+| `photos` | optional | (string \| `{ src, align }`)[] | Gallery; `align: "top"` crops from the top |
+| `keywords` | optional | string[] | JSON-LD `keywords` + JSON Feed `tags` |
+| `articleSection` | optional | string | JSON-LD `articleSection` |
+| `topics` | optional | `{ name, sameAs }`[] | JSON-LD `about` |
+| `sources` | optional | `{ label, href }`[] | Source links under the article |
+
+Validation lives in `article-schema.js` (`validateArticle`) and runs in **both**
+the browser (`defineArticle`, throwing a clear console error) and the server
+(`loadArticleMeta`, which logs and skips an invalid article so bad data never
+reaches the feeds). It enforces the required fields, the `YYYY-MM-DD` date
+format, and that `body`/`photos`/`sources`/`keywords`/`topics` are arrays. The
+legacy `(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({ ... })` form
+still works if you ever need it.
 
 ## Folder structure
 

@@ -4,6 +4,8 @@ const path = require("path");
 const zlib = require("zlib");
 const { URL } = require("url");
 const SITE_CFG = require("./site.config.js");
+const { parseRoute, isValidSpaRoute: routeIsValidSpa, pageTitle } = require("./routes.js");
+const { validateArticle, compareByDateDesc } = require("./article-schema.js");
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
@@ -67,6 +69,10 @@ function loadAssetMap() {
 
 const DEFAULT_IMAGE = `${SITE_CFG.url}${SITE_CFG.defaultImage}`;
 const DEFAULT_DESCRIPTION = SITE_CFG.defaultDescription;
+// The hero is the LCP image; preload the AVIF sibling the <picture> will pick.
+// Derived from the same SITE_CFG.heroImage the Hero component renders, so the
+// preload can never point at a renamed/missing file.
+const HERO_PRELOAD_IMAGE = SITE_CFG.heroImage.replace(/\.(jpe?g|png)$/i, ".avif");
 
 const PROFILE_JSONLD = {
   "@context": "https://schema.org",
@@ -90,7 +96,15 @@ const PROFILE_JSONLD = {
   ]
 };
 
-// Evaluate a single article.js in a tiny sandbox to extract its metadata.
+// Execute a single article.js to extract its metadata.
+//
+// This is NOT a security sandbox: article.js files are first-party content in
+// this repo (the trust boundary is the repository, not the request), so they
+// are run with a plain Function. The fake `window`/`defineArticle` shim only
+// captures the object the article registers. The captured article is then run
+// through the SAME validateArticle the browser uses, so a field the client
+// would reject is logged and skipped here instead of silently shipping into
+// the RSS / JSON-LD / sitemap output.
 function loadArticleMeta(slug) {
   const file = path.join(PUBLIC_DIR, "news", slug, "article.js");
   if (!fs.existsSync(file)) return null;
@@ -101,19 +115,26 @@ function loadArticleMeta(slug) {
     const fakeWindow = {
       NEWS_ARTICLES: { push: capture },
       defineArticle: capture,
+      validateArticle,
     };
     new Function("window", "defineArticle", code)(fakeWindow, capture);
+    if (captured) validateArticle(captured);
     return captured;
   } catch (e) {
-    console.error(`Failed to parse article meta for "${slug}":`, e.message);
+    console.error(`Skipping article "${slug}" — ${e.message}`);
     return null;
   }
 }
 
 // Serialize JSON-LD for embedding inside <script type="application/ld+json">.
-// Escaping "<" keeps a stray "</script>" in article text from closing the tag.
+// Escaping "<" keeps a stray "</script>" in article text from closing the tag;
+// U+2028/U+2029 are valid in JSON but are line terminators in a <script>, so
+// they are escaped to keep the inline JSON parseable.
 function jsonLdScript(obj) {
-  return JSON.stringify(obj).replace(/</g, "\\u003c");
+  return JSON.stringify(obj)
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 }
 
 // Built once at startup. Article folders and the esbuild asset map only change
@@ -139,24 +160,27 @@ function escapeHtml(s) {
 }
 
 function computePageMeta(pathname) {
-  const p = pathname.replace(/\/+$/, "") || "/";
+  // parseRoute is the shared route table (routes.js) — same matcher the client
+  // and isValidSpaRoute use, so the meta branch can never drift from routing.
+  const route = parseRoute(pathname);
+  const titleCtx = { siteName: SITE_CFG.name, jobTitle: SITE_CFG.jobTitle };
 
-  if (p === "/") {
+  if (route.page === "home") {
     return {
-      title: `${SITE_CFG.name} - ${SITE_CFG.jobTitle}`,
+      title: pageTitle(route, titleCtx),
       description: DEFAULT_DESCRIPTION,
       url: `${SITE_CFG.url}/`,
       image: DEFAULT_IMAGE,
       imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
       ogType: "website",
       jsonLd: PROFILE_JSONLD,
-      preloadImage: "/lampros-konstantellos-picture.avif",
+      preloadImage: HERO_PRELOAD_IMAGE,
     };
   }
 
-  if (p === "/news") {
+  if (route.page === "news-list") {
     return {
-      title: `News - ${SITE_CFG.name}`,
+      title: pageTitle(route, titleCtx),
       description:
         "Reflections from conferences, forums, awards, and projects in renewable energy, battery storage, grid flexibility, and electricity markets.",
       url: `${SITE_CFG.url}/news`,
@@ -178,9 +202,9 @@ function computePageMeta(pathname) {
     };
   }
 
-  if (p === "/publications") {
+  if (route.page === "publications-list") {
     return {
-      title: `Publications - ${SITE_CFG.name}`,
+      title: pageTitle(route, titleCtx),
       description:
         "Peer-reviewed publications and conference papers on renewable energy, V2G integration, real-time grid simulation, and EV charging.",
       url: `${SITE_CFG.url}/publications`,
@@ -202,9 +226,8 @@ function computePageMeta(pathname) {
     };
   }
 
-  const m = p.match(/^\/news\/([^/]+)$/);
-  if (m) {
-    const article = ARTICLE_META[m[1]];
+  if (route.page === "article") {
+    const article = ARTICLE_META[route.slug];
     if (article) {
       const image = article.cover ? `${SITE_CFG.url}/${article.cover}` : DEFAULT_IMAGE;
 
@@ -249,7 +272,7 @@ function computePageMeta(pathname) {
       };
 
       return {
-        title: `${article.title} - ${SITE_CFG.name}`,
+        title: pageTitle(route, { ...titleCtx, articleTitle: article.title }),
         description: article.excerpt,
         url: `${SITE_CFG.url}/news/${article.slug}`,
         image,
@@ -263,11 +286,13 @@ function computePageMeta(pathname) {
     }
   }
 
-  // Unknown route - used by the SPA NotFound page
+  // Unknown route — used by the SPA NotFound page (served with HTTP 404).
+  // Canonical/og:url point at the home root rather than reflecting the
+  // requested (attacker-controllable) pathname back into shared metadata.
   return {
-    title: `Page not found - ${SITE_CFG.name}`,
+    title: pageTitle(route, titleCtx),
     description: DEFAULT_DESCRIPTION,
-    url: `${SITE_CFG.url}${pathname}`,
+    url: `${SITE_CFG.url}/`,
     image: DEFAULT_IMAGE,
     imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
     ogType: "website",
@@ -275,11 +300,23 @@ function computePageMeta(pathname) {
   };
 }
 
+// Parse req.url against a FIXED base. The request host is never used (the site
+// only ever builds URLs from SITE_CFG.url), so a missing or malformed Host
+// header can no longer make `new URL` throw and crash the process.
+function parseRequestUrl(req) {
+  return new URL(req.url || "/", "http://localhost");
+}
+
 function cacheHeaderFor(req, contentType) {
   if (contentType.startsWith("text/html")) {
     return "no-cache, no-store, must-revalidate";
   }
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  let url;
+  try {
+    url = parseRequestUrl(req);
+  } catch {
+    return "public, max-age=86400";
+  }
   if (url.searchParams.has("v") || url.pathname.startsWith("/dist/")) {
     return "public, max-age=31536000, immutable";
   }
@@ -290,48 +327,106 @@ function isCompressible(contentType) {
   return /^(text\/|application\/(javascript|json|xml|xhtml\+xml)|image\/svg)/.test(contentType);
 }
 
-function writeCompressed(req, res, headers, data) {
-  const status = headers.__status || 200;
-  delete headers.__status;
-  const accept = req.headers["accept-encoding"] || "";
-  const ct = headers["Content-Type"] || "";
-  if (isCompressible(ct) && data && data.length > 1024) {
-    if (/\bbr\b/.test(accept)) {
-      const compressed = zlib.brotliCompressSync(data);
-      res.writeHead(status, {
-        ...headers,
-        "Content-Encoding": "br",
-        "Content-Length": compressed.length,
-        "Vary": "Accept-Encoding",
-      });
-      res.end(compressed);
-      return;
+// Quality 6 (not the zlib default of 11). For this content, q11 cost ~250ms of
+// blocking CPU per call vs ~8ms at q6 for ~10% larger output — and with the
+// cache below, each unique body is only ever compressed once per process.
+const BROTLI_QUALITY = 6;
+const COMPRESSION_CACHE = new Map(); // cacheKey -> { br?: Buffer, gzip?: Buffer }
+const COMPRESSION_CACHE_MAX = 128;
+
+// Compress `data` for `encoding`, memoized by cacheKey so identical bytes are
+// never recompressed. Without the cache the server burned full brotli CPU on
+// every request for the same asset — a cheap denial-of-service amplifier.
+function getCompressed(cacheKey, encoding, data) {
+  let entry = cacheKey ? COMPRESSION_CACHE.get(cacheKey) : null;
+  if (entry && entry[encoding]) return entry[encoding];
+
+  const out =
+    encoding === "br"
+      ? zlib.brotliCompressSync(data, {
+          params: { [zlib.constants.BROTLI_PARAM_QUALITY]: BROTLI_QUALITY },
+        })
+      : zlib.gzipSync(data);
+
+  if (cacheKey) {
+    if (!entry) {
+      if (COMPRESSION_CACHE.size >= COMPRESSION_CACHE_MAX) {
+        COMPRESSION_CACHE.delete(COMPRESSION_CACHE.keys().next().value);
+      }
+      entry = {};
+      COMPRESSION_CACHE.set(cacheKey, entry);
     }
-    if (/\bgzip\b/.test(accept)) {
-      const compressed = zlib.gzipSync(data);
-      res.writeHead(status, {
-        ...headers,
-        "Content-Encoding": "gzip",
-        "Content-Length": compressed.length,
-        "Vary": "Accept-Encoding",
-      });
-      res.end(compressed);
-      return;
-    }
+    entry[encoding] = out;
   }
-  res.writeHead(status, headers);
-  res.end(data);
+  return out;
 }
 
-// True when pathname maps to a route the SPA can render.
-function isValidSpaRoute(pathname) {
-  const p = pathname.replace(/\/+$/, "") || "/";
-  if (p === "/" || p === "/news" || p === "/publications") return true;
-  const m = p.match(/^\/news\/([^/]+)$/);
-  if (m) {
-    return Object.prototype.hasOwnProperty.call(ARTICLE_META, m[1]);
+function writeCompressed(req, res, headers, data, cacheKey) {
+  const status = headers.__status || 200;
+  delete headers.__status;
+  const isHead = req.method === "HEAD";
+  const accept = req.headers["accept-encoding"] || "";
+  const ct = headers["Content-Type"] || "";
+
+  // Normalize to a Buffer so Content-Length is the true byte count. A string's
+  // .length counts UTF-16 units, which understates the byte length whenever the
+  // body contains multi-byte UTF-8 (e.g. the "—" in the home meta).
+  const buf = data == null ? Buffer.alloc(0) : Buffer.isBuffer(data) ? data : Buffer.from(data);
+
+  let encoding = null;
+  if (isCompressible(ct) && buf.length > 1024) {
+    if (/\bbr\b/.test(accept)) encoding = "br";
+    else if (/\bgzip\b/.test(accept)) encoding = "gzip";
   }
-  return false;
+
+  if (encoding) {
+    let compressed;
+    try {
+      compressed = getCompressed(cacheKey, encoding, buf);
+    } catch {
+      compressed = null; // fall back to identity on any compression failure
+    }
+    if (compressed) {
+      res.writeHead(status, {
+        ...headers,
+        "Content-Encoding": encoding,
+        "Content-Length": compressed.length,
+        "Vary": "Accept-Encoding",
+      });
+      res.end(isHead ? undefined : compressed);
+      return;
+    }
+  }
+
+  res.writeHead(status, { ...headers, "Content-Length": buf.length });
+  res.end(isHead ? undefined : buf);
+}
+
+// True when pathname maps to a route the SPA can render. Delegates to the
+// shared route table; an article route is valid only if its slug was
+// discovered at startup.
+function isValidSpaRoute(pathname) {
+  return routeIsValidSpa(pathname, ARTICLE_SLUGS);
+}
+
+// Replace the __META_*__ placeholders in index.html with per-route values.
+// Every replacement uses a FUNCTION value, not a string: a string replacement
+// would interpret $&, $`, $', $$ in the injected meta as special patterns,
+// letting hostile article text (e.g. a title containing "$&") corrupt the
+// served HTML and JSON-LD. A function value is inserted verbatim.
+function injectMeta(html, meta) {
+  return html
+    .replace(/__META_SITE_NAME__/g, () => escapeHtml(SITE_CFG.name))
+    .replace(/__META_TITLE__/g, () => escapeHtml(meta.title))
+    .replace(/__META_DESCRIPTION__/g, () => escapeHtml(meta.description))
+    .replace(/__META_URL__/g, () => escapeHtml(meta.url))
+    .replace(/__META_IMAGE__/g, () => escapeHtml(meta.image))
+    .replace(/__META_IMAGE_ALT__/g, () => escapeHtml(meta.imageAlt || meta.title))
+    .replace(/__META_OG_TYPE__/g, () => escapeHtml(meta.ogType))
+    .replace(/__META_JSONLD__/g, () => (meta.jsonLd ? jsonLdScript(meta.jsonLd) : ""))
+    .replace(/__META_PRELOAD__/g, () => meta.preloadImage
+      ? `<link rel="preload" as="image" href="${escapeHtml(meta.preloadImage)}" type="image/avif" fetchpriority="high" />`
+      : "");
 }
 
 function serveIndex(req, res, filePath, pathname, statusCode = 200) {
@@ -341,24 +436,14 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
       res.end("404 Not Found");
       return;
     }
-    // Inject per-route meta first so later replacements see the populated HTML
     const meta = computePageMeta(pathname);
-    const processedHtml = html
-      .replace(/__META_TITLE__/g, escapeHtml(meta.title))
-      .replace(/__META_DESCRIPTION__/g, escapeHtml(meta.description))
-      .replace(/__META_URL__/g, escapeHtml(meta.url))
-      .replace(/__META_IMAGE__/g, escapeHtml(meta.image))
-      .replace(/__META_IMAGE_ALT__/g, escapeHtml(meta.imageAlt || meta.title))
-      .replace(/__META_OG_TYPE__/g, escapeHtml(meta.ogType))
-      .replace(/__META_JSONLD__/g, meta.jsonLd ? jsonLdScript(meta.jsonLd) : "")
-      .replace(/__META_PRELOAD__/g, meta.preloadImage
-        ? `<link rel="preload" as="image" href="${escapeHtml(meta.preloadImage)}" type="image/avif" fetchpriority="high" />`
-        : "");
-    // Inject auto-discovered article scripts right after data.js
+    const processedHtml = injectMeta(html, meta);
+    // Inject auto-discovered article scripts right after data.js (function
+    // replacement so a slug containing a $-sequence cannot corrupt the markup).
     const withArticles = ARTICLE_SCRIPTS
       ? processedHtml.replace(
           '<script src="/data.js"></script>',
-          `<script src="/data.js"></script>\n${ARTICLE_SCRIPTS}`
+          () => `<script src="/data.js"></script>\n${ARTICLE_SCRIPTS}`
         )
       : processedHtml;
     // Rewrite /dist/<name>.js references to their content-hashed filenames
@@ -369,17 +454,22 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
         return mapped ? `${prefix}${mapped}${suffix}` : match;
       }
     );
-    // Inject deploy version into local asset URLs (except content-hashed /dist/)
+    // Inject deploy version into local asset URLs (except content-hashed /dist/).
+    // Here $1/$2/$3 are deliberate capture-group backreferences, and
+    // DEPLOY_VERSION is a commit SHA or a timestamp (no $), so the string form
+    // is correct — this is not the same hazard as the meta injection above.
     const versioned = hashed.replace(
       /((?:src|href)=")(\/(?!dist\/)[^"?]+\.(?:css|js|jsx))(")/g,
       `$1$2?v=${DEPLOY_VERSION}$3`
     );
     const contentType = "text/html; charset=utf-8";
+    // The rendered HTML for a given path is deterministic within a process, so
+    // cache its compressed variants by path.
     writeCompressed(req, res, {
       "Content-Type": contentType,
       "Cache-Control": cacheHeaderFor(req, contentType),
       __status: statusCode,
-    }, versioned);
+    }, versioned, `html:${pathname}`);
   });
 }
 
@@ -393,10 +483,12 @@ function sendFile(req, res, filePath) {
       res.end("404 Not Found");
       return;
     }
+    // Static file bytes are immutable per deploy; key by path + size so the
+    // brotli/gzip result is computed once and reused.
     writeCompressed(req, res, {
       "Content-Type": contentType,
       "Cache-Control": cacheHeaderFor(req, contentType),
-    }, data);
+    }, data, `file:${filePath}:${data.length}`);
   });
 }
 
@@ -420,9 +512,15 @@ const SECURITY_HEADERS = {
     "object-src 'none'",
     "base-uri 'self'",
     "frame-ancestors 'none'",
+    "form-action 'none'",
   ].join("; "),
 };
 
+// The repo root is the document root, so anything not listed here is public.
+// Intended public set: index.html, styles.css, the app scripts (site.config.js,
+// routes.js, article-schema.js, data.js), dist/* bundles, vendor/* React,
+// favicons/og-image/manifest/robots, and news/<slug>/article.js + images.
+// Everything below is source, config, tooling or docs and is blocked.
 const PRIVATE_PATHS = new Set([
   "/server.js",
   "/package.json",
@@ -431,14 +529,28 @@ const PRIVATE_PATHS = new Set([
   "/.dockerignore",
   "/.gitignore",
   "/LICENSE",
+  "/README.md",
+  "/news/README.md",
   "/dist/manifest.json",
 ]);
 
 function isPrivatePath(pathname) {
   if (PRIVATE_PATHS.has(pathname)) return true;
-  if (pathname.startsWith("/scripts/")) return true;
-  if (pathname.startsWith("/.")) return true;
+  if (pathname.startsWith("/scripts/")) return true; // build tooling
+  if (pathname.startsWith("/test/")) return true; // test suite
+  if (pathname.startsWith("/.")) return true; // dotfiles (.git, .github, ...)
   return false;
+}
+
+const ALLOWED_METHODS = "GET, HEAD, OPTIONS";
+
+function sendStatus(res, code, message, extraHeaders) {
+  if (res.headersSent) return;
+  res.writeHead(code, {
+    "Content-Type": "text/plain; charset=utf-8",
+    ...(extraHeaders || {}),
+  });
+  res.end(message);
 }
 
 const server = http.createServer((req, res) => {
@@ -446,27 +558,71 @@ const server = http.createServer((req, res) => {
     res.setHeader(name, value);
   }
 
-  const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
-  const urlPathname = decodeURIComponent(parsedUrl.pathname);
-  let pathname = urlPathname;
+  // One try/catch around the whole synchronous handler: a malformed request
+  // must never throw past here and take the process down.
+  try {
+    // Method policy: this is a read-only static site.
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, { "Allow": ALLOWED_METHODS, "Content-Length": 0 });
+      res.end();
+      return;
+    }
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      sendStatus(res, 405, "405 Method Not Allowed", { "Allow": ALLOWED_METHODS });
+      return;
+    }
 
-  if (isPrivatePath(urlPathname)) {
-    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-    res.end("404 Not Found");
-    return;
-  }
+    // Parse against a fixed base (host-independent) and decode defensively.
+    let parsedUrl;
+    try {
+      parsedUrl = parseRequestUrl(req);
+    } catch {
+      sendStatus(res, 400, "400 Bad Request");
+      return;
+    }
+    let urlPathname;
+    try {
+      urlPathname = decodeURIComponent(parsedUrl.pathname);
+    } catch {
+      // Invalid percent-encoding (e.g. "/%zz") — decodeURIComponent throws.
+      sendStatus(res, 400, "400 Bad Request");
+      return;
+    }
+    // A NUL byte (%00) is never valid in a served path and would make the fs
+    // layer throw; reject it cleanly as a bad request.
+    if (urlPathname.includes("\x00")) {
+      sendStatus(res, 400, "400 Bad Request");
+      return;
+    }
 
-  if (pathname.endsWith("/")) {
-    pathname += "index.html";
-  }
+    // /index.html is the home page under a second URL. Redirect to "/" so there
+    // is one canonical home (previously it served 200 with "Page not found"
+    // meta and a self-canonical to /index.html — a duplicate-content bug).
+    if (urlPathname === "/index.html") {
+      res.writeHead(301, { "Location": "/", "Content-Type": "text/plain; charset=utf-8" });
+      res.end("Moved Permanently");
+      return;
+    }
 
-  const requestedPath = path.normalize(path.join(PUBLIC_DIR, pathname));
+    let pathname = urlPathname;
 
-  if (!requestedPath.startsWith(PUBLIC_DIR)) {
-    res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
-    res.end("403 Forbidden");
-    return;
-  }
+    if (isPrivatePath(urlPathname)) {
+      sendStatus(res, 404, "404 Not Found");
+      return;
+    }
+
+    if (pathname.endsWith("/")) {
+      pathname += "index.html";
+    }
+
+    const requestedPath = path.normalize(path.join(PUBLIC_DIR, pathname));
+
+    // Boundary check with a trailing separator so a sibling directory whose
+    // name merely starts with PUBLIC_DIR (e.g. "<dir>-secrets") cannot pass.
+    if (requestedPath !== PUBLIC_DIR && !requestedPath.startsWith(PUBLIC_DIR + path.sep)) {
+      sendStatus(res, 403, "403 Forbidden");
+      return;
+    }
 
   if (urlPathname === "/sitemap.xml") {
     // Use the most recent article date as the lastmod for index pages
@@ -513,7 +669,7 @@ const server = http.createServer((req, res) => {
     const items = ARTICLE_SLUGS
       .map((slug) => ARTICLE_META[slug])
       .filter((a) => a && a.date)
-      .sort((a, b) => (a.date < b.date ? 1 : -1));
+      .sort(compareByDateDesc);
 
     const feed = {
       version: "https://jsonfeed.org/version/1.1",
@@ -553,7 +709,7 @@ const server = http.createServer((req, res) => {
     const items = ARTICLE_SLUGS
       .map((slug) => ARTICLE_META[slug])
       .filter((a) => a && a.date)
-      .sort((a, b) => (a.date < b.date ? 1 : -1));
+      .sort(compareByDateDesc);
 
     const itemXml = items
       .map((a) => {
@@ -618,9 +774,47 @@ const server = http.createServer((req, res) => {
     // SPA HTML so the client can render a friendly 404 page.
     const statusCode = isValidSpaRoute(urlPathname) ? 200 : 404;
     serveIndex(req, res, path.join(PUBLIC_DIR, "index.html"), urlPathname, statusCode);
-  });
+    });
+  } catch (err) {
+    console.error("Request handler error:", err && err.message);
+    sendStatus(res, 500, "500 Internal Server Error");
+  }
 });
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Lampros Konstantellos website running on port ${PORT}`);
-});
+if (require.main === module) {
+  // Malformed HTTP at the parser level (bad request line/headers) never reaches
+  // the handler; answer it without tearing the socket down abruptly.
+  server.on("clientError", (err, socket) => {
+    if (socket.writable) socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
+  });
+
+  // Last-resort availability net: a static site should stay up even if some
+  // unforeseen async path throws. Log loudly, but do not exit the process.
+  process.on("uncaughtException", (err) => {
+    console.error("uncaughtException:", (err && err.stack) || err);
+  });
+  process.on("unhandledRejection", (err) => {
+    console.error("unhandledRejection:", err);
+  });
+
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`Lampros Konstantellos website running on port ${PORT}`);
+  });
+}
+
+// Exported for the test suite. Requiring this module (instead of running it as
+// the entrypoint) does NOT start the listener, so tests can drive the handler
+// on an ephemeral port and exercise the pure helpers directly.
+module.exports = {
+  server,
+  computePageMeta,
+  injectMeta,
+  escapeHtml,
+  jsonLdScript,
+  cacheHeaderFor,
+  isValidSpaRoute,
+  loadArticleMeta,
+  discoverArticleSlugs,
+  SECURITY_HEADERS,
+  isPrivatePath,
+};

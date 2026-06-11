@@ -1,4 +1,4 @@
-/* global React, Icon */
+/* global React, Icon, routeToPath */
 
 /* ============================================================
    SHARED HELPERS & SMALL UI PRIMITIVES
@@ -9,6 +9,7 @@
    - useReveal:     IntersectionObserver-driven reveal hook
    - SectionHeader: <h2> + optional right-aligned action
    - ViewAllLink:   "View all →" CTA
+   (routeToPath now lives in routes.js, shared with the server.)
    ============================================================ */
 
 function asset(path) {
@@ -17,14 +18,7 @@ function asset(path) {
   return "/" + path;
 }
 
-function routeToPath(route) {
-  if (!route) return "/";
-  if (route.page === "news-list") return "/news";
-  if (route.page === "publications-list") return "/publications";
-  if (route.page === "article") return "/news/" + route.slug;
-  if (route.page === "home" && route.section) return "/#" + route.section;
-  return "/";
-}
+// routeToPath lives in routes.js (shared with the server's route table).
 
 function handleAnchorClick(e, navigate, route, opts) {
   // Let the browser handle modifier-clicks and non-left clicks normally
@@ -83,6 +77,6 @@ function ViewAllLink({ href, onClick }) {
 }
 
 Object.assign(window, {
-  asset, routeToPath, handleAnchorClick, renderInline,
+  asset, handleAnchorClick, renderInline,
   useReveal, SectionHeader, ViewAllLink,
 });

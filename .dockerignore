@@ -1,5 +1,9 @@
 .git
+.github
 .gitignore
 README.md
+news/README.md
 dist
 node_modules
+test
+scratch
