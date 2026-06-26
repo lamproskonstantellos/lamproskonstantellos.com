@@ -5,8 +5,15 @@
   <link>https://lamproskonstantellos.com/news</link>
   <description>Exploring renewable energy, battery storage, grid flexibility, and electricity markets through engineering, modelling, and applied research.</description>
   <language>en</language>
-  <lastBuildDate>Tue, 07 Apr 2026 00:00:00 GMT</lastBuildDate>
+  <lastBuildDate>Thu, 25 Jun 2026 00:00:00 GMT</lastBuildDate>
   <atom:link href="https://lamproskonstantellos.com/rss.xml" rel="self" type="application/rss+xml" />
+  <item>
+    <title>Reflections from Intersolar Europe 2026 and The smarter E Europe</title>
+    <link>https://lamproskonstantellos.com/news/intersolar-europe-2026</link>
+    <guid isPermaLink="true">https://lamproskonstantellos.com/news/intersolar-europe-2026</guid>
+    <pubDate>Thu, 25 Jun 2026 00:00:00 GMT</pubDate>
+    <description>Notes from Munich on battery storage as a revenue asset, hybrid PV plus storage, grid-forming inverters, energy management software, bidirectional charging, and what structural curtailment means for Greece.</description>
+  </item>
   <item>
     <title>Insights from the 7th Power &amp; Gas Forum in Athens</title>
     <link>https://lamproskonstantellos.com/news/7th-power-gas-forum-athens</link>
