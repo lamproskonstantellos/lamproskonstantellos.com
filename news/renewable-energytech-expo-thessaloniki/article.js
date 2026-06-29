@@ -21,7 +21,9 @@ defineArticle({
   ],
   articleSection: "Energy Markets",
   cover: "news/renewable-energytech-expo-thessaloniki/cover.jpg",
+  coverAlign: "top",
   video: "news/renewable-energytech-expo-thessaloniki/video.mp4",
+  poster: "news/renewable-energytech-expo-thessaloniki/video-cover.jpg",
   body: [
     "On **26–28 March 2026**, I attended **Renewable EnergyTech** in Thessaloniki, the green and smart energy exhibition held at the Thessaloniki International Exhibition Centre alongside **Forward Green Expo**. It was a packed schedule of meetings and conversations across **RES, BESS, and offshore wind**.",
     "What stood out to me most is how far storage has moved in the conversation. It is no longer treated as an afterthought to renewable generation, but as a central part of how projects and portfolios are now designed.",
