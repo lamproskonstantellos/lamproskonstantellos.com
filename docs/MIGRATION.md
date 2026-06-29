@@ -33,7 +33,7 @@ JSON-LD, `sitemap.xml`, `rss.xml` or `feed.json` changed.
 | `/index.html` → `/` | 301 in `server.js` | `build/_redirects` |
 | Unknown routes | SPA HTML served with HTTP 404 | `build/404.html` (Cloudflare serves it with HTTP 404) |
 | Hosting | Railway, redeploy on push | Cloudflare Pages, build + deploy on push |
-| Container | Dockerfile builds + runs the server | optional; only containerizes the local preview server |
+| Container | Dockerfile builds + runs the server | removed; Cloudflare builds from source, no container |
 
 ### Single source of truth
 
@@ -102,8 +102,9 @@ excluded/private file leaked into `build/`.
 ## Retiring Railway
 
 Once the Cloudflare Pages deployment is verified on the custom domain, the
-Railway service can be deleted. The `Dockerfile` is retained only for running
-the local preview server in a container and is not used by Cloudflare Pages.
+Railway service can be deleted. The `Dockerfile` and `.dockerignore` have been
+removed: Cloudflare Pages builds the static site from source, with no container
+involved.
 
 ## Local preview (unchanged)
 
