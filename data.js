@@ -31,7 +31,7 @@ const PROFILE = {
       location: "Munich, Germany",
       year: "2025",
       title: "Integration of PV and V2G Technology in an Island Grid: A Real-Time Simulation Study of Kastellorizo",
-      authors: "Konstantellos, L., Mohapatra, A., Kavvathas, T., Konstantopoulos, G., & Hamacher, T. (2025)",
+      authors: "**Konstantellos, L.**, Mohapatra, A., Kavvathas, T., Konstantopoulos, G., & Hamacher, T. (2025)",
       award: "3rd Best Paper Award",
       links: [
         { label: "IEEE Xplore", href: "https://ieeexplore.ieee.org/document/11443073" },
@@ -43,7 +43,7 @@ const PROFILE = {
       location: "Gothenburg, Sweden",
       year: "2025",
       title: "Financial Impact Analysis of Electric Vehicle Charging Behavior with RNN Model and Validation Against Real-World Data",
-      authors: "Konstantellos, L., Kamacı, Z., Pekmezci, D., & Köpfer, B. (2025)",
+      authors: "**Konstantellos, L.**, Kamacı, Z., Pekmezci, D., & Köpfer, B. (2025)",
       links: [
         { label: "Proceedings", href: "https://evs38-program.org/images/Proceedings/D%20Charging%20Infrastructure%20and%20grid%20integration/448_Financial_Impact_Analysis_of_Electric_Vehicle_Charging_Behavior_with_RNN_Model_and_Validation_Against_Real_World_Data.pdf" },
         { label: "Zenodo",      href: "https://zenodo.org/records/15882802" },

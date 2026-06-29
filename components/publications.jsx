@@ -1,6 +1,6 @@
 /* global React, Icon, getRecentPublications, LIMITS,
    routeToPath, handleAnchorClick,
-   useReveal, SectionHeader, ViewAllLink */
+   useReveal, SectionHeader, ViewAllLink, renderInline */
 
 /* ============================================================
    PUBLICATIONS
@@ -35,7 +35,7 @@ function PublicationCard({ pub, index = 0, revealKey, isVisible }) {
           <span>{pub.year}</span>
         </div>
         <h3>{pub.title}</h3>
-        <p className="pub-authors">{pub.authors}</p>
+        <p className="pub-authors">{renderInline(pub.authors)}</p>
         {pub.description && <p className="pub-description">{pub.description}</p>}
         {pub.links && pub.links.length > 0 && (
           <div className="pub-links">

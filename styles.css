@@ -489,6 +489,10 @@ section.block:first-of-type { border-top: none; }
   color: var(--muted);
   margin: 0 0 12px;
 }
+/* The author's own name is wrapped in **bold** in data.js and parsed by
+   renderInline; lift only that token to full navy so authorship reads at a
+   glance while co-authors stay in --muted. #0a1f44 on --surface ≈ 16.3:1 (AA). */
+.pub-authors strong { color: var(--ink); font-weight: 600; }
 .pub-description {
   font-size: 13.5px;
   color: var(--muted);
