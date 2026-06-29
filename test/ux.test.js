@@ -94,7 +94,7 @@ test("Contact maps the researchgate and github ids to their brand icons", () => 
 
 test("App observes the home sections and drives the Header via activeSection", () => {
   const src = fs.readFileSync(path.join(ROOT, "app.jsx"), "utf8");
-  assert.match(src, /rootMargin:\s*"-45% 0px -50% 0px"/, "thin-band rootMargin missing");
+  assert.match(src, /rootMargin:\s*"-15% 0px -80% 0px"/, "near-top band rootMargin missing");
   assert.ok(src.includes("pickActiveSection("), "App must resolve the section via pickActiveSection");
   assert.match(src, /\["about",\s*"publications",\s*"news",\s*"contact"\]/, "section order missing");
   assert.ok(src.includes("activeSection={activeSection}"), "Header must receive activeSection");
@@ -110,7 +110,7 @@ test("compiled app bundle carries the scroll-spy wiring", () => {
   const code = compiledBundle("app.jsx");
   assert.ok(code.includes("IntersectionObserver"), "bundle missing the observer");
   assert.ok(code.includes("pickActiveSection"), "bundle must call the shared helper");
-  assert.ok(code.includes("-45% 0px -50% 0px"), "bundle missing the band rootMargin");
+  assert.ok(code.includes("-15% 0px -80% 0px"), "bundle missing the band rootMargin");
 });
 
 // ---- Article share row -------------------------------------------------------

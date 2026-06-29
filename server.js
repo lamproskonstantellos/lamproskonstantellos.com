@@ -2,6 +2,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
+const crypto = require("crypto");
 const { URL } = require("url");
 const SITE_CFG = require("./site.config.js");
 const { parseRoute, isValidSpaRoute: routeIsValidSpa, pageTitle } = require("./routes.js");
@@ -104,8 +105,24 @@ function imageDims(absPath) {
   return null;
 }
 
-const DEFAULT_IMAGE = `${SITE_CFG.url}${SITE_CFG.defaultImage}`;
-const DEFAULT_IMAGE_DIMS = imageDims(path.join(PUBLIC_DIR, SITE_CFG.defaultImage.replace(/^\//, "")));
+// Short content hash of an image file, appended to its og:image URL as a ?v=
+// cache-buster. LinkedIn/Facebook and CDNs cache the share image by URL, so
+// replacing a cover in place (same filename) would otherwise keep serving the
+// old preview. The hash changes only when the bytes do, so a replaced image is
+// re-fetched automatically while an unchanged one keeps a stable URL. Returns
+// null if the file is missing/unreadable (the URL then stays un-versioned).
+function imageVersion(absPath) {
+  try {
+    return crypto.createHash("sha1").update(fs.readFileSync(absPath)).digest("hex").slice(0, 12);
+  } catch {
+    return null;
+  }
+}
+
+const DEFAULT_IMAGE_PATH = path.join(PUBLIC_DIR, SITE_CFG.defaultImage.replace(/^\//, ""));
+const DEFAULT_IMAGE_VERSION = imageVersion(DEFAULT_IMAGE_PATH);
+const DEFAULT_IMAGE = `${SITE_CFG.url}${SITE_CFG.defaultImage}${DEFAULT_IMAGE_VERSION ? `?v=${DEFAULT_IMAGE_VERSION}` : ""}`;
+const DEFAULT_IMAGE_DIMS = imageDims(DEFAULT_IMAGE_PATH);
 const DEFAULT_DESCRIPTION = SITE_CFG.defaultDescription;
 // The hero is the LCP image; preload the AVIF sibling the <picture> will pick.
 // Derived from the same SITE_CFG.heroImage the Hero component renders, so the
@@ -197,11 +214,15 @@ const ARTICLE_META = {};
 // so computePageMeta can declare accurate og:image:width/height without touching
 // the (multi-megabyte) image files on every request.
 const ARTICLE_COVER_DIMS = {};
+// Content hash of each cover, appended to its og:image URL as a ?v= cache-buster
+// so a same-name cover replacement is re-fetched by social scrapers and CDNs.
+const ARTICLE_COVER_VERSION = {};
 for (const slug of ARTICLE_SLUGS) {
   const meta = loadArticleMeta(slug);
   ARTICLE_META[slug] = meta;
   if (meta && meta.cover) {
     ARTICLE_COVER_DIMS[slug] = imageDims(path.join(PUBLIC_DIR, meta.cover));
+    ARTICLE_COVER_VERSION[slug] = imageVersion(path.join(PUBLIC_DIR, meta.cover));
   }
 }
 // The loaded, validated articles in folder order — the single input shared by
@@ -299,7 +320,10 @@ function computePageMeta(pathname) {
   if (route.page === "article") {
     const article = ARTICLE_META[route.slug];
     if (article) {
-      const image = article.cover ? `${SITE_CFG.url}/${article.cover}` : DEFAULT_IMAGE;
+      const coverVersion = ARTICLE_COVER_VERSION[route.slug];
+      const image = article.cover
+        ? `${SITE_CFG.url}/${article.cover}${coverVersion ? `?v=${coverVersion}` : ""}`
+        : DEFAULT_IMAGE;
       // og:image dimensions track whichever image `image` points at: the
       // article's own cover when it has one, else the default 1200x630 image.
       const imageDimensions = article.cover ? ARTICLE_COVER_DIMS[route.slug] : DEFAULT_IMAGE_DIMS;
