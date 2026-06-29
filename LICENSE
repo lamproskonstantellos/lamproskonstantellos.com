@@ -1,27 +1,69 @@
 Copyright (c) 2026 Lampros Konstantellos. All rights reserved.
 
 This repository contains the source code, written content, design, images,
-and configuration files for the personal website published at
-https://lamproskonstantellos.com (the "Work").
+video, and configuration files for the personal website published at
+https://lamproskonstantellos.com (the "Work"), excluding the third-party
+components identified below, which remain governed by their own licenses.
 
-The Work is the proprietary intellectual property of Lampros Konstantellos.
-No part of the Work may be copied, reproduced, modified, adapted,
-translated, distributed, republished, mirrored, displayed, sublicensed,
-sold, or used to create derivative works, in whole or in part, in any
-form or by any means, without the prior written permission of the
-copyright holder.
+PROPRIETARY RIGHTS
 
-The repository is made publicly visible for the sole purpose of
-showcasing the author's work. Public visibility on GitHub or any other
-platform does not, and shall not be construed to, grant any license,
-right, title, or interest in or to the Work.
+The source code, written content, and design of the Work are the
+proprietary intellectual property of Lampros Konstantellos. No part of
+this material may be copied, reproduced, modified, adapted, translated,
+distributed, republished, mirrored, displayed, sublicensed, sold, or used
+to create derivative works, in whole or in part, in any form or by any
+means, without the prior written permission of the copyright holder.
 
-The personal photograph included in this repository
-(`lampros-konstantellos-picture.jpg`) is the likeness of the author and
-may not be used, reproduced, or redistributed in any context.
+The repository is made publicly visible for the sole purpose of showcasing
+the author's work. Public visibility on GitHub or any other platform does
+not, and shall not be construed to, grant any license, right, title, or
+interest in or to the Work.
+
+IMAGES AND VIDEO
+
+The photographs and video in this repository depict the author at events,
+conferences, and project sites; some were taken by third parties such as
+event organisers, colleagues, employers, or clients. To the extent
+permitted by law, the author reserves all rights in the images and video
+he owns. Where an image or video is owned by another party, no rights are
+asserted beyond the author's own, and all rights of the actual
+photographer, organiser, employer, or persons depicted are reserved to
+them. Public visibility of any image or video, on GitHub or elsewhere,
+grants no license to copy, reproduce, redistribute, or reuse it.
+
+The personal photograph of the author (`lampros-konstantellos-picture.jpg`)
+is his likeness and may not be used, reproduced, or redistributed in any
+context.
+
+THIRD-PARTY COMPONENTS
+
+The terms above apply only to material authored by the copyright holder.
+This repository also redistributes third-party software under its own
+license, which governs that material and is not superseded by this notice:
+
+  - vendor/react.production.min.js and vendor/react-dom.production.min.js
+    React and ReactDOM, Copyright (c) Facebook, Inc. and its affiliates,
+    licensed under the MIT License. The react-dom build additionally
+    bundles a custom Modernizr build, separately licensed under the MIT
+    License. The original license headers are retained in those files and
+    govern their use.
+
+Fonts (Inter, JetBrains Mono) are loaded at runtime from the Google Fonts
+CDN under the SIL Open Font License and are not redistributed in this
+repository.
+
+Third-party brand names, logos, and trademarks reproduced as SVG icons in
+icons.jsx (including LinkedIn, Google Scholar, IEEE, ORCID, Zenodo,
+ResearchGate, and GitHub) are the property of their respective owners.
+They are reproduced solely to identify and link to the author's profiles;
+no ownership of, or affiliation with, those marks is claimed.
+
+PERMISSION REQUESTS
 
 Permission requests should be directed to the author via the contact
 information published at https://lamproskonstantellos.com.
+
+NO WARRANTY
 
 THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,

@@ -84,4 +84,16 @@ See [`news/README.md`](./news/README.md). In short: create a folder under `news/
 
 ## License
 
-This repository is published for portfolio visibility only. All rights are reserved by the author. See [`LICENSE`](./LICENSE) for the full terms — copying, modification, redistribution, or any derivative use of the source code or assets requires prior written permission.
+This repository is published for **portfolio visibility only** — public visibility on GitHub does not grant any right to reuse it. All rights are reserved by the author.
+
+- **Source code, written content, and design** — © Lampros Konstantellos, all rights reserved. Copying, modification, redistribution, or any derivative use requires prior written permission.
+- **Photographs and video** — all rights reserved; some event/conference photos were taken by third parties, whose rights are reserved to them. The personal portrait (`lampros-konstantellos-picture.jpg`) may not be reused in any context.
+- **Third-party components** — keep their own licenses (see below); the terms above do not apply to them.
+
+See [`LICENSE`](./LICENSE) for the full terms, including how to request permission.
+
+### Third-party notices
+
+- **React / ReactDOM** (`vendor/react.production.min.js`, `vendor/react-dom.production.min.js`) — MIT License, © Facebook, Inc. and its affiliates. The react-dom build additionally bundles a custom Modernizr build (MIT). The original MIT headers are retained verbatim in those files.
+- **Inter** and **JetBrains Mono** — loaded at runtime from the Google Fonts CDN under the SIL Open Font License; not redistributed in this repository.
+- **Brand icons** in `icons.jsx` (LinkedIn, Google Scholar, IEEE, ORCID, Zenodo, ResearchGate, GitHub) reference trademarks owned by their respective owners and are used only to link to the author's profiles.
