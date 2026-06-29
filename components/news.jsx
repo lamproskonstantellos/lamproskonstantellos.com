@@ -20,7 +20,7 @@ function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from }) 
       href={routeToPath(route)}
       onClick={(e) => handleAnchorClick(e, navigate, route, { from })}
     >
-      <div className="cover">
+      <div className={"cover" + (article.coverAlign === "top" ? " cover-align-top" : "")}>
         {article.cover
           ? <Picture src={asset(article.cover)} alt={article.title} width="640" height="400" />
           : <div className="ph">[ news/{article.slug}/cover.jpg ]</div>}
@@ -284,7 +284,7 @@ function Article({ slug, navigate }) {
       </div>
       <h1>{article.title}</h1>
       {article.cover && (
-        <div className="article-cover">
+        <div className={"article-cover" + (article.coverAlign === "top" ? " cover-align-top" : "")}>
           <Picture
             src={asset(article.cover)}
             alt={article.title}
@@ -304,13 +304,7 @@ function Article({ slug, navigate }) {
           <video
             controls
             preload="metadata"
-            poster={
-              article.poster
-                ? asset(article.poster)
-                : article.cover
-                ? asset(article.cover)
-                : undefined
-            }
+            poster={article.poster ? asset(article.poster) : undefined}
           >
             <source src={asset(article.video)} type="video/mp4" />
           </video>
