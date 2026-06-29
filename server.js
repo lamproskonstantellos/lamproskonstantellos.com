@@ -5,14 +5,16 @@ const zlib = require("zlib");
 const { URL } = require("url");
 const SITE_CFG = require("./site.config.js");
 const { parseRoute, isValidSpaRoute: routeIsValidSpa, pageTitle } = require("./routes.js");
-const { validateArticle, compareByDateDesc } = require("./article-schema.js");
+const { validateArticle } = require("./article-schema.js");
+const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
 
 // Unique per server start - forces browser to re-fetch JS/CSS on every deploy.
-// Railway exposes the deploying commit SHA at build time; falling back to
-// the boot timestamp keeps local dev working.
+// This is the local preview server; the static build (build-static.js) stamps
+// its own version from CF_PAGES_COMMIT_SHA. A commit SHA from the environment is
+// honoured if present, falling back to the boot timestamp for local dev.
 const DEPLOY_VERSION = process.env.RAILWAY_GIT_COMMIT_SHA
   ? process.env.RAILWAY_GIT_COMMIT_SHA.slice(0, 12)
   : Date.now();
@@ -202,6 +204,11 @@ for (const slug of ARTICLE_SLUGS) {
     ARTICLE_COVER_DIMS[slug] = imageDims(path.join(PUBLIC_DIR, meta.cover));
   }
 }
+// The loaded, validated articles in folder order — the single input shared by
+// the feed builders here and by the static build (feeds.js stays the one place
+// sitemap/rss/feed bytes are produced, so the live server and the build cannot
+// diverge).
+const ARTICLES = ARTICLE_SLUGS.map((slug) => ARTICLE_META[slug]).filter(Boolean);
 const ARTICLE_SCRIPTS = ARTICLE_SLUGS
   .map((slug) => `<script src="/news/${slug}/article.js"></script>`)
   .join("\n");
@@ -512,6 +519,44 @@ function injectMeta(html, meta) {
       : "");
 }
 
+// Render the served HTML for a path from the index.html template. Pure given
+// its inputs — the SINGLE source of truth for the HTML pipeline, called both by
+// serveIndex (live server) and by the static build (build-static.js), so the
+// two can never drift. Performs, in order: injectMeta(computePageMeta) → inject
+// the auto-discovered article <script>s after the /data.js tag → rewrite
+// /dist/<name>.js to content-hashed names via the asset map → stamp
+// ?v=deployVersion on local non-dist css/js for cache busting.
+function renderHtml(templateHtml, pathname, { deployVersion, articleScripts, assetMap } = {}) {
+  const map = assetMap || {};
+  const meta = computePageMeta(pathname);
+  const processedHtml = injectMeta(templateHtml, meta);
+  // Inject auto-discovered article scripts right after data.js (function
+  // replacement so a slug containing a $-sequence cannot corrupt the markup).
+  const withArticles = articleScripts
+    ? processedHtml.replace(
+        '<script src="/data.js"></script>',
+        () => `<script src="/data.js"></script>\n${articleScripts}`
+      )
+    : processedHtml;
+  // Rewrite /dist/<name>.js references to their content-hashed filenames
+  const hashed = withArticles.replace(
+    /(<script\s+src=")\/dist\/([^"?]+)\.js(")/g,
+    (match, prefix, name, suffix) => {
+      const mapped = map[name];
+      return mapped ? `${prefix}${mapped}${suffix}` : match;
+    }
+  );
+  // Inject deploy version into local asset URLs (except content-hashed /dist/).
+  // Here $1/$2/$3 are deliberate capture-group backreferences, and the deploy
+  // version is a commit SHA or a timestamp (no $), so the string form is
+  // correct — this is not the same hazard as the meta injection above.
+  const versioned = hashed.replace(
+    /((?:src|href)=")(\/(?!dist\/)[^"?]+\.(?:css|js|jsx))(")/g,
+    `$1$2?v=${deployVersion}$3`
+  );
+  return versioned;
+}
+
 function serveIndex(req, res, filePath, pathname, statusCode = 200) {
   fs.readFile(filePath, "utf8", (err, html) => {
     if (err) {
@@ -519,32 +564,11 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
       res.end("404 Not Found");
       return;
     }
-    const meta = computePageMeta(pathname);
-    const processedHtml = injectMeta(html, meta);
-    // Inject auto-discovered article scripts right after data.js (function
-    // replacement so a slug containing a $-sequence cannot corrupt the markup).
-    const withArticles = ARTICLE_SCRIPTS
-      ? processedHtml.replace(
-          '<script src="/data.js"></script>',
-          () => `<script src="/data.js"></script>\n${ARTICLE_SCRIPTS}`
-        )
-      : processedHtml;
-    // Rewrite /dist/<name>.js references to their content-hashed filenames
-    const hashed = withArticles.replace(
-      /(<script\s+src=")\/dist\/([^"?]+)\.js(")/g,
-      (match, prefix, name, suffix) => {
-        const mapped = ASSET_MAP[name];
-        return mapped ? `${prefix}${mapped}${suffix}` : match;
-      }
-    );
-    // Inject deploy version into local asset URLs (except content-hashed /dist/).
-    // Here $1/$2/$3 are deliberate capture-group backreferences, and
-    // DEPLOY_VERSION is a commit SHA or a timestamp (no $), so the string form
-    // is correct — this is not the same hazard as the meta injection above.
-    const versioned = hashed.replace(
-      /((?:src|href)=")(\/(?!dist\/)[^"?]+\.(?:css|js|jsx))(")/g,
-      `$1$2?v=${DEPLOY_VERSION}$3`
-    );
+    const versioned = renderHtml(html, pathname, {
+      deployVersion: DEPLOY_VERSION,
+      articleScripts: ARTICLE_SCRIPTS,
+      assetMap: ASSET_MAP,
+    });
     const contentType = "text/html; charset=utf-8";
     // The rendered HTML for a given path is deterministic within a process, so
     // cache its compressed variants by path.
@@ -776,38 +800,7 @@ const server = http.createServer((req, res) => {
     }
 
   if (urlPathname === "/sitemap.xml") {
-    // Use the most recent article date as the lastmod for index pages
-    // (home, /news, /publications all surface news content), so the value
-    // only changes when content actually changes.
-    const articleDates = ARTICLE_SLUGS
-      .map((slug) => ARTICLE_META[slug]?.date)
-      .filter((d) => d && /^\d{4}-\d{2}-\d{2}$/.test(d))
-      .sort()
-      .reverse();
-    const latestContentDate = articleDates[0] || "2026-01-01";
-
-    const entries = [
-      { path: "/", lastmod: latestContentDate },
-      { path: "/news", lastmod: latestContentDate },
-      { path: "/publications", lastmod: latestContentDate },
-    ];
-
-    for (const slug of ARTICLE_SLUGS) {
-      const article = ARTICLE_META[slug];
-      entries.push({
-        path: `/news/${slug}`,
-        lastmod: article && /^\d{4}-\d{2}-\d{2}$/.test(article.date) ? article.date : latestContentDate,
-      });
-    }
-
-    const xml =
-      `<?xml version="1.0" encoding="UTF-8"?>\n` +
-      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-      entries
-        .map((e) => `  <url>\n    <loc>${SITE_CFG.url}${e.path}</loc>\n    <lastmod>${e.lastmod}</lastmod>\n  </url>`)
-        .join("\n") +
-      `\n</urlset>\n`;
-
+    const xml = buildSitemap({ articles: ARTICLES, siteCfg: SITE_CFG });
     // Compressed like every other text response (the body is deterministic per
     // process, so it is keyed by a stable name and compressed at most once).
     writeCompressed(req, res, {
@@ -818,84 +811,16 @@ const server = http.createServer((req, res) => {
   }
 
   if (urlPathname === "/feed.json") {
-    const items = ARTICLE_SLUGS
-      .map((slug) => ARTICLE_META[slug])
-      .filter((a) => a && a.date)
-      .sort(compareByDateDesc);
-
-    const feed = {
-      version: "https://jsonfeed.org/version/1.1",
-      title: `${SITE_CFG.name} — News`,
-      home_page_url: `${SITE_CFG.url}/news`,
-      feed_url: `${SITE_CFG.url}/feed.json`,
-      description: SITE_CFG.defaultDescription,
-      language: "en",
-      authors: [
-        { name: SITE_CFG.name, url: SITE_CFG.url }
-      ],
-      items: items.map((a) => {
-        const url = `${SITE_CFG.url}/news/${a.slug}`;
-        const item = {
-          id: url,
-          url,
-          title: a.title,
-          content_text: Array.isArray(a.body) ? a.body.join("\n\n") : "",
-          summary: a.excerpt || "",
-          date_published: new Date(`${a.date}T00:00:00Z`).toISOString(),
-        };
-        if (a.cover) item.image = `${SITE_CFG.url}/${a.cover}`;
-        if (a.keywords && a.keywords.length) item.tags = a.keywords;
-        return item;
-      }),
-    };
-
+    const json = buildFeed({ articles: ARTICLES, siteCfg: SITE_CFG });
     writeCompressed(req, res, {
       "Content-Type": "application/feed+json; charset=utf-8",
       "Cache-Control": "public, max-age=3600",
-    }, JSON.stringify(feed, null, 2), "feed:json");
+    }, json, "feed:json");
     return;
   }
 
   if (urlPathname === "/rss.xml") {
-    const items = ARTICLE_SLUGS
-      .map((slug) => ARTICLE_META[slug])
-      .filter((a) => a && a.date)
-      .sort(compareByDateDesc);
-
-    const itemXml = items
-      .map((a) => {
-        const link = `${SITE_CFG.url}/news/${a.slug}`;
-        const pubDate = new Date(`${a.date}T00:00:00Z`).toUTCString();
-        return (
-          `  <item>\n` +
-          `    <title>${escapeHtml(a.title)}</title>\n` +
-          `    <link>${link}</link>\n` +
-          `    <guid isPermaLink="true">${link}</guid>\n` +
-          `    <pubDate>${pubDate}</pubDate>\n` +
-          `    <description>${escapeHtml(a.excerpt || "")}</description>\n` +
-          `  </item>`
-        );
-      })
-      .join("\n");
-
-    const lastBuildDate = items.length
-      ? new Date(`${items[0].date}T00:00:00Z`).toUTCString()
-      : new Date().toUTCString();
-
-    const xml =
-      `<?xml version="1.0" encoding="UTF-8"?>\n` +
-      `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n` +
-      `<channel>\n` +
-      `  <title>${escapeHtml(SITE_CFG.name)} - News</title>\n` +
-      `  <link>${SITE_CFG.url}/news</link>\n` +
-      `  <description>${escapeHtml(SITE_CFG.defaultDescription)}</description>\n` +
-      `  <language>en</language>\n` +
-      `  <lastBuildDate>${lastBuildDate}</lastBuildDate>\n` +
-      `  <atom:link href="${SITE_CFG.url}/rss.xml" rel="self" type="application/rss+xml" />\n` +
-      (itemXml ? itemXml + `\n` : "") +
-      `</channel>\n` +
-      `</rss>\n`;
-
+    const xml = buildRss({ articles: ARTICLES, siteCfg: SITE_CFG });
     writeCompressed(req, res, {
       "Content-Type": "application/rss+xml; charset=utf-8",
       "Cache-Control": "public, max-age=3600",
@@ -957,6 +882,7 @@ if (require.main === module) {
 // on an ephemeral port and exercise the pure helpers directly.
 module.exports = {
   server,
+  renderHtml,
   computePageMeta,
   injectMeta,
   escapeHtml,
@@ -967,4 +893,11 @@ module.exports = {
   discoverArticleSlugs,
   SECURITY_HEADERS,
   isPrivatePath,
+  // Build-time reuse: the static build (build-static.js) renders and writes the
+  // exact bytes the server serves by reusing this already-loaded state.
+  DEPLOY_VERSION,
+  ARTICLES,
+  ARTICLE_SCRIPTS,
+  ASSET_MAP,
+  SITE_CFG,
 };
