@@ -22,6 +22,13 @@
     <description>Reflections on grid constraints, flexibility, storage, data infrastructure, and the increasingly operational nature of the Greek energy transition.</description>
   </item>
   <item>
+    <title>At Renewable EnergyTech in Thessaloniki: Market Exposure for Young Engineers</title>
+    <link>https://lamproskonstantellos.com/news/renewable-energytech-expo-thessaloniki</link>
+    <guid isPermaLink="true">https://lamproskonstantellos.com/news/renewable-energytech-expo-thessaloniki</guid>
+    <pubDate>Sat, 28 Mar 2026 00:00:00 GMT</pubDate>
+    <description>Notes from Renewable EnergyTech in Thessaloniki on curtailment, storage delays, flexible portfolios, and self-consumption, and a conversation on what young engineers gain from the market itself.</description>
+  </item>
+  <item>
     <title>Reflections from the 7th Renewable &amp; Storage Forum</title>
     <link>https://lamproskonstantellos.com/news/7th-renewable-storage-forum</link>
     <guid isPermaLink="true">https://lamproskonstantellos.com/news/7th-renewable-storage-forum</guid>
@@ -29,11 +36,32 @@
     <description>Notes on renewable deployment, storage, curtailment, grid access, and the regulatory conditions shaping the next phase of the Greek electricity market.</description>
   </item>
   <item>
+    <title>Erecting a Wind Turbine: Notes from the 23.1 MW Wind Farm</title>
+    <link>https://lamproskonstantellos.com/news/wind-farm-turbine-erection</link>
+    <guid isPermaLink="true">https://lamproskonstantellos.com/news/wind-farm-turbine-erection</guid>
+    <pubDate>Thu, 16 Oct 2025 00:00:00 GMT</pubDate>
+    <description>Field notes from the erection of a wind turbine, lifted section by section from the bottom tower to the three blades, and why the sequence and the weather govern the day.</description>
+  </item>
+  <item>
     <title>Third Best Paper Award at IEEE PESS 2025</title>
     <link>https://lamproskonstantellos.com/news/ieee-pess-2025-best-paper-award</link>
     <guid isPermaLink="true">https://lamproskonstantellos.com/news/ieee-pess-2025-best-paper-award</guid>
     <pubDate>Fri, 10 Oct 2025 00:00:00 GMT</pubDate>
     <description>Our work on PV and Vehicle-to-Grid integration in the isolated island grid of Kastellorizo received the 3rd Best Paper Award at IEEE PESS 2025 in Munich.</description>
+  </item>
+  <item>
+    <title>Our EV Charging Research, Presented at EVS38 in Gothenburg</title>
+    <link>https://lamproskonstantellos.com/news/evs38-gothenburg-ev-charging</link>
+    <guid isPermaLink="true">https://lamproskonstantellos.com/news/evs38-gothenburg-ev-charging</guid>
+    <pubDate>Wed, 18 Jun 2025 00:00:00 GMT</pubDate>
+    <description>Our EVS38 paper used BiGRU neural networks to predict long-term EV charger behaviour from short-term test data, with a prediction error as low as 4.9% for chargers with consistent control logic.</description>
+  </item>
+  <item>
+    <title>Casting a Wind Turbine Foundation: Notes from the 23.1 MW Wind Farm</title>
+    <link>https://lamproskonstantellos.com/news/wind-farm-foundation-pour</link>
+    <guid isPermaLink="true">https://lamproskonstantellos.com/news/wind-farm-foundation-pour</guid>
+    <pubDate>Thu, 22 May 2025 00:00:00 GMT</pubDate>
+    <description>Notes from site during the continuous, uninterrupted concrete pour of a wind turbine foundation, and why the engineering is decided in the logistics, not only in the concrete.</description>
   </item>
   <item>
     <title>AI-Hub Meeting with the Mayor of Western Achaia</title>
