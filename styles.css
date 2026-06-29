@@ -441,30 +441,25 @@ section.block:first-of-type { border-top: none; }
   right: 16px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   font-family: "Inter", sans-serif;
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  background: #fdf8ee;
-  /* #8a6420: WCAG AA — 5.06:1 on the #fdf8ee badge (was #aa7c2e at 3.52:1). */
-  color: #8a6420;
-  border: 1px solid #e8d4a0;
-  padding: 5px 10px;
-  border-radius: 6px;
+  letter-spacing: 0.005em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  background: var(--surface);
+  /* #7a5618: WCAG AA — ~6.6:1 on the white --surface badge. A quiet outline
+     pill (no fill, no icon) reads as a minimal credential rather than a tag. */
+  color: #7a5618;
+  border: 1px solid #dcc488;
+  padding: 5px 12px;
+  border-radius: 999px;
   z-index: 1;
 }
-.pub-award svg {
-  width: 12px;
-  height: 12px;
-  color: #c49030;
-  flex-shrink: 0;
-}
-/* Keep the meta line clear of the absolute badge: it wraps ~7px before the
-   badge edge at any card width (badge ≈176px wide + 16px right offset). */
+/* Keep the meta line clear of the absolute badge: it wraps before the badge
+   edge at any card width (badge ≈141px wide + 16px right offset). */
 .pub-award + .pub-meta {
-  padding-right: 145px;
+  padding-right: 110px;
 }
 @media (max-width: 600px) {
   .pub-award {
@@ -489,6 +484,10 @@ section.block:first-of-type { border-top: none; }
   color: var(--muted);
   margin: 0 0 12px;
 }
+/* The author's own name is wrapped in **bold** in data.js and parsed by
+   renderInline; lift only that token to full navy so authorship reads at a
+   glance while co-authors stay in --muted. #0a1f44 on --surface ≈ 16.3:1 (AA). */
+.pub-authors strong { color: var(--ink); font-weight: 600; }
 .pub-description {
   font-size: 13.5px;
   color: var(--muted);
