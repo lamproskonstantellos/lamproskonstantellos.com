@@ -1,5 +1,5 @@
 /* ============================================================
-   Erecting a Wind Turbine: Notes from the 23.1 MW Wind Farm
+   Turbine Erection at the 23.1 MW Wind Farm
    ============================================================ */
 
 defineArticle({
@@ -7,7 +7,7 @@ defineArticle({
   date: "2025-10-16",
   dateLabel: "October 16, 2025",
   location: "Greece",
-  title: "Erecting a Wind Turbine: Notes from the 23.1 MW Wind Farm",
+  title: "Turbine Erection at the 23.1 MW Wind Farm",
   excerpt: "Field notes from the erection of a wind turbine, lifted section by section from the bottom tower to the three blades, and why the sequence and the weather govern the day.",
   keywords: [
     "wind energy",

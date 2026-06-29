@@ -1,5 +1,5 @@
 /* ============================================================
-   At Renewable EnergyTech in Thessaloniki: Market Exposure for Young Engineers
+   Reflections from Renewable EnergyTech in Thessaloniki
    ============================================================ */
 
 defineArticle({
@@ -7,7 +7,7 @@ defineArticle({
   date: "2026-03-28",
   dateLabel: "March 28, 2026",
   location: "Thessaloniki, Greece",
-  title: "At Renewable EnergyTech in Thessaloniki: Market Exposure for Young Engineers",
+  title: "Reflections from Renewable EnergyTech in Thessaloniki",
   excerpt: "Notes from Renewable EnergyTech in Thessaloniki on curtailment, storage delays, flexible portfolios, and self-consumption, and a conversation on what young engineers gain from the market itself.",
   keywords: [
     "Renewable EnergyTech",

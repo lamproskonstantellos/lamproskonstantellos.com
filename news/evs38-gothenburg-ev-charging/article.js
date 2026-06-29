@@ -1,5 +1,5 @@
 /* ============================================================
-   Our EV Charging Research, Presented at EVS38 in Gothenburg
+   EV Charging Research at EVS38 in Gothenburg
    ============================================================ */
 
 defineArticle({
@@ -7,7 +7,7 @@ defineArticle({
   date: "2025-06-18",
   dateLabel: "June 18, 2025",
   location: "Gothenburg, Sweden",
-  title: "Our EV Charging Research, Presented at EVS38 in Gothenburg",
+  title: "EV Charging Research at EVS38 in Gothenburg",
   excerpt: "Our EVS38 paper used BiGRU neural networks to predict long-term EV charger behaviour from short-term test data, with a prediction error as low as 4.9% for chargers with consistent control logic.",
   keywords: [
     "EVS38",

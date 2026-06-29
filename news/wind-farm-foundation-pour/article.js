@@ -1,5 +1,5 @@
 /* ============================================================
-   Casting a Wind Turbine Foundation: Notes from the 23.1 MW Wind Farm
+   Foundation Pour at the 23.1 MW Wind Farm
    ============================================================ */
 
 defineArticle({
@@ -7,7 +7,7 @@ defineArticle({
   date: "2025-05-22",
   dateLabel: "May 22, 2025",
   location: "Greece",
-  title: "Casting a Wind Turbine Foundation: Notes from the 23.1 MW Wind Farm",
+  title: "Foundation Pour at the 23.1 MW Wind Farm",
   excerpt: "Notes from site during the continuous, uninterrupted concrete pour of a wind turbine foundation, and why the engineering is decided in the logistics, not only in the concrete.",
   keywords: [
     "wind energy",
