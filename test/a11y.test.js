@@ -48,7 +48,8 @@ test("body text colors meet WCAG AA (4.5:1) on their backgrounds", () => {
 
 test("award badge text meets WCAG AA on its badge background", () => {
   const color = CSS.match(/\.pub-award\s*\{[^}]*?color:\s*(#[0-9a-fA-F]{6})/s)[1];
-  const r = ratio(color, "#fdf8ee");
+  // The badge is now an outline pill on the white card surface (no cream fill).
+  const r = ratio(color, SURFACE);
   assert.ok(r >= 4.5, `award text is ${r.toFixed(2)}:1 (needs 4.5:1)`);
 });
 
