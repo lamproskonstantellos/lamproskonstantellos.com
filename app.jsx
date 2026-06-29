@@ -282,11 +282,15 @@ function App() {
   }, [route]);
 
   // Scroll-spy (homepage only): observe the four sections against a thin band
-  // near the top of the viewport (between 45% and 50%, via rootMargin) and
-  // highlight the one crossing it. The observer reports only entries that
-  // CHANGED, so `latest` keeps the most recent observation per section and
-  // pickActiveSection (ui-helpers.js) resolves the winner — null while the
-  // hero is in view. Disconnected when leaving home.
+  // just below the sticky header (15%–20% of the viewport height, via
+  // rootMargin) and highlight the one crossing it. The band sits near the TOP
+  // on purpose: nav clicks scroll a section's top to ~70px (the -70 offset
+  // below), so the "active" line has to be up there too — a mid-viewport band
+  // would land in the NEXT section right after a click and highlight it instead
+  // (off-by-one). The observer reports only entries that CHANGED, so `latest`
+  // keeps the most recent observation per section and pickActiveSection
+  // (ui-helpers.js) resolves the winner — null while the hero is in view.
+  // Disconnected when leaving home.
   useEffect(() => {
     if (route.page !== "home") {
       setActiveSection(null);
@@ -299,7 +303,7 @@ function App() {
     const latest = new Map();
     const io = new IntersectionObserver(
       (entries) => {
-        const bandTop = window.innerHeight * 0.45;
+        const bandTop = window.innerHeight * 0.15;
         for (const e of entries) {
           latest.set(e.target.id, {
             id: e.target.id,
@@ -312,7 +316,7 @@ function App() {
         }
         setActiveSection(pickActiveSection([...latest.values()], HOME_SECTION_IDS));
       },
-      { rootMargin: "-45% 0px -50% 0px" }
+      { rootMargin: "-15% 0px -80% 0px" }
     );
     sections.forEach((el) => io.observe(el));
     return () => io.disconnect();
