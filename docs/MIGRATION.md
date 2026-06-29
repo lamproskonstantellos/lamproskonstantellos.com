@@ -2,7 +2,7 @@
 
 This document records the move from serving the site with a runtime Node
 process (`server.js` on Railway) to deploying a fully **pre-rendered static
-build** to **Cloudflare Pages** — with **zero change to user-facing output or
+build** to **Cloudflare Pages**, with **zero change to user-facing output or
 SEO**.
 
 `server.js` is **not** removed: it is kept as the local preview server
@@ -13,7 +13,7 @@ against.
 
 The static output for every route is **byte-identical** to what `server.js`
 previously served, except for the per-deploy `?v=` cache-buster token. This is
-not aspirational — it is enforced by `test/parity.test.js`, which boots the real
+not aspirational: it is enforced by `test/parity.test.js`, which boots the real
 server, renders `build/`, normalizes only the `?v=` token, and asserts byte
 equality for every route and feed.
 
@@ -33,7 +33,7 @@ JSON-LD, `sitemap.xml`, `rss.xml` or `feed.json` changed.
 | `/index.html` → `/` | 301 in `server.js` | `build/_redirects` |
 | Unknown routes | SPA HTML served with HTTP 404 | `build/404.html` (Cloudflare serves it with HTTP 404) |
 | Hosting | Railway, redeploy on push | Cloudflare Pages, build + deploy on push |
-| Container | Dockerfile builds + runs the server | optional; only containerizes the local preview server |
+| Container | Dockerfile builds + runs the server | removed; Cloudflare builds from source, no container |
 
 ### Single source of truth
 
@@ -42,7 +42,7 @@ diverging, the HTML render and the feed generation each live in exactly one
 place:
 
 - `renderHtml(templateHtml, pathname, { deployVersion, articleScripts, assetMap })`
-  in `server.js` — meta injection → article `<script>` injection → `/dist/`
+  in `server.js`: meta injection → article `<script>` injection → `/dist/`
   hash rewrite → `?v=` stamping.
 - `buildSitemap` / `buildRss` / `buildFeed` in `feeds.js`.
 
@@ -63,7 +63,7 @@ npm run build:static   # pre-render every route → build/
 - `sitemap.xml`, `rss.xml`, `feed.json`;
 - `_headers` (security headers + cache classes) and `_redirects`
   (`/index.html → /`);
-- only the public assets — `styles.css`, the dual modules, `vendor/`, the
+- only the public assets: `styles.css`, the dual modules, `vendor/`, the
   hashed `dist/` bundles (never `dist/manifest.json`), favicons / icons /
   manifest / `robots.txt`, and each article folder's `article.js`, images
   (including the `optimize-images` `.webp`/`.avif` variants the `<picture>` tags
@@ -86,7 +86,7 @@ excluded/private file leaked into `build/`.
    deploy.
 5. **Custom domain**: *Custom domains* → add `lamproskonstantellos.com` and
    follow the DNS instructions.
-6. `_headers` and `_redirects` in `build/` are applied automatically — no
+6. `_headers` and `_redirects` in `build/` are applied automatically, with no
    dashboard configuration needed for security headers, caching, or the
    `/index.html → /` redirect.
 
@@ -102,8 +102,9 @@ excluded/private file leaked into `build/`.
 ## Retiring Railway
 
 Once the Cloudflare Pages deployment is verified on the custom domain, the
-Railway service can be deleted. The `Dockerfile` is retained only for running
-the local preview server in a container and is not used by Cloudflare Pages.
+Railway service can be deleted. The `Dockerfile` and `.dockerignore` have been
+removed: Cloudflare Pages builds the static site from source, with no container
+involved.
 
 ## Local preview (unchanged)
 
