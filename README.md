@@ -9,11 +9,11 @@ The personal website of **Lampros Konstantellos**, Electrical & Computer Enginee
 
 ## Stack
 
-- **Frontend:** React 18 loaded via self-hosted UMD builds (`vendor/`). JSX is compiled to plain JavaScript at build time with [esbuild](https://esbuild.github.io/) — no in-browser Babel. Plain CSS. Inter and JetBrains Mono via Google Fonts.
+- **Frontend:** React 18 loaded via self-hosted UMD builds (`vendor/`). JSX is compiled to plain JavaScript at build time with [esbuild](https://esbuild.github.io/); no in-browser Babel. Plain CSS. Inter and JetBrains Mono via Google Fonts.
 - **Build / pre-render:** A dependency-free Node build step (`build-static.js`) pre-renders every route to a static `build/` directory: per-route `<title>` / meta / Open Graph / Twitter / canonical / JSON-LD, the auto-discovered per-article scripts, `sitemap.xml` / `rss.xml` / `feed.json`, a route-independent `404.html`, and the security-header + cache rules as Cloudflare `_headers` / `_redirects`. It reuses the same `renderHtml` and `feeds.js` builders as the local preview server, so the static output is byte-identical to what `server.js` serves (proven by `test/parity.test.js`). A per-deploy version query string on local CSS/JS busts browser caches on every deploy.
 - **Local preview:** The original dependency-free Node.js HTTP server (`server.js`, `npm start`) is retained for local preview. It serves the same per-route meta and feeds at request time, with cached brotli/gzip compression, security headers + CSP, class-appropriate `Cache-Control`, and malformed-request guards (no request can crash the process).
-- **Container:** `node:20-alpine`. The `Dockerfile` (runs `npm run build`, then starts `server.js`) is now optional — it only containerizes the local preview server. Cloudflare Pages builds the static site from source and needs no container.
-- **Hosting:** [Cloudflare Pages](https://pages.cloudflare.com/). Builds and deploys the static `build/` output on every git push — build command `npm run build && npm run build:static`, output directory `build`, `NODE_VERSION=20`.
+- **Container:** `node:20-alpine`. The `Dockerfile` (runs `npm run build`, then starts `server.js`) is now optional: it only containerizes the local preview server. Cloudflare Pages builds the static site from source and needs no container.
+- **Hosting:** [Cloudflare Pages](https://pages.cloudflare.com/). Builds and deploys the static `build/` output on every git push: build command `npm run build && npm run build:static`, output directory `build`, `NODE_VERSION=20`.
 
 ## Local development
 
@@ -24,12 +24,12 @@ npm start         # serve at http://localhost:3000
 npm test          # run the test suite (build first, so dist/ exists)
 ```
 
-While editing `.jsx` files, run `npm run watch` in a second terminal — esbuild rebuilds on every save and a browser refresh shows the change.
+While editing `.jsx` files, run `npm run watch` in a second terminal; esbuild rebuilds on every save and a browser refresh shows the change.
 
 ## Static build
 
 The site deploys to [Cloudflare Pages](https://pages.cloudflare.com/) as a fully
-pre-rendered static bundle — no runtime server.
+pre-rendered static bundle, with no runtime server.
 
 ```bash
 npm run build          # optimize images + compile JSX → dist/
@@ -38,7 +38,7 @@ npm run build:static   # pre-render every route → build/
 
 `build-static.js` reuses the server's `renderHtml` and `feeds.js` builders, so
 every page, feed and header file in `build/` is byte-identical to what
-`server.js` serves (modulo the per-deploy `?v=` cache-buster) — asserted by
+`server.js` serves (modulo the per-deploy `?v=` cache-buster), asserted by
 `test/parity.test.js`. Only public assets are copied into `build/`; source,
 tooling and config never are.
 
@@ -105,7 +105,7 @@ every push.
 
 ## Adding a new article
 
-See [`news/README.md`](./news/README.md). In short: create a folder under `news/<slug>/`, drop in `cover.jpg` and any photos, write `article.js`. The build auto-discovers it at build time and it ships on the next deploy (git push) — no edits to `data.js`, `index.html`, or any other file needed.
+See [`news/README.md`](./news/README.md). In short: create a folder under `news/<slug>/`, drop in `cover.jpg` and any photos, write `article.js`. The build auto-discovers it at build time and it ships on the next deploy (git push), with no edits to `data.js`, `index.html`, or any other file needed.
 
 ## SEO
 
@@ -118,16 +118,16 @@ See [`news/README.md`](./news/README.md). In short: create a folder under `news/
 
 ## License
 
-This repository is published for **portfolio visibility only** — public visibility on GitHub does not grant any right to reuse it. All rights are reserved by the author.
+This repository is published for **portfolio visibility only**. Public visibility on GitHub does not grant any right to reuse it. All rights are reserved by the author.
 
-- **Source code, written content, and design** — © Lampros Konstantellos, all rights reserved. Copying, modification, redistribution, or any derivative use requires prior written permission.
-- **Photographs and video** — all rights reserved; some event/conference photos were taken by third parties, whose rights are reserved to them. The personal portrait (`lampros-konstantellos-picture.jpg`) may not be reused in any context.
-- **Third-party components** — keep their own licenses (see below); the terms above do not apply to them.
+- **Source code, written content, and design**: © Lampros Konstantellos, all rights reserved. Copying, modification, redistribution, or any derivative use requires prior written permission.
+- **Photographs and video**: all rights reserved; some event/conference photos were taken by third parties, whose rights are reserved to them. The personal portrait (`lampros-konstantellos-picture.jpg`) may not be reused in any context.
+- **Third-party components**: keep their own licenses (see below); the terms above do not apply to them.
 
 See [`LICENSE`](./LICENSE) for the full terms, including how to request permission.
 
 ### Third-party notices
 
-- **React / ReactDOM** (`vendor/react.production.min.js`, `vendor/react-dom.production.min.js`) — MIT License, © Facebook, Inc. and its affiliates. The react-dom build additionally bundles a custom Modernizr build (MIT). The original MIT headers are retained verbatim in those files.
-- **Inter** and **JetBrains Mono** — loaded at runtime from the Google Fonts CDN under the SIL Open Font License; not redistributed in this repository.
+- **React / ReactDOM** (`vendor/react.production.min.js`, `vendor/react-dom.production.min.js`): MIT License, © Facebook, Inc. and its affiliates. The react-dom build additionally bundles a custom Modernizr build (MIT). The original MIT headers are retained verbatim in those files.
+- **Inter** and **JetBrains Mono**: loaded at runtime from the Google Fonts CDN under the SIL Open Font License; not redistributed in this repository.
 - **Brand icons** in `icons.jsx` (LinkedIn, Google Scholar, IEEE, ORCID, Zenodo, ResearchGate, GitHub) reference trademarks owned by their respective owners and are used only to link to the author's profiles.

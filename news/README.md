@@ -1,8 +1,8 @@
 # News Articles
 
-Each article is a self-contained package inside its own folder under `news/<slug>/` — the text, the cover image, and any in-article photos all live together. Articles are sorted automatically by `date` (newest first) — both on the homepage News preview (capped at 3) and on the full `/news` list page.
+Each article is a self-contained package inside its own folder under `news/<slug>/`: the text, the cover image, and any in-article photos all live together. Articles are sorted automatically by `date` (newest first), both on the homepage News preview (capped at 3) and on the full `/news` list page.
 
-The static build (`build-static.js`) discovers `news/` at build time and injects a `<script>` tag for each `news/<slug>/article.js` it finds — the local preview server (`server.js`) does the same on each request — so adding an article requires no edits to `data.js` or `index.html`.
+The static build (`build-static.js`) discovers `news/` at build time and injects a `<script>` tag for each `news/<slug>/article.js` it finds, and the local preview server (`server.js`) does the same on each request, so adding an article requires no edits to `data.js` or `index.html`.
 
 ## Add a new article
 
@@ -17,19 +17,19 @@ The static build (`build-static.js`) discovers `news/` at build time and injects
 
 defineArticle({
   slug: "my-article-slug",
-  date: "2026-05-12",                        // YYYY-MM-DD — used for sorting
+  date: "2026-05-12",                        // YYYY-MM-DD, used for sorting
   dateLabel: "May 12, 2026",                 // human-readable, shown on the card
-  location: "Athens",                        // optional — shown after the date
+  location: "Athens",                        // optional, shown after the date
   title: "Title of the article",
   excerpt: "One- or two-sentence preview shown on the card.",
-  cover: "news/my-article-slug/cover.jpg",   // optional — card + article cover
-  photos: [                                  // optional — gallery
+  cover: "news/my-article-slug/cover.jpg",   // optional: card + article cover
+  photos: [                                  // optional: gallery
     "news/my-article-slug/photo-01.jpg",
     // Or, to crop a photo from its top instead of centre:
     { src: "news/my-article-slug/photo-02.jpg", align: "top" },
   ],
-  video: "news/my-article-slug/video.mp4",    // optional — self-hosted <video>
-  poster: "news/my-article-slug/cover.jpg",   // optional — poster; falls back to cover
+  video: "news/my-article-slug/video.mp4",    // optional: self-hosted <video>
+  poster: "news/my-article-slug/cover.jpg",   // optional: poster; falls back to cover
   body: [
     "First paragraph. Use **double asterisks** for inline bold.",
     "Second paragraph.",
@@ -40,19 +40,19 @@ defineArticle({
   topics: [                                  // {name, sameAs}[] → Article.about
     { name: "Vehicle-to-Grid", sameAs: "https://en.wikipedia.org/wiki/Vehicle-to-grid" },
   ],
-  sources: [                                 // optional — shown under the article
+  sources: [                                 // optional, shown under the article
     { label: "Source name", href: "https://example.com" },
   ],
 });
 ```
 
-4. That's it — the article is auto-discovered at build time and, on the next deploy (a git push), will appear at `/news/my-article-slug`, on the homepage News preview (if among the 3 most recent), and on the `/news` list page. No edits to `data.js` or `index.html` needed.
+4. That's it: the article is auto-discovered at build time and, on the next deploy (a git push), will appear at `/news/my-article-slug`, on the homepage News preview (if among the 3 most recent), and on the `/news` list page. No edits to `data.js` or `index.html` needed.
 
 ### Fields
 
 | Field | Required | Type | Used for |
 |-------|----------|------|----------|
-| `slug` | ✅ | string | URL `/news/<slug>` — must equal the folder name; lowercase letters, digits and hyphens only |
+| `slug` | ✅ | string | URL `/news/<slug>`; must equal the folder name (lowercase letters, digits and hyphens only) |
 | `date` | ✅ | `YYYY-MM-DD` | Sorting (newest first), sitemap/RSS/feed dates |
 | `dateLabel` | ✅ | string | Human-readable date on the card/article |
 | `title` | ✅ | string | Heading, `<title>`, JSON-LD headline |
@@ -90,9 +90,9 @@ news/
 
 ## Routes
 
-- `/`               — homepage with News preview (max 3, newest first)
-- `/news`           — full list of all articles
-- `/news/<slug>`    — single article view
+- `/`: homepage with News preview (max 3, newest first)
+- `/news`: full list of all articles
+- `/news/<slug>`: single article view
 
 ## Tweaking the homepage cap
 
