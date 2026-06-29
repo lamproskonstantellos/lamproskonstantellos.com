@@ -2,7 +2,7 @@
   "name": "lamproskonstantellos-website",
   "version": "1.0.0",
   "private": true,
-  "description": "Personal website served on Railway.",
+  "description": "Personal website, pre-rendered to a static site for Cloudflare Pages.",
   "license": "UNLICENSED",
   "main": "server.js",
   "scripts": {

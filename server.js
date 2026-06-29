@@ -12,8 +12,9 @@ const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
 
 // Unique per server start - forces browser to re-fetch JS/CSS on every deploy.
-// Railway exposes the deploying commit SHA at build time; falling back to
-// the boot timestamp keeps local dev working.
+// This is the local preview server; the static build (build-static.js) stamps
+// its own version from CF_PAGES_COMMIT_SHA. A commit SHA from the environment is
+// honoured if present, falling back to the boot timestamp for local dev.
 const DEPLOY_VERSION = process.env.RAILWAY_GIT_COMMIT_SHA
   ? process.env.RAILWAY_GIT_COMMIT_SHA.slice(0, 12)
   : Date.now();

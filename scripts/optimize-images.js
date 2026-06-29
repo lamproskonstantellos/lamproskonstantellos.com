@@ -5,8 +5,8 @@
  * sibling .webp and .avif files. Idempotent: skips images whose outputs are
  * already newer than the source.
  *
- * Run by `npm run build` before esbuild, so every Railway deploy ships with
- * fresh optimized variants without ever committing them to git.
+ * Run by `npm run build` before esbuild, so every deploy ships with fresh
+ * optimized variants without ever committing them to git.
  */
 
 const fs = require("fs");
