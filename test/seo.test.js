@@ -65,7 +65,13 @@ test("article meta matches article.js source", () => {
   const meta = server.computePageMeta(`/news/${ARTICLE}`);
   assert.equal(meta.title, `${a.title} - ${SITE.name}`);
   assert.equal(meta.description, a.excerpt);
-  assert.equal(meta.image, `${SITE.url}/${a.cover}`);
+  // og:image is the cover plus a content-hash ?v= so a same-name cover
+  // replacement busts LinkedIn/Facebook/CDN caches (see server.js imageVersion).
+  assert.ok(
+    meta.image.startsWith(`${SITE.url}/${a.cover}?v=`),
+    `article og:image should be the cover with a ?v= cache-buster, got ${meta.image}`
+  );
+  assert.match(meta.image, /\?v=[0-9a-f]{8,}$/, "the ?v= token is a content hash");
   const article = meta.jsonLd["@graph"].find((n) => n["@type"] === "Article");
   assert.equal(article.headline, a.title);
   assert.equal(article.datePublished, a.date);
