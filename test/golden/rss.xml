@@ -43,6 +43,13 @@
     <description>Our work on PV and Vehicle-to-Grid integration in the isolated island grid of Kastellorizo received the 3rd Best Paper Award at IEEE PESS 2025 in Munich.</description>
   </item>
   <item>
+    <title>Our EV Charging Research, Presented at EVS38 in Gothenburg</title>
+    <link>https://lamproskonstantellos.com/news/evs38-gothenburg-ev-charging</link>
+    <guid isPermaLink="true">https://lamproskonstantellos.com/news/evs38-gothenburg-ev-charging</guid>
+    <pubDate>Wed, 18 Jun 2025 00:00:00 GMT</pubDate>
+    <description>Our EVS38 paper used BiGRU neural networks to predict long-term EV charger behaviour from short-term test data, with a prediction error as low as 4.9% for chargers with consistent control logic.</description>
+  </item>
+  <item>
     <title>Casting a Wind Turbine Foundation: Notes from the 23.1 MW Wind Farm</title>
     <link>https://lamproskonstantellos.com/news/wind-farm-foundation-pour</link>
     <guid isPermaLink="true">https://lamproskonstantellos.com/news/wind-farm-foundation-pour</guid>
