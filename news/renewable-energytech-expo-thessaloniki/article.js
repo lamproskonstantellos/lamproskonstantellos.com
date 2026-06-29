@@ -1,5 +1,5 @@
 /* ============================================================
-   At Renewable EnergyTech in Thessaloniki: Market Exposure for Young Engineers
+   Reflections from Renewable EnergyTech in Thessaloniki
    ============================================================ */
 
 defineArticle({
@@ -7,7 +7,7 @@ defineArticle({
   date: "2026-03-28",
   dateLabel: "March 28, 2026",
   location: "Thessaloniki, Greece",
-  title: "At Renewable EnergyTech in Thessaloniki: Market Exposure for Young Engineers",
+  title: "Reflections from Renewable EnergyTech in Thessaloniki",
   excerpt: "Notes from Renewable EnergyTech in Thessaloniki on curtailment, storage delays, flexible portfolios, and self-consumption, and a conversation on what young engineers gain from the market itself.",
   keywords: [
     "Renewable EnergyTech",
@@ -20,6 +20,8 @@ defineArticle({
     "EESTEC",
   ],
   articleSection: "Energy Markets",
+  cover: "news/renewable-energytech-expo-thessaloniki/cover.jpg",
+  video: "news/renewable-energytech-expo-thessaloniki/video.mp4",
   body: [
     "On **26–28 March 2026**, I attended **Renewable EnergyTech** in Thessaloniki, the green and smart energy exhibition held at the Thessaloniki International Exhibition Centre alongside **Forward Green Expo**. It was a packed schedule of meetings and conversations across **RES, BESS, and offshore wind**.",
     "What stood out to me most is how far storage has moved in the conversation. It is no longer treated as an afterthought to renewable generation, but as a central part of how projects and portfolios are now designed.",

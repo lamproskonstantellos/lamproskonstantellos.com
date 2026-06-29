@@ -1,5 +1,5 @@
 /* ============================================================
-   Casting a Wind Turbine Foundation: Notes from the 23.1 MW Wind Farm
+   Foundation Pour at the 23.1 MW Wind Farm
    ============================================================ */
 
 defineArticle({
@@ -7,7 +7,7 @@ defineArticle({
   date: "2025-05-22",
   dateLabel: "May 22, 2025",
   location: "Greece",
-  title: "Casting a Wind Turbine Foundation: Notes from the 23.1 MW Wind Farm",
+  title: "Foundation Pour at the 23.1 MW Wind Farm",
   excerpt: "Notes from site during the continuous, uninterrupted concrete pour of a wind turbine foundation, and why the engineering is decided in the logistics, not only in the concrete.",
   keywords: [
     "wind energy",
@@ -18,6 +18,7 @@ defineArticle({
     "Greece",
   ],
   articleSection: "Construction and Engineering",
+  cover: "news/wind-farm-foundation-pour/cover.jpg",
   body: [
     "On 22 May 2025, I was on site during the **continuous concrete pour** of a wind turbine foundation, an essential structural element of approximately **640 m³**, as part of the construction works at the **23.1 MW Wind Farm** project. A pour of this scale has to be carried out without interruption, over several hours, to preserve structural integrity and long-term durability.",
     "What makes a pour like this demanding is not the volume itself, but the requirement that it stays uninterrupted. A monolithic foundation has to be cast as a single, continuous body; any unplanned break risks a **cold joint**, a plane of weakness where fresh concrete meets concrete that has already begun to set. For a structure that will carry the cyclic loads of a wind turbine for decades, that is not an acceptable risk.",

@@ -672,6 +672,20 @@ section.block:first-of-type { border-top: none; }
   object-fit: cover;
 }
 
+.article-video {
+  margin: 0 0 36px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #000;
+  line-height: 0;
+}
+.article-video video {
+  width: 100%;
+  height: auto;
+  max-height: 80vh;
+  display: block;
+}
+
 .article-body {
   font-size: 16px;
   line-height: 1.75;

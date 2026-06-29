@@ -28,6 +28,8 @@ defineArticle({
     // Or, to crop a photo from its top instead of centre:
     { src: "news/my-article-slug/photo-02.jpg", align: "top" },
   ],
+  video: "news/my-article-slug/video.mp4",    // optional — self-hosted <video>
+  poster: "news/my-article-slug/cover.jpg",   // optional — poster; falls back to cover
   body: [
     "First paragraph. Use **double asterisks** for inline bold.",
     "Second paragraph.",
@@ -59,6 +61,8 @@ defineArticle({
 | `location` | optional | string | Shown after the date |
 | `cover` | optional | path | Card thumbnail + article cover (`og:image` for the article) |
 | `photos` | optional | (string \| `{ src, align }`)[] | Gallery; `align: "top"` crops from the top |
+| `video` | optional | path | Self-hosted `<video>` embed (e.g. `news/<slug>/video.mp4`) |
+| `poster` | optional | path | Poster image for `video`; falls back to `cover` |
 | `keywords` | optional | string[] | JSON-LD `keywords` + JSON Feed `tags` |
 | `articleSection` | optional | string | JSON-LD `articleSection` |
 | `topics` | optional | `{ name, sameAs }`[] | JSON-LD `about` |

@@ -299,6 +299,23 @@ function Article({ slug, navigate }) {
           <p key={i}>{renderInline(p)}</p>
         ))}
       </div>
+      {article.video && (
+        <div className="article-video">
+          <video
+            controls
+            preload="metadata"
+            poster={
+              article.poster
+                ? asset(article.poster)
+                : article.cover
+                ? asset(article.cover)
+                : undefined
+            }
+          >
+            <source src={asset(article.video)} type="video/mp4" />
+          </video>
+        </div>
+      )}
       {article.photos && article.photos.length > 0 && (
         <div className="article-gallery">
           {article.photos.map((photo, i) => {

@@ -1,5 +1,5 @@
 /* ============================================================
-   Our EV Charging Research, Presented at EVS38 in Gothenburg
+   EV Charging Research at EVS38 in Gothenburg
    ============================================================ */
 
 defineArticle({
@@ -7,7 +7,7 @@ defineArticle({
   date: "2025-06-18",
   dateLabel: "June 18, 2025",
   location: "Gothenburg, Sweden",
-  title: "Our EV Charging Research, Presented at EVS38 in Gothenburg",
+  title: "EV Charging Research at EVS38 in Gothenburg",
   excerpt: "Our EVS38 paper used BiGRU neural networks to predict long-term EV charger behaviour from short-term test data, with a prediction error as low as 4.9% for chargers with consistent control logic.",
   keywords: [
     "EVS38",
@@ -19,6 +19,7 @@ defineArticle({
     "machine learning",
   ],
   articleSection: "Research",
+  cover: "news/evs38-gothenburg-ev-charging/cover.jpg",
   body: [
     "From **15–18 June 2025**, the **38th International Electric Vehicle Symposium & Exhibition (EVS38)** took place in **Gothenburg, Sweden**. Our paper, **\"Financial Impact Analysis of Electric Vehicle Charging Behavior with RNN Model and Validation Against Real-World Data\"**, was presented there by my co-author **Deniz Pekmezci**. As **first author**, I developed this work during my internship at the **Fraunhofer Institute for Solar Energy Systems ISE**.",
     "The study addresses a practical question for the EV charging industry: can the long-term behaviour of a charger be predicted from only short-term test data? The answer matters, because it determines how much testing a charger needs before it can be trusted in the field, and how well it can be matched to solar-optimised, smart-charging operation.",

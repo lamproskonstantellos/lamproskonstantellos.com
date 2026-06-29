@@ -53,6 +53,12 @@
     if (article.topics && !Array.isArray(article.topics)) {
       throw new Error(`[article] "${article.slug}" has non-array topics`);
     }
+    if (article.video !== undefined && typeof article.video !== "string") {
+      throw new Error(`[article] "${article.slug}" has non-string video`);
+    }
+    if (article.poster !== undefined && typeof article.poster !== "string") {
+      throw new Error(`[article] "${article.slug}" has non-string poster`);
+    }
     // A photos entry is either a path string or { src, align? }.
     if (Array.isArray(article.photos)) {
       for (const p of article.photos) {

@@ -1,5 +1,5 @@
 /* ============================================================
-   Erecting a Wind Turbine: Notes from the 23.1 MW Wind Farm
+   Turbine Erection at the 23.1 MW Wind Farm
    ============================================================ */
 
 defineArticle({
@@ -7,7 +7,7 @@ defineArticle({
   date: "2025-10-16",
   dateLabel: "October 16, 2025",
   location: "Greece",
-  title: "Erecting a Wind Turbine: Notes from the 23.1 MW Wind Farm",
+  title: "Turbine Erection at the 23.1 MW Wind Farm",
   excerpt: "Field notes from the erection of a wind turbine, lifted section by section from the bottom tower to the three blades, and why the sequence and the weather govern the day.",
   keywords: [
     "wind energy",
@@ -19,6 +19,7 @@ defineArticle({
     "Greece",
   ],
   articleSection: "Construction and Engineering",
+  cover: "news/wind-farm-turbine-erection/cover.jpg",
   body: [
     "On 16 October 2025, I visited the site during the installation of the **bottom tower section** of a wind turbine, part of the ongoing construction works at the **23.1 MW Wind Farm** project.",
     "A turbine is erected in a strict sequence: the **bottom**, **mid 1**, **mid 2**, and **top** tower sections, followed by the **nacelle**, the **drive train**, the **hub**, and finally the **three blades**. Each lift has to land within tight tolerances, and each one depends on the one before it.",

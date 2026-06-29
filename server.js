@@ -31,6 +31,7 @@ const mimeTypes = {
   ".ico": "image/x-icon",
   ".webp": "image/webp",
   ".avif": "image/avif",
+  ".mp4": "video/mp4",
   ".pdf": "application/pdf",
   ".txt": "text/plain; charset=utf-8",
   ".xml": "application/xml; charset=utf-8"
@@ -565,11 +566,52 @@ function sendFile(req, res, filePath) {
       res.end("404 Not Found");
       return;
     }
+    // Non-compressible binaries (video, images, fonts) are byte-seekable, so we
+    // honour HTTP Range requests on them. This lets a browser stream an mp4
+    // whose moov atom sits at the end without first downloading the whole file,
+    // and enables scrubbing. Compressible text assets keep the compressed path.
+    const seekable = !isCompressible(contentType);
+    const rangeHeader = seekable ? req.headers["range"] : undefined;
+    if (rangeHeader) {
+      const size = data.length;
+      const m = /^bytes=(\d*)-(\d*)$/.exec(String(rangeHeader).trim());
+      if (m && (m[1] !== "" || m[2] !== "")) {
+        let start, end;
+        if (m[1] === "") {
+          // suffix range: the final N bytes
+          start = Math.max(0, size - parseInt(m[2], 10));
+          end = size - 1;
+        } else {
+          start = parseInt(m[1], 10);
+          end = m[2] === "" ? size - 1 : Math.min(parseInt(m[2], 10), size - 1);
+        }
+        if (start > end || start >= size) {
+          res.writeHead(416, {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Content-Range": `bytes */${size}`,
+          });
+          res.end("416 Range Not Satisfiable");
+          return;
+        }
+        const chunk = data.subarray(start, end + 1);
+        res.writeHead(206, {
+          "Content-Type": contentType,
+          "Cache-Control": cacheHeaderFor(req, contentType),
+          "Accept-Ranges": "bytes",
+          "Content-Range": `bytes ${start}-${end}/${size}`,
+          "Content-Length": chunk.length,
+        });
+        res.end(req.method === "HEAD" ? undefined : chunk);
+        return;
+      }
+    }
     // Static file bytes are immutable per deploy; key by path + size so the
-    // brotli/gzip result is computed once and reused.
+    // brotli/gzip result is computed once and reused. Seekable assets also
+    // advertise Accept-Ranges so the browser knows it may issue Range requests.
     writeCompressed(req, res, {
       "Content-Type": contentType,
       "Cache-Control": cacheHeaderFor(req, contentType),
+      ...(seekable ? { "Accept-Ranges": "bytes" } : {}),
     }, data, `file:${filePath}:${data.length}`);
   });
 }
