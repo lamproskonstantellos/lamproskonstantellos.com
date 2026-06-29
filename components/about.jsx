@@ -1,4 +1,4 @@
-/* global React, PROFILE, SectionHeader */
+/* global React, PROFILE, SectionHeader, renderInline */
 
 /* ============================================================
    ABOUT
@@ -49,7 +49,7 @@ function About() {
               className={`about-paragraph${i === 0 ? " about-lead" : ""}`}
               style={{ transitionDelay: `${i * 90}ms` }}
             >
-              {p}
+              {renderInline(p)}
             </p>
           ))}
         </div>
