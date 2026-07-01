@@ -56,8 +56,14 @@ function Header({ route, navigate, activeSection }) {
           aria-label={`${PROFILE.name} — home`}
           onClick={(e) => handleAnchorClick(e, navigate, { page: "home" })}
         >
-          <span className="brand-name">{PROFILE.name}</span>
-          <span className="brand-role">{PROFILE.role}</span>
+          {/* Raster logo (not the SVG): the icon art uses Space Grotesk, which
+              the page doesn't load, so an <img> of the SVG would fall back to a
+              different font. The PNG bakes the type in and stays on-brand. */}
+          <img className="brand-logo" src="/icon-192.png" alt="" width="36" height="36" />
+          <span className="brand-text">
+            <span className="brand-name">{PROFILE.name}</span>
+            <span className="brand-role">{PROFILE.role}</span>
+          </span>
         </a>
         <nav className="nav">
           {items.map((it) => {
