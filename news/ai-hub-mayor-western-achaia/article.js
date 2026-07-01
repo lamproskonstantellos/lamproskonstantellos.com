@@ -30,7 +30,7 @@ defineArticle({
       src: "news/ai-hub-mayor-western-achaia/photo-02.jpg",
       after: 5, // next to the pH / temperature / chlorine monitoring detail
       caption:
-        "The Nireas prototype — an Arduino-based unit sensing pH, temperature, and chlorine.",
+        "The Nireas prototype, an Arduino-based unit that senses pH, temperature, and chlorine.",
     },
     {
       src: "news/ai-hub-mayor-western-achaia/photo-03.jpg",

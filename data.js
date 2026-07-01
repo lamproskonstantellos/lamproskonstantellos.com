@@ -54,7 +54,7 @@ const PROFILE = {
       // a distinguishing tag and it reads apart from the conference papers.
       type: "Master's Thesis",
       venue: "University of Patras",
-      location: "Greece",
+      location: "Patras, Greece",
       year: "2025",
       title: "Integration of Photovoltaic Power and Vehicle-to-Grid Technology in Electric Power Systems of Non-Interconnected Islands: A Case Study of Kastellorizo",
       authors: "**Konstantellos, L.** (2025)",
