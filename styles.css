@@ -55,6 +55,11 @@
   outline-offset: 2px;
 }
 html, body { margin: 0; padding: 0; }
+/* Suppress the translucent grey box iOS Safari / Android Chrome flash over a
+   link or button the moment it's tapped. It only shows on touch devices, and
+   the site already has its own :hover / :active / :focus-visible feedback, so
+   the native highlight is just a flicker of visual noise on the logo and nav. */
+html { -webkit-tap-highlight-color: transparent; }
 body {
   font-family: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
   background: var(--bg);
