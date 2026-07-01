@@ -6,7 +6,7 @@ defineArticle({
   slug: "wind-farm-turbine-erection",
   date: "2025-10-16",
   dateLabel: "October 16, 2025",
-  location: "Greece",
+  location: "Boeotia, Greece",
   title: "Turbine Erection at the 23.1 MW Wind Farm",
   excerpt: "Field notes from the erection of a wind turbine, lifted section by section from the bottom tower to the three blades, and why the sequence and the weather govern the day.",
   keywords: [

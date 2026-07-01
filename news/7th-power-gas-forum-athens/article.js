@@ -6,7 +6,7 @@ defineArticle({
   slug: "7th-power-gas-forum-athens",
   date: "2026-04-07",
   dateLabel: "April 7, 2026",
-  location: "Athens",
+  location: "Athens, Greece",
   title: "Insights from the 7th Power & Gas Forum in Athens",
   excerpt: "Reflections on grid constraints, flexibility, storage, data infrastructure, and the increasingly operational nature of the Greek energy transition.",
   keywords: [
