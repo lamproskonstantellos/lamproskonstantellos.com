@@ -335,9 +335,16 @@ function Article({ slug, navigate }) {
       <video
         controls
         preload="metadata"
+        aria-label={`Video: ${article.title}`}
         poster={article.poster ? asset(article.poster) : undefined}
       >
         <source src={asset(article.video)} type="video/mp4" />
+        {/* Captions render only when the article supplies a WebVTT file, so a
+            clip with speech can be made accessible without shipping an empty
+            placeholder track for silent b-roll. */}
+        {article.captions && (
+          <track kind="captions" srcLang="en" label="English" src={asset(article.captions)} default />
+        )}
       </video>
     </div>
   );

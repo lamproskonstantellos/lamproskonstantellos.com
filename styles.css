@@ -903,8 +903,8 @@ section.block:first-of-type,
   position: absolute;
   top: 20px;
   right: 24px;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1207,5 +1207,29 @@ section.block:first-of-type,
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Reveal-on-scroll elements start hidden and are shown by a JS-added .in
+     class (IntersectionObserver). For reduced-motion users there is nothing to
+     animate, so show them outright - content never depends on the observer. */
+  .reveal,
+  .about-paragraph,
+  .chip {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Touch devices: give the smaller inline controls a comfortable >=44px tap
+   target. Scoped to coarse pointers so the desktop (mouse) layout is unchanged. */
+@media (pointer: coarse) {
+  .nav a { padding-top: 11px; padding-bottom: 11px; }
+  .footer-col a { padding-top: 10px; padding-bottom: 10px; }
+  .view-all,
+  .back-link,
+  .footer-top-link,
+  .pub-links a,
+  .article-share a,
+  .article-share button {
+    min-height: 44px;
   }
 }

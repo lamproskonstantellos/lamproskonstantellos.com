@@ -94,3 +94,13 @@ test("structural a11y guarantees", () => {
   assert.match(CSS, /prefers-reduced-motion/, "reduced-motion support");
   assert.match(CSS, /#main-content:focus\s*\{\s*outline:\s*none/, "route-change focus target");
 });
+
+test("reduced-motion shows reveal content without depending on the observer", () => {
+  // Inside the prefers-reduced-motion query, .reveal must be forced visible so
+  // content is never gated on IntersectionObserver for these users.
+  assert.match(
+    CSS,
+    /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.reveal[\s\S]*?opacity:\s*1/,
+    "reduced-motion must reset .reveal opacity"
+  );
+});

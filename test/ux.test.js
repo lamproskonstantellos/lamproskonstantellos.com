@@ -76,6 +76,20 @@ test("compiled app bundle carries the title + focus wiring", () => {
   assert.ok(code.includes("pageTitle"), "bundle missing pageTitle");
 });
 
+// ---- nav aria-current semantics + video accessibility ----------------------
+
+test("app.jsx marks in-page section nav with aria-current=location", () => {
+  const src = fs.readFileSync(path.join(ROOT, "app.jsx"), "utf8");
+  assert.ok(/aria-current=\{currentToken\(/.test(src), "nav must set aria-current via currentToken");
+  assert.ok(src.includes('return "location"'), "home-section highlight should be aria-current=location");
+});
+
+test("compiled news bundle labels the video and gates captions on article data", () => {
+  const code = compiledBundle("components/news.jsx");
+  assert.ok(code.includes("Video:"), "video is missing an accessible name");
+  assert.ok(code.includes("captions"), "captions track wiring is missing");
+});
+
 // ---- Contact: ResearchGate + GitHub cards ------------------------------------
 
 test("icons bundle defines the ResearchGate and GitHub brand icons", () => {
