@@ -34,6 +34,8 @@ const mimeTypes = {
   ".ico": "image/x-icon",
   ".webp": "image/webp",
   ".avif": "image/avif",
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
   ".mp4": "video/mp4",
   ".pdf": "application/pdf",
   ".txt": "text/plain; charset=utf-8",
@@ -692,8 +694,9 @@ function sendFile(req, res, filePath) {
 }
 
 // Applied to every response. CSP is tuned to this site: self-hosted scripts
-// plus the Plausible analytics script, Google Fonts, and inline style
-// attributes emitted by React's style prop.
+// plus the Plausible analytics script, self-hosted fonts (vendor/fonts), and
+// inline style attributes emitted by React's style prop. No third-party font
+// or style origins — the webfonts are served from this origin.
 const SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -704,8 +707,8 @@ const SECURITY_HEADERS = {
   "Content-Security-Policy": [
     "default-src 'self'",
     "script-src 'self' https://plausible.io",
-    "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     "img-src 'self' data:",
     "connect-src 'self' https://plausible.io",
     "object-src 'none'",
