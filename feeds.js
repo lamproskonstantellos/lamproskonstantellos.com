@@ -124,7 +124,7 @@ function buildFeed({ articles, siteCfg }) {
 
   const feed = {
     version: "https://jsonfeed.org/version/1.1",
-    title: `${siteCfg.name} — News`,
+    title: `${siteCfg.name} - News`,
     home_page_url: `${siteCfg.url}/news`,
     feed_url: `${siteCfg.url}/feed.json`,
     description: siteCfg.defaultDescription,

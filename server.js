@@ -260,7 +260,7 @@ function computePageMeta(pathname) {
       image: DEFAULT_IMAGE,
       imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
       imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
-      imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
+      imageAlt: `${SITE_CFG.name} - ${SITE_CFG.jobTitle}`,
       ogType: "website",
       jsonLd: PROFILE_JSONLD,
       preloadImage: HERO_PRELOAD_IMAGE,
@@ -397,7 +397,7 @@ function computePageMeta(pathname) {
     image: DEFAULT_IMAGE,
     imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
     imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
-    imageAlt: `${SITE_CFG.name} — ${SITE_CFG.jobTitle}`,
+    imageAlt: `${SITE_CFG.name} - ${SITE_CFG.jobTitle}`,
     ogType: "website",
     jsonLd: null,
   };
