@@ -105,6 +105,18 @@ a:hover { color: var(--accent-hover); }
 img { max-width: 100%; display: block; }
 button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 
+/* No-JS fallback note (shown only inside <noscript>). Centered, readable, and
+   independent of the app shell so it stands alone when nothing hydrates. */
+.noscript-note {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 40px 28px;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.7;
+}
+.noscript-note a { font-weight: 500; }
+
 /* ===== Header ===== */
 .site-header {
   position: sticky;

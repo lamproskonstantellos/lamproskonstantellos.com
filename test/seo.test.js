@@ -176,6 +176,23 @@ test("sitemap.xml is well-formed with absolute locs and YYYY-MM-DD lastmod", asy
   }
 });
 
+// ---- robots directive + no-JS fallback on every route ----------------------
+
+test("every route carries the image-preview robots directive and a noscript fallback", async () => {
+  for (const p of ["/", "/news", "/publications", `/news/${ARTICLE}`, "/no-such-page"]) {
+    const html = (await request(base, p)).body.toString("utf8");
+    assert.match(
+      html,
+      /<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" \/>/,
+      `${p}: robots directive`
+    );
+    const noscript = html.match(/<noscript>([\s\S]*?)<\/noscript>/);
+    assert.ok(noscript, `${p}: has a <noscript> fallback`);
+    assert.match(noscript[1], /href="\/news"/, `${p}: noscript links to /news`);
+    assert.match(noscript[1], /href="\/publications"/, `${p}: noscript links to /publications`);
+  }
+});
+
 // ---- Crawler view (JS disabled): server HTML carries full meta -------------
 
 test("article served HTML carries title/canonical/JSON-LD without JS", async () => {

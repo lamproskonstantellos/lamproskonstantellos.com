@@ -17,6 +17,7 @@
 
 <title>__META_TITLE__</title>
 <meta name="description" content="__META_DESCRIPTION__" />
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
 
 <!-- Open Graph / WhatsApp / LinkedIn / Facebook -->
 <meta property="og:type" content="__META_OG_TYPE__" />
@@ -50,6 +51,21 @@ __META_PRELOAD__
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
+<!-- Fallback for clients that do not run JavaScript: the visible page is
+     rendered client-side, so without this a JS-off visitor sees a blank body.
+     Kept identity-free (the name lives only in site.config.js) - links onward
+     to the server-rendered routes and feeds. -->
+<noscript>
+  <div class="noscript-note">
+    <p>This site needs JavaScript for the interactive experience. You can still browse:</p>
+    <p>
+      <a href="/news">News</a> &middot;
+      <a href="/publications">Publications</a> &middot;
+      <a href="/rss.xml">RSS feed</a> &middot;
+      <a href="/feed.json">JSON feed</a>
+    </p>
+  </div>
+</noscript>
 <div id="root"></div>
 
 <script src="/vendor/react.production.min.js"></script>
