@@ -58,7 +58,6 @@ const PROFILE = {
       year: "2025",
       title: "Integration of Photovoltaic Power and Vehicle-to-Grid Technology in Electric Power Systems of Non-Interconnected Islands: A Case Study of Kastellorizo",
       authors: "**Konstantellos, L.** (2025)",
-      description: "MSc thesis, Department of Electrical & Computer Engineering, in collaboration with the Chair of Renewable and Sustainable Energy Systems, Technical University of Munich.",
       links: [
         { label: "Nemertes", href: "https://hdl.handle.net/10889/28931" },
         { label: "Zenodo",   href: "https://zenodo.org/records/14871102" },
@@ -71,7 +70,6 @@ const PROFILE = {
       year: "2023",
       title: "Novel Optimization Model Applied for Decarbonization Scenarios of Non-Interconnected Mediterranean Islands – A Kastellorizo Case Study",
       authors: "**Konstantellos, L.** (2023)",
-      description: "Research internship report, Chair of Renewable and Sustainable Energy Systems, Technical University of Munich.",
       links: [
         { label: "Zenodo", href: "https://zenodo.org/records/13936256" },
       ],
@@ -92,7 +90,7 @@ const PROFILE = {
 /* ---- Display caps for homepage previews ---- */
 const LIMITS = {
   newsPreview: 3,
-  publicationsPreview: 3,
+  publicationsPreview: 2,
 };
 
 /* ---- Selectors (auto-sorted, newest first) ---- */
