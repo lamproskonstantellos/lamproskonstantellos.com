@@ -49,6 +49,33 @@ const PROFILE = {
         { label: "Zenodo",      href: "https://zenodo.org/records/15882802" },
       ],
     },
+    {
+      // `type` marks non-peer-reviewed work (thesis / report) so the card shows
+      // a distinguishing tag and it reads apart from the conference papers.
+      type: "Master's Thesis",
+      venue: "University of Patras",
+      location: "Greece",
+      year: "2025",
+      title: "Integration of Photovoltaic Power and Vehicle-to-Grid Technology in Electric Power Systems of Non-Interconnected Islands: A Case Study of Kastellorizo",
+      authors: "**Konstantellos, L.** (2025)",
+      description: "MSc thesis, Department of Electrical & Computer Engineering, in collaboration with the Chair of Renewable and Sustainable Energy Systems, Technical University of Munich.",
+      links: [
+        { label: "Nemertes", href: "https://hdl.handle.net/10889/28931" },
+        { label: "Zenodo",   href: "https://zenodo.org/records/14871102" },
+      ],
+    },
+    {
+      type: "Internship Report",
+      venue: "Technical University of Munich",
+      location: "Munich, Germany",
+      year: "2023",
+      title: "Novel Optimization Model Applied for Decarbonization Scenarios of Non-Interconnected Mediterranean Islands – A Kastellorizo Case Study",
+      authors: "**Konstantellos, L.** (2023)",
+      description: "Research internship report, Chair of Renewable and Sustainable Energy Systems, Technical University of Munich.",
+      links: [
+        { label: "Zenodo", href: "https://zenodo.org/records/13936256" },
+      ],
+    },
   ],
   contact: [
     { id: "linkedin",     label: "LinkedIn",       href: "https://www.linkedin.com/in/lampros-konstantellos/" },
@@ -65,7 +92,7 @@ const PROFILE = {
 /* ---- Display caps for homepage previews ---- */
 const LIMITS = {
   newsPreview: 3,
-  publicationsPreview: 5,
+  publicationsPreview: 3,
 };
 
 /* ---- Selectors (auto-sorted, newest first) ---- */

@@ -9,7 +9,8 @@
    - PublicationsListPage:   /publications full list
    ============================================================ */
 
-function PublicationCard({ pub, index = 0, revealKey, isVisible }) {
+function PublicationCard({ pub, index = 0, revealKey, isVisible, headingLevel = "h3" }) {
+  const Title = headingLevel;
   return (
     <article
       className={`pub-card reveal ${isVisible ? "in" : ""}`}
@@ -19,6 +20,9 @@ function PublicationCard({ pub, index = 0, revealKey, isVisible }) {
       <div className="pub-body">
         {pub.award && (
           <div className="pub-award">{pub.award}</div>
+        )}
+        {pub.type && (
+          <div className="pub-type">{pub.type}</div>
         )}
         <div className="pub-meta">
           <span>{pub.venue}</span>
@@ -31,7 +35,7 @@ function PublicationCard({ pub, index = 0, revealKey, isVisible }) {
           <span className="dot" />
           <span>{pub.year}</span>
         </div>
-        <h3>{pub.title}</h3>
+        <Title className="pub-title">{pub.title}</Title>
         <p className="pub-authors">{renderInline(pub.authors)}</p>
         {pub.description && <p className="pub-description">{pub.description}</p>}
         {pub.links && pub.links.length > 0 && (
@@ -102,7 +106,7 @@ function PublicationsListPage({ navigate }) {
       </a>
       <header className="list-header">
         <h1>Publications</h1>
-        <p>Peer-reviewed publications and conference papers, ordered from most recent.</p>
+        <p>Peer-reviewed papers, plus theses and reports, ordered from most recent.</p>
       </header>
       <div className="pub-list">
         {items.map((p, i) => (
@@ -112,6 +116,7 @@ function PublicationsListPage({ navigate }) {
             index={i}
             revealKey={`pub-list-${i}`}
             isVisible={visible.has(`pub-list-${i}`)}
+            headingLevel="h2"
           />
         ))}
       </div>
