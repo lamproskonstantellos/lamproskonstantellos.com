@@ -232,7 +232,11 @@ section.block {
   padding: 56px 0;
   border-top: 1px solid var(--line);
 }
-section.block:first-of-type { border-top: none; }
+/* Strip the divider above the first content block. On the homepage the first
+   <section> is `.hero` (no `.block`), so `:first-of-type` alone never matches
+   the About block — target the block right after the hero as well. */
+section.block:first-of-type,
+.hero + section.block { border-top: none; }
 .section-label {
   display: flex;
   align-items: baseline;
@@ -466,17 +470,42 @@ section.block:first-of-type { border-top: none; }
 .pub-award + .pub-meta {
   padding-right: 110px;
 }
+/* Category tag for non-peer-reviewed work (thesis / report). Same slot as the
+   award pill (they never coexist), but a quiet navy outline rather than gold,
+   so it reads as a "type" marker, not a distinction. */
+.pub-type {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  color: var(--accent);
+  background: rgba(31, 58, 138, 0.06);
+  border: 1px solid #c7d0e8;
+  padding: 5px 12px;
+  border-radius: 999px;
+  z-index: 1;
+}
+.pub-type + .pub-meta {
+  padding-right: 120px;
+}
 @media (max-width: 600px) {
-  .pub-award {
+  .pub-award,
+  .pub-type {
     position: static;
     align-self: flex-start;
     margin-bottom: 10px;
   }
-  .pub-award + .pub-meta {
+  .pub-award + .pub-meta,
+  .pub-type + .pub-meta {
     padding-right: 0;
   }
 }
-.pub-card h3 {
+.pub-card .pub-title {
   font-size: 16.5px;
   font-weight: 600;
   line-height: 1.42;
@@ -526,7 +555,9 @@ section.block:first-of-type { border-top: none; }
 /* ===== News ===== */
 .news-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  /* min(280px, 100%) lets the min track collapse below 280px instead of
+     overflowing the container on very narrow (<320px) viewports. */
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 18px;
 }
 .news-card {
@@ -571,7 +602,7 @@ section.block:first-of-type { border-top: none; }
   color: var(--muted-2);
   margin-bottom: 8px;
 }
-.news-card h3 {
+.news-card .news-title {
   font-size: 16px;
   font-weight: 600;
   line-height: 1.35;
@@ -712,10 +743,46 @@ section.block:first-of-type { border-top: none; }
 .article-body p { margin: 0 0 22px; }
 .article-body strong { color: var(--ink); font-weight: 600; }
 
+/* Inline article figure: a photo placed between paragraphs (photos[].after),
+   shown whole at its natural aspect ratio (capped), with an optional caption.
+   Portrait photos cap by height, landscape by width — no cropping. */
+.article-figure {
+  margin: 10px 0 30px;
+  text-align: center;
+}
+.article-figure .figure-frame {
+  display: inline-block;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: linear-gradient(135deg, #e9eef7 0%, #dde4f0 100%);
+  cursor: zoom-in;
+  line-height: 0;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition);
+}
+.article-figure .figure-frame:hover { box-shadow: var(--shadow-md); }
+.article-figure img,
+.article-figure picture {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 70vh;
+}
+.article-figure .figure-frame.photo-align-top img { object-position: top center; }
+.article-figure figcaption {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+}
+
 .article-gallery {
   margin: 40px 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
   gap: 12px;
 }
 .article-gallery .photo {
@@ -989,6 +1056,17 @@ section.block:first-of-type { border-top: none; }
   .site-header-inner { padding: 14px 20px; }
   main { padding: 0 20px 16px; }
   .site-footer-inner { padding: 0 20px; }
+}
+
+/* On very narrow phones (≤560px) the brand + 4 inline nav links overran the
+   viewport (~372px min) and forced a horizontal scrollbar at 360px. Tighten the
+   header gaps/type so it fits without a scrollbar. */
+@media (max-width: 560px) {
+  .site-header-inner { gap: 12px; padding-left: 16px; padding-right: 16px; }
+  .nav { gap: 13px; }
+  .nav a { font-size: 12.5px; }
+  .brand-name { font-size: 14px; }
+  .brand-role { font-size: 11.5px; }
 }
 
 /* ===== Accessibility: respect user motion preferences ===== */
