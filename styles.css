@@ -4,6 +4,28 @@
    smooth transitions, refined typography.
    ============================================================ */
 
+/* Self-hosted Inter (variable weight axis), served from this origin instead of
+   Google Fonts — removes a render-blocking third-party request and stops
+   leaking every visitor's IP to Google, keeping the site's privacy stance
+   intact. Two subsets with unicode-range so the browser fetches only what a
+   page needs (latin covers all English content; latin-ext loads on demand). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/vendor/fonts/inter-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/vendor/fonts/inter-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
   --bg: #f4f6f9;
   --surface: #ffffff;
@@ -82,6 +104,18 @@ a { color: var(--accent); text-decoration: none; transition: color var(--transit
 a:hover { color: var(--accent-hover); }
 img { max-width: 100%; display: block; }
 button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+/* No-JS fallback note (shown only inside <noscript>). Centered, readable, and
+   independent of the app shell so it stands alone when nothing hydrates. */
+.noscript-note {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 40px 28px;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.7;
+}
+.noscript-note a { font-weight: 500; }
 
 /* ===== Header ===== */
 .site-header {
@@ -615,7 +649,7 @@ section.block:first-of-type,
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   color: var(--muted-2);
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11px;
   letter-spacing: 0.06em;
   background-image:
@@ -831,7 +865,7 @@ section.block:first-of-type,
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   color: var(--muted-2);
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11px;
   background-image:
     linear-gradient(135deg, transparent 0 49%, rgba(31,58,138,0.05) 49% 51%, transparent 51% 100%);
@@ -869,8 +903,8 @@ section.block:first-of-type,
   position: absolute;
   top: 20px;
   right: 24px;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1019,7 +1053,7 @@ section.block:first-of-type,
   justify-content: center;
   padding: 14px 26px;
   margin-bottom: 28px;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 40px;
   font-weight: 500;
   letter-spacing: 0.12em;
@@ -1104,7 +1138,9 @@ section.block:first-of-type,
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: rgba(255, 255, 255, 0.45);
+  /* rgba(255,255,255,0.45) measured 4.30:1 on the navy footer — below the
+     4.5:1 AA threshold for this 12px/600 label. 0.60 lifts it to ~6.56:1. */
+  color: rgba(255, 255, 255, 0.60);
 }
 .footer-col a {
   color: rgba(255, 255, 255, 0.74);
@@ -1171,5 +1207,29 @@ section.block:first-of-type,
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Reveal-on-scroll elements start hidden and are shown by a JS-added .in
+     class (IntersectionObserver). For reduced-motion users there is nothing to
+     animate, so show them outright - content never depends on the observer. */
+  .reveal,
+  .about-paragraph,
+  .chip {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Touch devices: give the smaller inline controls a comfortable >=44px tap
+   target. Scoped to coarse pointers so the desktop (mouse) layout is unchanged. */
+@media (pointer: coarse) {
+  .nav a { padding-top: 11px; padding-bottom: 11px; }
+  .footer-col a { padding-top: 10px; padding-bottom: 10px; }
+  .view-all,
+  .back-link,
+  .footer-top-link,
+  .pub-links a,
+  .article-share a,
+  .article-share button {
+    min-height: 44px;
   }
 }

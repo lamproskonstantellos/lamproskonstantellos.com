@@ -59,6 +59,10 @@
     if (article.poster !== undefined && typeof article.poster !== "string") {
       throw new Error(`[article] "${article.slug}" has non-string poster`);
     }
+    // Optional path to a WebVTT captions track for the article video.
+    if (article.captions !== undefined && typeof article.captions !== "string") {
+      throw new Error(`[article] "${article.slug}" has non-string captions`);
+    }
     // A photos entry is either a path string or { src, align? }.
     if (Array.isArray(article.photos)) {
       for (const p of article.photos) {

@@ -40,12 +40,21 @@ function Header({ route, navigate, activeSection }) {
 
   // On the homepage the highlight follows the scroll-spy (activeSection,
   // null while the hero is in view); list and article pages keep their
-  // route-derived highlight.
-  const isActive = (it) =>
-    (route.page === "home" && activeSection === it.id) ||
-    (route.page === "publications-list" && it.id === "publications") ||
-    (route.page === "news-list" && it.id === "news") ||
-    (route.page === "article" && it.id === "news");
+  // route-derived highlight. The two states carry different aria-current
+  // tokens: "location" for a scroll position within the homepage, "page" for
+  // the actual list/article route you are on.
+  const currentToken = (it) => {
+    if (route.page === "home" && activeSection === it.id) return "location";
+    if (
+      (route.page === "publications-list" && it.id === "publications") ||
+      (route.page === "news-list" && it.id === "news") ||
+      (route.page === "article" && it.id === "news")
+    ) {
+      return "page";
+    }
+    return undefined;
+  };
+  const isActive = (it) => Boolean(currentToken(it));
 
   return (
     <header className="site-header">
@@ -72,7 +81,7 @@ function Header({ route, navigate, activeSection }) {
               <a
                 key={it.id}
                 className={isActive(it) ? "active" : ""}
-                aria-current={isActive(it) ? "page" : undefined}
+                aria-current={currentToken(it)}
                 href={routeToPath(target)}
                 onClick={(e) => handleAnchorClick(e, navigate, target)}
               >
