@@ -459,9 +459,9 @@ section.block:first-of-type,
   letter-spacing: 0.005em;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  background: var(--surface);
-  /* #7a5618: WCAG AA — ~6.6:1 on the white --surface badge. A quiet outline
-     pill (no fill, no icon) reads as a minimal credential rather than a tag. */
+  /* Soft warm-cream fill (a gold counterpart to the navy .pub-type tint). */
+  background: #f9f4ea;
+  /* #7a5618 on the #f9f4ea fill ≈ 6:1 — WCAG AA. A quiet pill, not a loud tag. */
   color: #7a5618;
   border: 1px solid #dcc488;
   padding: 5px 12px;
