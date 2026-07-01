@@ -102,3 +102,33 @@ test("no private/excluded file leaked into build/", () => {
     assert.ok(!entry.startsWith("."), `dotfile leaked into build/: ${entry}`);
   }
 });
+
+// Guard against a reference-but-don't-copy bug: every icon the site points at
+// (web manifest, <link rel=icon>, and the header logo compiled into the app
+// bundle) must actually exist in build/, or it 404s on the static deploy.
+test("every referenced icon is present in the static build", () => {
+  const missing = [];
+  const check = (ref, where) => {
+    if (!fs.existsSync(path.join(BUILD, ref.replace(/^\//, "")))) {
+      missing.push(`${ref} (referenced in ${where})`);
+    }
+  };
+  // 1) web manifest icons
+  const mani = JSON.parse(fs.readFileSync(path.join(BUILD, "site.webmanifest"), "utf8"));
+  for (const icon of mani.icons || []) check(icon.src, "site.webmanifest");
+  // 2) <link rel="icon"/"apple-touch-icon"> hrefs in the served HTML
+  const html = fs.readFileSync(path.join(BUILD, "index.html"), "utf8");
+  for (const m of html.matchAll(/rel="(?:icon|apple-touch-icon)"[^>]*href="(\/[^"?]+)"/g)) {
+    check(m[1], "index.html");
+  }
+  // 3) icon <img> paths compiled into the JS bundles (e.g. the header logo)
+  const distDir = path.join(BUILD, "dist");
+  const js = fs.readdirSync(distDir)
+    .filter((f) => f.endsWith(".js"))
+    .map((f) => fs.readFileSync(path.join(distDir, f), "utf8"))
+    .join("\n");
+  for (const m of js.matchAll(/["'](\/(?:icon-|favicon-|apple-touch-icon|logo-mark)[^"']*\.png)["']/g)) {
+    check(m[1], "app bundle");
+  }
+  assert.deepEqual(missing, [], `icons referenced but missing from build/: ${missing.join(", ")}`);
+});
