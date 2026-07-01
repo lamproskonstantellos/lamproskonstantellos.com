@@ -1057,20 +1057,82 @@ section.block:first-of-type,
 
 /* ===== Footer ===== */
 .site-footer {
-  border-top: 1px solid var(--line);
-  padding: 24px 0;
+  background: var(--ink);
+  color: #fff;
 }
 .site-footer-inner {
   max-width: var(--container);
   margin: 0 auto;
-  padding: 0 28px;
-  display: flex;
-  justify-content: center;
+  padding: 56px 28px 26px;
+}
+.footer-top {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr 1fr;
+  gap: 48px;
+}
+.footer-brand-link {
+  display: inline-flex;
   align-items: center;
+  gap: 12px;
+  width: fit-content;
+  color: #fff;
+  text-decoration: none;
+}
+.footer-logo {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: block;
+  border-radius: 9px;
+  /* The mark is navy on navy, so a hairline keeps its edge visible. */
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+.footer-brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+.footer-name { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; color: #fff; }
+.footer-role { font-size: 13px; color: rgba(255, 255, 255, 0.62); margin-top: 2px; }
+.footer-tagline {
+  margin: 18px 0 0;
+  max-width: 330px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.55);
+}
+.footer-col { display: flex; flex-direction: column; align-items: flex-start; }
+.footer-col-title {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: rgba(255, 255, 255, 0.45);
+}
+.footer-col a {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 14px;
+  text-decoration: none;
+  padding: 6px 0;
+  transition: color var(--transition), transform var(--transition);
+}
+.footer-col a:hover { color: #fff; transform: translateX(2px); }
+.footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 44px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
   font-size: 13px;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.52);
 }
 .site-footer .copy { display: flex; align-items: center; gap: 6px; }
+.footer-top-link {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  transition: color var(--transition);
+}
+.footer-top-link:hover { color: #fff; }
 
 /* ===== Responsive ===== */
 @media (max-width: 820px) {
@@ -1085,7 +1147,9 @@ section.block:first-of-type,
   .nav a { font-size: 13px; }
   .site-header-inner { padding: 14px 20px; }
   main { padding: 0 20px 16px; }
-  .site-footer-inner { padding: 0 20px; }
+  .site-footer-inner { padding: 40px 20px 24px; }
+  .footer-top { grid-template-columns: 1fr; gap: 32px; }
+  .footer-tagline { max-width: none; }
 }
 
 /* On very narrow phones (≤560px) the brand + 4 inline nav links overran the

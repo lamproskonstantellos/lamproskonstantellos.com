@@ -6,7 +6,7 @@ defineArticle({
   slug: "wind-farm-foundation-pour",
   date: "2025-05-22",
   dateLabel: "May 22, 2025",
-  location: "Greece",
+  location: "Boeotia, Greece",
   title: "Foundation Pour at the 23.1 MW Wind Farm",
   excerpt: "Notes from site during the continuous, uninterrupted concrete pour of a wind turbine foundation, and why the engineering is decided in the logistics, not only in the concrete.",
   keywords: [

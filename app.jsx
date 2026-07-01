@@ -183,11 +183,82 @@ function Contact() {
    FOOTER
    ============================================================ */
 
-function Footer() {
+function Footer({ navigate }) {
+  const year = new Date().getFullYear();
+  const since = 2023;
+  const years = year > since ? `${since}-${year}` : `${year}`;
+
+  // Sitemap: the two standalone pages plus the two home-only sections.
+  const explore = [
+    { label: "About",        route: { page: "home", section: "about" } },
+    { label: "Publications", route: { page: "publications-list" } },
+    { label: "News",         route: { page: "news-list" } },
+    { label: "Contact",      route: { page: "home", section: "contact" } },
+  ];
+  // A short set only — the full list lives in the Contact section just above,
+  // so the footer keeps the essentials and doesn't repeat it.
+  const connect = ["linkedin", "github", "email"]
+    .map((id) => PROFILE.contact.find((c) => c.id === id))
+    .filter(Boolean);
+
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
-        <div className="copy">© {new Date().getFullYear()} {PROFILE.name}</div>
+        <div className="footer-top">
+          <div className="footer-brand">
+            <a
+              className="footer-brand-link"
+              href="/"
+              aria-label={`${PROFILE.name} — home`}
+              onClick={(e) => handleAnchorClick(e, navigate, { page: "home" })}
+            >
+              <img className="footer-logo" src="/icon-192.png" alt="" width="40" height="40" />
+              <span className="footer-brand-text">
+                <span className="footer-name">{PROFILE.name}</span>
+                <span className="footer-role">{PROFILE.role}</span>
+              </span>
+            </a>
+            <p className="footer-tagline">{SITE.defaultDescription}</p>
+          </div>
+
+          <nav className="footer-col" aria-label="Site map">
+            <h2 className="footer-col-title">Explore</h2>
+            {explore.map((it) => (
+              <a
+                key={it.label}
+                href={routeToPath(it.route)}
+                onClick={(e) => handleAnchorClick(e, navigate, it.route)}
+              >
+                {it.label}
+              </a>
+            ))}
+          </nav>
+
+          <nav className="footer-col" aria-label="Connect">
+            <h2 className="footer-col-title">Connect</h2>
+            {connect.map((c) => (
+              <a
+                key={c.id}
+                href={c.href}
+                target={c.href.startsWith("mailto") ? undefined : "_blank"}
+                rel="noopener noreferrer"
+              >
+                {c.label}
+              </a>
+            ))}
+          </nav>
+        </div>
+
+        <div className="footer-bottom">
+          <span className="copy">© {years} {PROFILE.name}</span>
+          <button
+            type="button"
+            className="footer-top-link"
+            onClick={() => window.scrollTo({ top: 0, behavior: scrollBehavior() })}
+          >
+            Back to top ↑
+          </button>
+        </div>
       </div>
     </footer>
   );
@@ -386,7 +457,7 @@ function App() {
         {route.page === "article" && <Article slug={route.slug} navigate={navigate} />}
         {route.page === "not-found" && <NotFound navigate={navigate} />}
       </main>
-      <Footer />
+      <Footer navigate={navigate} />
     </>
   );
 }
