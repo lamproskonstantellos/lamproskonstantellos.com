@@ -68,6 +68,7 @@ defineArticle({
 | `photos` | optional | (string \| `{ src, align?, after?, caption? }`)[] | Article photos — see [Photos](#photos) below |
 | `video` | optional | path | Self-hosted `<video>` embed (e.g. `news/<slug>/video.mp4`) |
 | `poster` | optional | path | Still image shown before the video plays (no poster is shown if omitted) |
+| `videoAfter` | optional | number | Render the video inline right after this body paragraph index (default: after the body) |
 | `keywords` | optional | string[] | JSON-LD `keywords` + JSON Feed `tags` |
 | `articleSection` | optional | string | JSON-LD `articleSection` |
 | `topics` | optional | `{ name, sameAs }`[] | JSON-LD `about` |
@@ -84,7 +85,7 @@ Each entry in `photos` is either a bare path string or an object `{ src, align?,
 
 Photos without `after` collect into a gallery grid at the end of the article. Both inline and gallery photos open in a full-screen lightbox on click (or Enter/Space when focused).
 
-**Render order** of an article: cover → body paragraphs (with any inline photos interleaved) → video → end gallery → share row → sources.
+**Render order** of an article: cover → body paragraphs (with any inline photos — and the video, if `videoAfter` is set — interleaved) → video (if not placed inline) → end gallery → share row → sources.
 
 ### Body formatting
 

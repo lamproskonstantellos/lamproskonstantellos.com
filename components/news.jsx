@@ -327,6 +327,21 @@ function Article({ slug, navigate }) {
     );
   };
 
+  // The video renders inline right after body paragraph `videoAfter` when that
+  // is an integer; otherwise it falls back to its default spot after the body.
+  const videoAfter = Number.isInteger(article.videoAfter) ? article.videoAfter : null;
+  const renderVideo = () => (
+    <div className="article-video">
+      <video
+        controls
+        preload="metadata"
+        poster={article.poster ? asset(article.poster) : undefined}
+      >
+        <source src={asset(article.video)} type="video/mp4" />
+      </video>
+    </div>
+  );
+
   return (
     <div className="page article">
       {backLink}
@@ -352,20 +367,11 @@ function Article({ slug, navigate }) {
             {(inlineAfter.get(i) || []).map((photo, j) =>
               renderInlineFigure(photo, `fig-${i}-${j}`)
             )}
+            {article.video && videoAfter === i && renderVideo()}
           </React.Fragment>
         ))}
       </div>
-      {article.video && (
-        <div className="article-video">
-          <video
-            controls
-            preload="metadata"
-            poster={article.poster ? asset(article.poster) : undefined}
-          >
-            <source src={asset(article.video)} type="video/mp4" />
-          </video>
-        </div>
-      )}
+      {article.video && videoAfter === null && renderVideo()}
       {galleryPhotos.length > 0 && (
         <div className="article-gallery">
           {galleryPhotos.map((photo, i) => {

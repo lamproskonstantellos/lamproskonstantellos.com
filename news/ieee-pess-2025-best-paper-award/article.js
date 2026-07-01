@@ -27,7 +27,7 @@ defineArticle({
       align: "top",
       after: 1, // inline, right after the award-announcement paragraph
       caption:
-        "Receiving the 3rd Best Paper Award at IEEE PESS 2025 in Munich, with co-author Dr. Anurag Mohapatra (TU Munich).",
+        "Receiving the 3rd Best Paper Award at IEEE PESS 2025 in Munich, with co-author Dr. Anurag Mohapatra (Technical University of Munich).",
     },
   ],
   body: [

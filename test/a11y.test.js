@@ -47,10 +47,12 @@ test("body text colors meet WCAG AA (4.5:1) on their backgrounds", () => {
 });
 
 test("award badge text meets WCAG AA on its badge background", () => {
-  const color = CSS.match(/\.pub-award\s*\{[^}]*?color:\s*(#[0-9a-fA-F]{6})/s)[1];
-  // The badge is now an outline pill on the white card surface (no cream fill).
-  const r = ratio(color, SURFACE);
-  assert.ok(r >= 4.5, `award text is ${r.toFixed(2)}:1 (needs 4.5:1)`);
+  const block = CSS.match(/\.pub-award\s*\{[^}]*\}/s)[0];
+  const color = block.match(/color:\s*(#[0-9a-fA-F]{6})/)[1];
+  // The badge now carries a soft warm-cream fill; check the text against it.
+  const bg = block.match(/background:\s*(#[0-9a-fA-F]{6})/)[1];
+  const r = ratio(color, bg);
+  assert.ok(r >= 4.5, `award text is ${r.toFixed(2)}:1 on ${bg} (needs 4.5:1)`);
 });
 
 test("structural a11y guarantees", () => {
