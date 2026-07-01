@@ -46,6 +46,38 @@ test("body text colors meet WCAG AA (4.5:1) on their backgrounds", () => {
   }
 });
 
+// Footer text sits on the solid navy --ink background and is written as
+// translucent white (rgba). Composite each rgba over the navy, then check the
+// ratio — the plain hex path above cannot see these. .footer-col-title was
+// 4.30:1 at alpha 0.45 (SC 1.4.3 fail) before it was lifted.
+function composite(rgba, bgHex) {
+  const [r, g, b, a] = rgba;
+  const bg = bgHex.replace("#", "");
+  const [br, bg_, bb] = [0, 2, 4].map((i) => parseInt(bg.slice(i, i + 2), 16));
+  const mix = (fg, back) => Math.round(fg * a + back * (1 - a));
+  const hex = (n) => n.toString(16).padStart(2, "0");
+  return "#" + hex(mix(r, br)) + hex(mix(g, bg_)) + hex(mix(b, bb));
+}
+function ruleColorRgba(selector) {
+  const block = CSS.match(new RegExp(`\\${selector}\\s*\\{[^}]*\\}`, "s"))[0];
+  const m = block.match(/color:\s*rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/);
+  return [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])];
+}
+
+test("footer text (rgba on navy) meets WCAG AA", () => {
+  const INK = cssVar("--ink"); // the .site-footer background
+  // The only footer heading text; regressing its alpha must fail the suite.
+  const pairs = [
+    [".footer-col-title", 4.5],
+    [".footer-role", 4.5],
+    [".footer-tagline", 4.5],
+  ];
+  for (const [sel, min] of pairs) {
+    const r = ratio(composite(ruleColorRgba(sel), INK), INK);
+    assert.ok(r >= min, `${sel} is ${r.toFixed(2)}:1 on ${INK} (needs ${min}:1)`);
+  }
+});
+
 test("award badge text meets WCAG AA on its badge background", () => {
   const block = CSS.match(/\.pub-award\s*\{[^}]*\}/s)[0];
   const color = block.match(/color:\s*(#[0-9a-fA-F]{6})/)[1];

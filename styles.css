@@ -1104,7 +1104,9 @@ section.block:first-of-type,
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: rgba(255, 255, 255, 0.45);
+  /* rgba(255,255,255,0.45) measured 4.30:1 on the navy footer — below the
+     4.5:1 AA threshold for this 12px/600 label. 0.60 lifts it to ~6.56:1. */
+  color: rgba(255, 255, 255, 0.60);
 }
 .footer-col a {
   color: rgba(255, 255, 255, 0.74);
