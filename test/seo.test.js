@@ -65,11 +65,13 @@ test("article meta matches article.js source", () => {
   const meta = server.computePageMeta(`/news/${ARTICLE}`);
   assert.equal(meta.title, `${a.title} - ${SITE.name}`);
   assert.equal(meta.description, a.excerpt);
-  // og:image is the cover plus a content-hash ?v= so a same-name cover
-  // replacement busts LinkedIn/Facebook/CDN caches (see server.js imageVersion).
+  // og:image is the dedicated 1200x630 social crop (cover-og.jpg) plus a
+  // content-hash ?v= so a same-name cover replacement busts LinkedIn/Facebook/
+  // CDN caches (see server.js imageVersion + ARTICLE_SOCIAL).
+  const ogPath = a.cover.replace(/\.(jpe?g|png)$/i, "-og.jpg");
   assert.ok(
-    meta.image.startsWith(`${SITE.url}/${a.cover}?v=`),
-    `article og:image should be the cover with a ?v= cache-buster, got ${meta.image}`
+    meta.image.startsWith(`${SITE.url}/${ogPath}?v=`),
+    `article og:image should be the 1200x630 social crop with a ?v= cache-buster, got ${meta.image}`
   );
   assert.match(meta.image, /\?v=[0-9a-f]{8,}$/, "the ?v= token is a content hash");
   const article = meta.jsonLd["@graph"].find((n) => n["@type"] === "Article");
@@ -78,9 +80,9 @@ test("article meta matches article.js source", () => {
   assert.equal(article.dateModified, a.date);
 });
 
-// ---- og:image:width/height are accurate per route (no hardcoded 1200x630) --
+// ---- og:image is a per-article 1200x630 social crop ------------------------
 
-test("og:image dimensions are per-route accurate: default 1200x630, covers real", async () => {
+test("og:image is a per-article 1200x630 social crop, not the raw cover", async () => {
   // The default share image (home / list / 404) is genuinely 1200x630.
   const buf = fs.readFileSync(path.join(__dirname, "../og-image.png"));
   // PNG: 8-byte sig, then IHDR length(4)+type(4), width @16, height @20 (BE).
@@ -88,17 +90,22 @@ test("og:image dimensions are per-route accurate: default 1200x630, covers real"
   assert.equal(buf.readUInt32BE(20), 630);
 
   const home = (await request(base, "/")).body.toString("utf8");
+  assert.match(home, /<meta property="og:image" content="[^"]*\/og-image\.png/);
   assert.match(home, /<meta property="og:image:width" content="1200" \/>/);
   assert.match(home, /<meta property="og:image:height" content="630" \/>/);
 
-  // The IEEE article's og:image is its cover, which is 3840x2160 — so the page
-  // must declare the cover's real pixels, never inherit the default 1200x630.
+  // The article's og:image is its dedicated 1200x630 social crop (cover-og.jpg),
+  // never the multi-megabyte raw cover and never the default share image.
   const article = (await request(base, `/news/${ARTICLE}`)).body.toString("utf8");
-  assert.match(article, /<meta property="og:image:width" content="3840" \/>/);
-  assert.match(article, /<meta property="og:image:height" content="2160" \/>/);
+  assert.match(
+    article,
+    new RegExp(`<meta property="og:image" content="${SITE.url}/news/${ARTICLE}/cover-og\\.jpg\\?v=`)
+  );
+  assert.match(article, /<meta property="og:image:width" content="1200" \/>/);
+  assert.match(article, /<meta property="og:image:height" content="630" \/>/);
   assert.ok(
-    !/og:image:width" content="1200"/.test(article),
-    "article must not declare the default image's dimensions"
+    !article.includes(`/news/${ARTICLE}/cover.jpg`),
+    "article shell must not reference the raw cover as a share image"
   );
 });
 

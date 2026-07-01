@@ -19,6 +19,17 @@ const SKIP_DIRS = new Set(["node_modules", "dist", ".git", "vendor", "scripts"])
 const WEBP_QUALITY = 80;
 const AVIF_QUALITY = 65;
 
+// Per-article social share crop. og:image wants a landscape ~1.91:1 card; the
+// raw covers are full-res and sometimes portrait/4:3, which social platforms
+// crop badly (and the multi-MB weight slows scrapers). We derive a dedicated
+// 1200x630 JPEG (cover-og.jpg) that server.js serves as the article og:image,
+// keeping the full cover for the on-page <picture>. Smart-cropped (attention)
+// so faces/subject survive the reframe.
+const OG_WIDTH = 1200;
+const OG_HEIGHT = 630;
+const OG_QUALITY = 82;
+const OG_SUFFIX = "-og.jpg";
+
 function* walk(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
@@ -47,13 +58,37 @@ async function optimize(srcPath) {
   return true;
 }
 
+// Generate the 1200x630 og:image crop for an article cover (news/<slug>/cover.*).
+// Only files whose base name is exactly "cover" get one; the crop itself is
+// skipped as a source in the loop below so it is never re-cropped or turned
+// into webp/avif. Idempotent via the same mtime freshness check as optimize().
+async function socialCrop(srcPath) {
+  const dir = path.dirname(srcPath);
+  const base = path.basename(srcPath, path.extname(srcPath));
+  if (base !== "cover") return false;
+
+  const og = path.join(dir, base + OG_SUFFIX);
+  const srcMtime = fs.statSync(srcPath).mtimeMs;
+  if (fs.existsSync(og) && fs.statSync(og).mtimeMs >= srcMtime) return false;
+
+  console.log(`Social crop ${srcPath} -> ${og}`);
+  await sharp(srcPath)
+    .resize(OG_WIDTH, OG_HEIGHT, { fit: "cover", position: sharp.strategy.attention })
+    .jpeg({ quality: OG_QUALITY, mozjpeg: true })
+    .toFile(og);
+  return true;
+}
+
 (async () => {
   let processed = 0;
   for (const dir of SOURCE_DIRS) {
     if (!fs.existsSync(dir)) continue;
     for (const file of walk(dir)) {
+      // The generated social crop is an output, never a source.
+      if (file.toLowerCase().endsWith(OG_SUFFIX)) continue;
       try {
         if (await optimize(file)) processed++;
+        if (await socialCrop(file)) processed++;
       } catch (e) {
         console.error(`Failed ${file}: ${e.message}`);
       }

@@ -7,3 +7,5 @@ Thumbs.db
 verification-report.md
 *.webp
 *.avif
+# Generated per-article social share crop (og:image), built by optimize-images.
+cover-og.jpg
