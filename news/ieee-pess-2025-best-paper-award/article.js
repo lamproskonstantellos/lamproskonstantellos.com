@@ -22,7 +22,13 @@ defineArticle({
   articleSection: "Conferences and Awards",
   cover: "news/ieee-pess-2025-best-paper-award/cover.jpg",
   photos: [
-    { src: "news/ieee-pess-2025-best-paper-award/photo-01.jpg", align: "top" },
+    {
+      src: "news/ieee-pess-2025-best-paper-award/photo-01.jpg",
+      align: "top",
+      after: 1, // inline, right after the award-announcement paragraph
+      caption:
+        "Receiving the 3rd Best Paper Award at IEEE PESS 2025 in Munich, with co-author Dr. Anurag Mohapatra (TU Munich).",
+    },
   ],
   body: [
     "From 8–10 October 2025, I attended the **IEEE Power and Energy Student Summit (PESS) 2025** in Munich, hosted at the **Chair of Electric Power Transmission and Distribution** of the **Technical University of Munich**. The summit brought together students, researchers, and engineers working on smart grids, renewable energy systems, storage, and the practical challenges of the energy transition.",

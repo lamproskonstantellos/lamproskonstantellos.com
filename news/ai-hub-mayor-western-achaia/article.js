@@ -21,9 +21,23 @@ defineArticle({
   articleSection: "Regional Policy",
   cover: "news/ai-hub-mayor-western-achaia/cover.jpg",
   photos: [
-    "news/ai-hub-mayor-western-achaia/photo-01.jpg",
-    "news/ai-hub-mayor-western-achaia/photo-02.jpg",
-    "news/ai-hub-mayor-western-achaia/photo-03.jpg",
+    {
+      src: "news/ai-hub-mayor-western-achaia/photo-01.jpg",
+      after: 2, // after the intro, before "Application presented"
+      caption: "The AI-Hub team meeting with the Municipality of Western Achaia.",
+    },
+    {
+      src: "news/ai-hub-mayor-western-achaia/photo-02.jpg",
+      after: 5, // next to the pH / temperature / chlorine monitoring detail
+      caption:
+        "The Nireas prototype — an Arduino-based unit sensing pH, temperature, and chlorine.",
+    },
+    {
+      src: "news/ai-hub-mayor-western-achaia/photo-03.jpg",
+      after: 6, // next to the analytics / early-warning goal
+      caption:
+        "Live pH and temperature readings from the prototype during the demonstration.",
+    },
   ],
   body: [
     "On 25 July 2024, the **Artificial Intelligence Hub (AI-Hub)** of the **Department of Electrical and Computer Engineering** at the **University of Patras** met with the Mayor of Western Achaia, **Grigoris Alexopoulos**, to discuss how artificial intelligence and data-driven tools could support municipal services.",

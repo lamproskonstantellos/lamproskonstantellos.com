@@ -7,7 +7,7 @@ The static build (`build-static.js`) discovers `news/` at build time and injects
 ## Add a new article
 
 1. Create a new folder: `news/<slug>/`.
-2. Drop the cover image as `news/<slug>/cover.jpg` (16:10 ratio works best for the card thumbnail). Optionally drop in-article photos as `photo-01.jpg`, `photo-02.jpg`, …
+2. Drop the cover image as `news/<slug>/cover.jpg` (16:10 ratio works best for the card thumbnail). Optionally drop in-article photos as `photo-01.jpg`, `photo-02.jpg`, … You commit only the source `.jpg`/`.png`; `npm run build` (which runs `optimize-images`) generates the `.webp`/`.avif` siblings the site serves, and Cloudflare does this automatically on deploy.
 3. Create `news/<slug>/article.js` using the template below:
 
 ```js
@@ -23,15 +23,19 @@ defineArticle({
   title: "Title of the article",
   excerpt: "One- or two-sentence preview shown on the card.",
   cover: "news/my-article-slug/cover.jpg",   // optional: card + article cover
-  photos: [                                  // optional: gallery
-    "news/my-article-slug/photo-01.jpg",
-    // Or, to crop a photo from its top instead of centre:
+  coverAlign: "top",                         // optional: crop the cover + thumbnail from the top instead of centre
+  photos: [                                  // optional: article photos — see "Photos" below
+    // Inline, right after body paragraph index 1, with a caption:
+    { src: "news/my-article-slug/photo-01.jpg", after: 1, caption: "What the photo shows." },
+    // No `after` → end-of-article gallery. `align: "top"` crops a gallery photo from the top:
     { src: "news/my-article-slug/photo-02.jpg", align: "top" },
+    "news/my-article-slug/photo-03.jpg",     // a bare string also works (end gallery, no caption)
   ],
-  video: "news/my-article-slug/video.mp4",    // optional: self-hosted <video>
-  poster: "news/my-article-slug/cover.jpg",   // optional: poster; falls back to cover
+  video: "news/my-article-slug/video.mp4",         // optional: self-hosted <video>
+  poster: "news/my-article-slug/video-cover.jpg",  // optional: still shown before the video plays
   body: [
     "First paragraph. Use **double asterisks** for inline bold.",
+    "• A bullet — prefix a paragraph with a literal '• ' (there is no Markdown list syntax).",
     "Second paragraph.",
   ],
   // ---- Optional SEO fields (used in JSON-LD / RSS / JSON Feed) ----
@@ -60,13 +64,31 @@ defineArticle({
 | `body` | ✅ | string[] | Article paragraphs (`**bold**` supported); also JSON-LD `articleBody` |
 | `location` | optional | string | Shown after the date |
 | `cover` | optional | path | Card thumbnail + article cover (`og:image` for the article) |
-| `photos` | optional | (string \| `{ src, align }`)[] | Gallery; `align: "top"` crops from the top |
+| `coverAlign` | optional | `"top"` | Crop the cover + card thumbnail from the top instead of the centre |
+| `photos` | optional | (string \| `{ src, align?, after?, caption? }`)[] | Article photos — see [Photos](#photos) below |
 | `video` | optional | path | Self-hosted `<video>` embed (e.g. `news/<slug>/video.mp4`) |
-| `poster` | optional | path | Poster image for `video`; falls back to `cover` |
+| `poster` | optional | path | Still image shown before the video plays (no poster is shown if omitted) |
 | `keywords` | optional | string[] | JSON-LD `keywords` + JSON Feed `tags` |
 | `articleSection` | optional | string | JSON-LD `articleSection` |
 | `topics` | optional | `{ name, sameAs }`[] | JSON-LD `about` |
 | `sources` | optional | `{ label, href }`[] | Source links under the article |
+
+### Photos
+
+Each entry in `photos` is either a bare path string or an object `{ src, align?, after?, caption? }`:
+
+- **`after`** (number) — render the photo **inline**, right after the `body` paragraph at that (0-based) index, instead of in the end gallery. Inline photos show whole, at their natural aspect ratio (portrait or landscape), capped in size.
+- **`caption`** (string) — a short caption shown beneath an inline photo (also used as its alt text).
+- **`align: "top"`** — for a **gallery** photo (one without `after`), crop from the top instead of the centre when the subject sits high in the frame. Gallery photos are shown in a 4:3 grid.
+- A **bare string** is shorthand for `{ src }` — an uncaptioned gallery photo.
+
+Photos without `after` collect into a gallery grid at the end of the article. Both inline and gallery photos open in a full-screen lightbox on click (or Enter/Space when focused).
+
+**Render order** of an article: cover → body paragraphs (with any inline photos interleaved) → video → end gallery → share row → sources.
+
+### Body formatting
+
+`body` is an array of strings, each rendered as one `<p>`. The only inline formatting is **`**bold**`** (double asterisks) — there is no Markdown link or list syntax. For a bulleted list, make each bullet its own `body` entry beginning with a literal `• ` (see `renewable-energytech-expo-thessaloniki/article.js`).
 
 Validation lives in `article-schema.js` (`validateArticle`) and runs in **both**
 the browser (`defineArticle`, throwing a clear console error) and the server
