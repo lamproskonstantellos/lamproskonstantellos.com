@@ -6,6 +6,17 @@
 
 const { useState, useEffect, useCallback, useRef } = React;
 
+// An explicit behavior:"smooth" in scrollTo() bypasses the CSS
+// `scroll-behavior:auto` reduced-motion override, so gate it in JS too: users
+// who asked for reduced motion get an instant jump instead of an animated one.
+function scrollBehavior() {
+  return typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ? "auto"
+    : "smooth";
+}
+
 /* ============================================================
    ROUTING — URL-based (parseRoute lives in routes.js, shared
    with server.js so the route table can never diverge)
@@ -331,7 +342,7 @@ function App() {
       const el = document.getElementById(id);
       if (el) {
         const y = el.getBoundingClientRect().top + window.scrollY - 70;
-        window.scrollTo({ top: y, behavior: "smooth" });
+        window.scrollTo({ top: y, behavior: scrollBehavior() });
       }
     });
   }, []);
@@ -351,11 +362,11 @@ function App() {
         const el = document.getElementById(next.section);
         if (el) {
           const y = el.getBoundingClientRect().top + window.scrollY - 70;
-          window.scrollTo({ top: y, behavior: "smooth" });
+          window.scrollTo({ top: y, behavior: scrollBehavior() });
         }
       });
     } else if (next.page === "home" && !next.section) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: scrollBehavior() });
     }
   }, []);
 
