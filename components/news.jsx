@@ -10,7 +10,8 @@
    - Article:         /news/<slug> full article view
    ============================================================ */
 
-function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from }) {
+function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from, headingLevel = "h3" }) {
+  const Title = headingLevel;
   const route = { page: "article", slug: article.slug };
   return (
     <a
@@ -29,7 +30,7 @@ function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from }) 
         <div className="meta">
           {article.dateLabel}{article.location ? ` · ${article.location}` : ""}
         </div>
-        <h3>{article.title}</h3>
+        <Title className="news-title">{article.title}</Title>
         <p>{article.excerpt}</p>
         <span className="read">
           Read article <Icon.arrowRight style={{ width: 13, height: 13 }} />
@@ -108,6 +109,7 @@ function NewsListPage({ navigate }) {
               revealKey={`news-list-${i}`}
               isVisible={visible.has(`news-list-${i}`)}
               from="news-list"
+              headingLevel="h2"
             />
           ))}
         </div>
@@ -276,6 +278,55 @@ function Article({ slug, navigate }) {
     );
   }
 
+  // A photo is a path string or { src, align?, after?, caption? }. Photos with
+  // an integer `after` render inline right after that body paragraph (with an
+  // optional caption); the rest fall back to the end-of-article gallery, so
+  // articles that don't use `after` are unchanged.
+  const photos = (article.photos || []).map((p) =>
+    typeof p === "string" ? { src: p } : p
+  );
+  const inlineAfter = new Map();
+  const galleryPhotos = [];
+  photos.forEach((photo) => {
+    if (Number.isInteger(photo.after)) {
+      const list = inlineAfter.get(photo.after) || [];
+      list.push(photo);
+      inlineAfter.set(photo.after, list);
+    } else {
+      galleryPhotos.push(photo);
+    }
+  });
+
+  const photoAlt = (photo) => photo.caption || `Photo from “${article.title}”`;
+  const openPhoto = (photo, alt) => (e) => {
+    // Focus the trigger first so the Lightbox returns focus here on close, even
+    // in browsers that don't focus a clicked div on mousedown (e.g. Safari).
+    if (e && e.currentTarget && e.currentTarget.focus) e.currentTarget.focus();
+    setLightboxSrc({ src: asset(photo.src), alt });
+  };
+
+  const renderInlineFigure = (photo, key) => {
+    const alt = photoAlt(photo);
+    const open = openPhoto(photo, alt);
+    return (
+      <figure className="article-figure" key={key}>
+        <div
+          className={"figure-frame" + (photo.align === "top" ? " photo-align-top" : "")}
+          role="button"
+          tabIndex={0}
+          aria-label={`Open ${alt} in full screen`}
+          onClick={open}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(e); }
+          }}
+        >
+          <Picture src={asset(photo.src)} alt={alt} />
+        </div>
+        {photo.caption && <figcaption>{photo.caption}</figcaption>}
+      </figure>
+    );
+  };
+
   return (
     <div className="page article">
       {backLink}
@@ -296,7 +347,12 @@ function Article({ slug, navigate }) {
       )}
       <div className="article-body">
         {article.body.map((p, i) => (
-          <p key={i}>{renderInline(p)}</p>
+          <React.Fragment key={i}>
+            <p>{renderInline(p)}</p>
+            {(inlineAfter.get(i) || []).map((photo, j) =>
+              renderInlineFigure(photo, `fig-${i}-${j}`)
+            )}
+          </React.Fragment>
         ))}
       </div>
       {article.video && (
@@ -310,31 +366,27 @@ function Article({ slug, navigate }) {
           </video>
         </div>
       )}
-      {article.photos && article.photos.length > 0 && (
+      {galleryPhotos.length > 0 && (
         <div className="article-gallery">
-          {article.photos.map((photo, i) => {
-            // A photo is a path string or { src, align } — alignment is article
-            // data, never a filename check inside the component.
-            const photoSrc = typeof photo === "string" ? photo : photo.src;
-            const alignTop = typeof photo === "object" && photo.align === "top";
-            const photoAlt = `Photo ${i + 1} from “${article.title}”`;
-            const open = () => setLightboxSrc({ src: asset(photoSrc), alt: photoAlt });
+          {galleryPhotos.map((photo, i) => {
+            const alt = photoAlt(photo);
+            const open = openPhoto(photo, alt);
             return (
               <div
-                className={"photo" + (alignTop ? " photo-align-top" : "")}
+                className={"photo" + (photo.align === "top" ? " photo-align-top" : "")}
                 key={i}
                 role="button"
                 tabIndex={0}
-                aria-label={`Open ${photoAlt} in full screen`}
+                aria-label={`Open ${alt} in full screen`}
                 onClick={open}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    open();
+                    open(e);
                   }
                 }}
               >
-                <Picture src={asset(photoSrc)} alt={photoAlt} width="800" height="600" />
+                <Picture src={asset(photo.src)} alt={alt} width="800" height="600" />
               </div>
             );
           })}
