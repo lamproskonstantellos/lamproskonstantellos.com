@@ -25,15 +25,12 @@ function PublicationCard({ pub, index = 0, revealKey, isVisible, headingLevel = 
           <div className="pub-type">{pub.type}</div>
         )}
         <div className="pub-meta">
-          <span>{pub.venue}</span>
-          {pub.location && (
-            <>
-              <span className="dot" />
-              <span>{pub.location}</span>
-            </>
-          )}
-          <span className="dot" />
-          <span>{pub.year}</span>
+          {/* Each separator is glued to the token BEFORE it (inside the same
+              nowrap item) so a wrapped meta line never starts with a stray "·"
+              at narrow widths. */}
+          <span className="pub-meta-item">{pub.venue}</span>
+          {pub.location && <span className="pub-meta-item">{pub.location}</span>}
+          <span className="pub-meta-item">{pub.year}</span>
         </div>
         <Title className="pub-title">{pub.title}</Title>
         <p className="pub-authors">{renderInline(pub.authors)}</p>
@@ -89,9 +86,8 @@ function PublicationsListPage({ navigate }) {
   const visible = useReveal();
   const items = getRecentPublications();
 
-  React.useEffect(() => {
-    window.scrollTo({ top: 0 });
-  }, []);
+  // Scroll-to-top on arrival is handled by App.navigate (fresh navigations
+  // only), so Back/Forward restores the prior scroll position natively.
 
   const backRoute = { page: "home", section: "publications" };
 

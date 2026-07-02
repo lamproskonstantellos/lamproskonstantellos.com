@@ -195,23 +195,12 @@ main {
    link) so screen-reader/keyboard users land in the new content. It is a focus
    *target*, not a control, so no focus ring is drawn. */
 #main-content:focus { outline: none; }
-.page {
-  animation: fade-up 360ms cubic-bezier(.2,.7,.2,1);
-}
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
 
-.reveal {
-  opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 600ms cubic-bezier(.2,.7,.2,1),
-              transform 600ms cubic-bezier(.2,.7,.2,1),
-              border-color 200ms ease,
-              box-shadow 200ms ease;
-}
-.reveal.in { opacity: 1; transform: translateY(0); }
+/* Content appears in its final position on load — no page fade-up and no
+   card slide-in reveal (cards/paragraphs are visible immediately). Hover
+   feedback lives on the individual card rules. */
+.reveal,
+.reveal.in { opacity: 1; transform: none; }
 
 /* ===== Hero ===== */
 .hero-photo {
@@ -257,7 +246,11 @@ main {
   border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 500;
-  transition: all var(--transition);
+  /* Explicit property list (not `all`): `all` also animated the 2px
+     :focus-visible outline in from 0, so rapid keyboard tabbing never showed
+     a focus ring. Same reasoning on every former `transition: all` below. */
+  transition: background var(--transition), color var(--transition),
+    border-color var(--transition), transform var(--transition);
   border: 1px solid transparent;
 }
 /* The CTAs are <a> elements, and the global a:hover outranks a lone class,
@@ -292,6 +285,12 @@ main {
 section.block {
   padding: 56px 0;
   border-top: 1px solid var(--line);
+  /* Native fragment navigation (a direct /#publications load, or opening a
+     section link in a new tab) must clear the sticky header exactly like the
+     SPA's own scroll offset. --header-offset is set from the live header height
+     by app.jsx (falling back to 70px before the script runs), so both paths use
+     the same measured amount and the heading never hides under the header. */
+  scroll-margin-top: var(--header-offset, 70px);
 }
 /* Strip the divider above the first content block. On the homepage the first
    <section> is `.hero` (no `.block`), so `:first-of-type` alone never matches
@@ -362,19 +361,14 @@ section.block:first-of-type,
   border: 1px solid var(--line);
   padding: 5px 11px;
   border-radius: 999px;
-  opacity: 0;
-  transform: translateY(4px);
-  animation: chip-in 480ms cubic-bezier(.2,.7,.2,1) forwards;
-  transition: all var(--transition);
+  transition: border-color var(--transition), color var(--transition),
+    transform var(--transition);
   cursor: default;
 }
 .chip:hover {
   border-color: var(--accent);
   color: var(--accent);
   transform: translateY(-1px);
-}
-@keyframes chip-in {
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .about-stream {
@@ -385,8 +379,7 @@ section.block:first-of-type,
   padding: 4px 0 4px 22px;
 }
 /* A short navy accent tick at the top of the bio (pull-quote marker) replaces
-   the old full-height grey rail — minimal, but keeps the brand navy note. It
-   still scales in on reveal via .about-stream.in::before. */
+   the old full-height grey rail — minimal, but keeps the brand navy note. */
 .about-stream::before {
   content: "";
   position: absolute;
@@ -396,11 +389,8 @@ section.block:first-of-type,
   height: 40px;
   background: var(--accent);
   border-radius: 2px;
-  transform: scaleY(0);
   transform-origin: top;
-  transition: transform 700ms cubic-bezier(.2,.7,.2,1) 120ms;
 }
-.about-stream.in::before { transform: scaleY(1); }
 .about-paragraph {
   margin: 0;
   color: var(--ink-soft);
@@ -408,10 +398,6 @@ section.block:first-of-type,
   line-height: 1.75;
   hyphens: auto;
   -webkit-hyphens: auto;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 700ms cubic-bezier(.2,.7,.2,1),
-              transform 700ms cubic-bezier(.2,.7,.2,1);
 }
 @media (min-width: 720px) {
   .about-paragraph { text-align: justify; }
@@ -422,10 +408,6 @@ section.block:first-of-type,
   color: var(--ink);
   font-weight: 450;
   letter-spacing: -0.005em;
-}
-.about-stream.in .about-paragraph {
-  opacity: 1;
-  transform: translateY(0);
 }
 /* Quiet navy emphasis on the credibility phrases (institutions + award),
    wrapped in **bold** in data.js and parsed by renderInline. */
@@ -470,7 +452,8 @@ section.block:first-of-type,
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 24px 26px 22px 28px;
-  transition: all var(--transition);
+  transition: border-color var(--transition), transform var(--transition),
+    box-shadow var(--transition);
   overflow: hidden;
   cursor: default;
   display: flex;
@@ -499,7 +482,10 @@ section.block:first-of-type,
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 10px;
+  /* Horizontal spacing lives in the ::after separators below (so each dot stays
+     glued to the token before it); only the vertical gap between wrapped rows
+     is set here. */
+  gap: 4px 0;
   font-size: 11.5px;
   color: var(--muted-2);
   letter-spacing: 0.08em;
@@ -507,7 +493,19 @@ section.block:first-of-type,
   margin-bottom: 10px;
   font-feature-settings: "tnum";
 }
-.pub-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted-2); }
+.pub-meta-item { display: inline-flex; align-items: center; white-space: nowrap; }
+/* The "·" separator is rendered as a trailing pseudo-element of every item
+   except the last, so it can never wrap to the start of a new line on a narrow
+   card — the break falls after the dot, not before it. */
+.pub-meta-item:not(:last-child)::after {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--muted-2);
+  margin: 0 10px;
+}
 .pub-award {
   position: absolute;
   top: 16px;
@@ -607,7 +605,7 @@ section.block:first-of-type,
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface);
-  transition: all var(--transition);
+  transition: border-color var(--transition), background var(--transition);
 }
 .pub-links a:hover {
   border-color: var(--accent);
@@ -630,7 +628,8 @@ section.block:first-of-type,
   border-radius: var(--radius-md);
   overflow: hidden;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: border-color var(--transition), transform var(--transition),
+    box-shadow var(--transition);
   display: flex;
   flex-direction: column;
 }
@@ -889,6 +888,11 @@ section.block:first-of-type,
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+/* The lightbox image ships inside a <picture> (AVIF/WebP negotiation, same as
+   the in-page photos). display:contents removes the picture's own box so the
+   <img> stays the direct flex child of .lightbox and its max-width/max-height
+   viewport sizing keeps working. */
+.lightbox picture { display: contents; }
 .lightbox-img {
   max-width: min(100%, 1100px);
   max-height: 100%;
@@ -921,9 +925,46 @@ section.block:first-of-type,
 .lightbox-close:focus-visible {
   outline-color: #fff;
 }
+/* Prev/next controls, shown only for multi-photo articles. Same disc styling as
+   the close button; pinned to the vertical centre on the left/right edges. */
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  line-height: 1;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.lightbox-prev { left: 24px; }
+.lightbox-next { right: 24px; }
+.lightbox-nav:hover { background: rgba(255, 255, 255, 0.22); }
+.lightbox-nav:focus-visible { outline-color: #fff; }
+.lightbox-counter {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
 @media (max-width: 600px) {
   .lightbox { padding: 16px; }
   .lightbox-close { top: 12px; right: 12px; }
+  .lightbox-prev { left: 10px; }
+  .lightbox-next { right: 10px; }
+  .lightbox-counter { bottom: 12px; }
 }
 
 .article-share {
@@ -951,7 +992,8 @@ section.block:first-of-type,
   border-radius: 6px;
   background: var(--surface);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: color var(--transition), border-color var(--transition),
+    background var(--transition);
 }
 .article-share a:hover,
 .article-share button:hover {
@@ -1002,7 +1044,8 @@ section.block:first-of-type,
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  transition: all var(--transition);
+  transition: border-color var(--transition), transform var(--transition),
+    box-shadow var(--transition), color var(--transition);
   font-size: 14px;
   font-weight: 500;
   color: var(--ink);
@@ -1029,7 +1072,8 @@ section.block:first-of-type,
   margin-left: auto;
   color: var(--muted-2);
   opacity: 0;
-  transition: all var(--transition);
+  transition: opacity var(--transition), transform var(--transition),
+    color var(--transition);
 }
 .contact-card:hover .ext { opacity: 1; transform: translate(2px, -2px); color: var(--accent); }
 
@@ -1197,6 +1241,14 @@ section.block:first-of-type,
      four nav links keep plenty of room (no horizontal overflow at 360px). */
   .brand-text { display: none; }
 }
+/* At ultra-narrow widths a classic scrollbar (or the reserved gutter) leaves
+   only ~305px of layout width at a 320px viewport, and the badge + four nav
+   links at 16px gaps overran it by 2px. Tighter gaps keep the header inside
+   the viewport with a few px to spare. */
+@media (max-width: 360px) {
+  .site-header-inner { gap: 8px; }
+  .nav { gap: 10px; }
+}
 
 /* ===== Accessibility: respect user motion preferences ===== */
 @media (prefers-reduced-motion: reduce) {
@@ -1208,9 +1260,9 @@ section.block:first-of-type,
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  /* Reveal-on-scroll elements start hidden and are shown by a JS-added .in
-     class (IntersectionObserver). For reduced-motion users there is nothing to
-     animate, so show them outright - content never depends on the observer. */
+  /* Entrance animations are disabled site-wide, so these elements are already
+     visible; this is a defensive guarantee that content never depends on any
+     motion/observer for reduced-motion users. */
   .reveal,
   .about-paragraph,
   .chip {

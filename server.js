@@ -37,6 +37,7 @@ const mimeTypes = {
   ".woff2": "font/woff2",
   ".woff": "font/woff",
   ".mp4": "video/mp4",
+  ".webm": "video/webm",
   ".pdf": "application/pdf",
   ".txt": "text/plain; charset=utf-8",
   ".xml": "application/xml; charset=utf-8"
@@ -262,6 +263,13 @@ function escapeHtml(s) {
     .replace(/'/g, "&#39;");
 }
 
+// Default robots directive for real, indexable routes: allow indexing and give
+// crawlers the large image/snippet previews. The not-found route overrides this
+// with a noindex directive (below) — an error page must not ask to be indexed.
+const ROBOTS_INDEX =
+  "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1";
+const ROBOTS_NOINDEX = "noindex,follow";
+
 function computePageMeta(pathname) {
   // parseRoute is the shared route table (routes.js) — same matcher the client
   // and isValidSpaRoute use, so the meta branch can never drift from routing.
@@ -355,11 +363,16 @@ function computePageMeta(pathname) {
 
       const articleBody = Array.isArray(article.body) ? article.body.join("\n\n") : "";
       const wordCount = articleBody ? articleBody.trim().split(/\s+/).length : 0;
+      // Meta/OG/Twitter/JSON-LD description: a dedicated, SERP-length (<=~160
+      // char) seoDescription when the article provides one, else the fuller
+      // card/feed excerpt. Keeps the meta description within Google's snippet
+      // window without shortening the visible card text or the feed summaries.
+      const description = article.seoDescription || article.excerpt;
 
       const articleSchema = {
         "@type": "Article",
         "headline": article.title,
-        "description": article.excerpt,
+        "description": description,
         "image": image,
         "datePublished": article.date,
         "dateModified": article.date,
@@ -395,13 +408,23 @@ function computePageMeta(pathname) {
 
       return {
         title: pageTitle(route, { ...titleCtx, articleTitle: article.title }),
-        description: article.excerpt,
+        description,
         url: `${SITE_CFG.url}/news/${article.slug}`,
         image,
         imageWidth: imageDimensions && imageDimensions.width,
         imageHeight: imageDimensions && imageDimensions.height,
         imageAlt: article.title,
         ogType: "article",
+        // article:* Open Graph properties (published/modified time, author,
+        // section, tags) let LinkedIn/Facebook/Slack surface the publish date
+        // and topic on shares. All derived from already-validated article data.
+        articleMeta: {
+          publishedTime: `${article.date}T00:00:00+00:00`,
+          modifiedTime: `${article.date}T00:00:00+00:00`,
+          author: SITE_CFG.name,
+          section: article.articleSection || undefined,
+          tags: article.keywords && article.keywords.length ? article.keywords : undefined,
+        },
         jsonLd: {
           "@context": "https://schema.org",
           "@graph": [breadcrumbs, articleSchema],
@@ -410,9 +433,13 @@ function computePageMeta(pathname) {
     }
   }
 
-  // Unknown route — used by the SPA NotFound page (served with HTTP 404).
-  // Canonical/og:url point at the home root rather than reflecting the
-  // requested (attacker-controllable) pathname back into shared metadata.
+  // Unknown route — used by the SPA NotFound page (served with HTTP 404) and by
+  // the static 404.html. Canonical/og:url point at the home root rather than
+  // reflecting the requested (attacker-controllable) pathname back into shared
+  // metadata. robots is noindex (an error page must not ask to be indexed) and
+  // jsonLd is null (no structured-data block emitted at all — an empty
+  // <script type="application/ld+json"></script> is invalid JSON that
+  // rich-results validators flag).
   return {
     title: pageTitle(route, titleCtx),
     description: DEFAULT_DESCRIPTION,
@@ -422,6 +449,7 @@ function computePageMeta(pathname) {
     imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
     imageAlt: `${SITE_CFG.name} - ${SITE_CFG.jobTitle}`,
     ogType: "website",
+    robots: ROBOTS_NOINDEX,
     jsonLd: null,
   };
 }
@@ -562,7 +590,26 @@ function injectMeta(html, meta) {
         : "")
     .replace(/__META_IMAGE_ALT__/g, () => escapeHtml(meta.imageAlt || meta.title))
     .replace(/__META_OG_TYPE__/g, () => escapeHtml(meta.ogType))
-    .replace(/__META_JSONLD__/g, () => (meta.jsonLd ? jsonLdScript(meta.jsonLd) : ""))
+    // article:* OG properties, emitted only on article pages (meta.articleMeta).
+    .replace(/__META_ARTICLE_OG__/g, () => {
+      const a = meta.articleMeta;
+      if (!a) return "";
+      const lines = [];
+      if (a.publishedTime) lines.push(`<meta property="article:published_time" content="${escapeHtml(a.publishedTime)}" />`);
+      if (a.modifiedTime) lines.push(`<meta property="article:modified_time" content="${escapeHtml(a.modifiedTime)}" />`);
+      if (a.author) lines.push(`<meta property="article:author" content="${escapeHtml(a.author)}" />`);
+      if (a.section) lines.push(`<meta property="article:section" content="${escapeHtml(a.section)}" />`);
+      for (const tag of a.tags || []) lines.push(`<meta property="article:tag" content="${escapeHtml(tag)}" />`);
+      return lines.join("\n");
+    })
+    .replace(/__META_ROBOTS__/g, () => escapeHtml(meta.robots || ROBOTS_INDEX))
+    // Emit the whole <script type="application/ld+json"> block only when there
+    // is schema to put in it; a route with no JSON-LD (the 404 page) gets no
+    // tag at all rather than an empty, invalid one.
+    .replace(/__META_JSONLD__/g, () =>
+      meta.jsonLd
+        ? `<script type="application/ld+json">${jsonLdScript(meta.jsonLd)}</script>`
+        : "")
     .replace(/__META_PRELOAD__/g, () => meta.preloadImage
       ? `<link rel="preload" as="image" href="${escapeHtml(meta.preloadImage)}" type="image/avif" fetchpriority="high" />`
       : "");
@@ -819,6 +866,17 @@ const server = http.createServer((req, res) => {
       sendStatus(res, 400, "400 Bad Request");
       return;
     }
+
+    // Collapse "." / ".." segments up front, BEFORE any allow/deny decision.
+    // isPrivatePath (and the feed routes) match on exact pathnames, so an
+    // ENCODED traversal like /news/..%2fserver.js — which `new URL` leaves
+    // un-normalized and decodeURIComponent turns into "/news/../server.js",
+    // a path NOT on the denylist — would otherwise slip past isPrivatePath and
+    // only normalize back onto the private file when requestedPath is built
+    // below. The existing boundary check only stops traversals that ESCAPE the
+    // root; one that re-enters onto server.js / .git / package.json passed it.
+    // URL paths are POSIX, so normalize with POSIX rules (path.sep-independent).
+    urlPathname = path.posix.normalize(urlPathname);
 
     // /index.html is the home page under a second URL. Redirect to "/" so there
     // is one canonical home (previously it served 200 with "Page not found"

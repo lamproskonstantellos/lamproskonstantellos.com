@@ -9,6 +9,7 @@ defineArticle({
   location: "Thessaloniki, Greece",
   title: "Reflections from Renewable EnergyTech in Thessaloniki",
   excerpt: "Notes from Renewable EnergyTech in Thessaloniki on curtailment, storage delays, flexible portfolios, and self-consumption, and a conversation on what young engineers gain from the market itself.",
+  seoDescription: "Notes from Renewable EnergyTech in Thessaloniki on curtailment, storage delays, flexible portfolios, self-consumption, and offshore wind.",
   keywords: [
     "Renewable EnergyTech",
     "Thessaloniki",
@@ -23,6 +24,7 @@ defineArticle({
   cover: "news/renewable-energytech-expo-thessaloniki/cover.jpg",
   coverAlign: "top",
   video: "news/renewable-energytech-expo-thessaloniki/video.mp4",
+  videoWebm: "news/renewable-energytech-expo-thessaloniki/video.webm",
   poster: "news/renewable-energytech-expo-thessaloniki/video-cover.jpg",
   videoAfter: 8, // inline, next to the paragraph about the conversation with Enri Skourti
   body: [

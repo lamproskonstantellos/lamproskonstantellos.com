@@ -32,7 +32,9 @@ defineArticle({
     "news/my-article-slug/photo-03.jpg",     // a bare string also works (end gallery, no caption)
   ],
   video: "news/my-article-slug/video.mp4",         // optional: self-hosted <video>
+  videoWebm: "news/my-article-slug/video.webm",    // optional: VP9/AV1 open-codec fallback source
   poster: "news/my-article-slug/video-cover.jpg",  // optional: still shown before the video plays
+  captions: "news/my-article-slug/video.vtt",      // optional: WebVTT captions track for the video
   body: [
     "First paragraph. Use **double asterisks** for inline bold.",
     "• A bullet — prefix a paragraph with a literal '• ' (there is no Markdown list syntax).",
@@ -60,14 +62,17 @@ defineArticle({
 | `date` | ✅ | `YYYY-MM-DD` | Sorting (newest first), sitemap/RSS/feed dates |
 | `dateLabel` | ✅ | string | Human-readable date on the card/article |
 | `title` | ✅ | string | Heading, `<title>`, JSON-LD headline |
-| `excerpt` | ✅ | string | Card preview, meta description, RSS/feed summary |
+| `excerpt` | ✅ | string | Card preview, RSS/feed summary, and the meta description when `seoDescription` is absent |
 | `body` | ✅ | string[] | Article paragraphs (`**bold**` supported); also JSON-LD `articleBody` |
+| `seoDescription` | optional | string | Shorter (≤~160 char) meta/OG/Twitter/JSON-LD description; falls back to `excerpt` when omitted |
 | `location` | optional | string | Shown after the date |
 | `cover` | optional | path | Card thumbnail + article cover (`og:image` for the article) |
 | `coverAlign` | optional | `"top"` | Crop the cover + card thumbnail from the top instead of the centre |
 | `photos` | optional | (string \| `{ src, align?, after?, caption? }`)[] | Article photos — see [Photos](#photos) below |
 | `video` | optional | path | Self-hosted `<video>` embed (e.g. `news/<slug>/video.mp4`) |
+| `videoWebm` | optional | path | VP9/AV1 WebM fallback `<source>` for browsers without the H.264 decoder |
 | `poster` | optional | path | Still image shown before the video plays (no poster is shown if omitted) |
+| `captions` | optional | path | WebVTT (`.vtt`) captions track for the video; renders as a default `<track kind="captions">` (English) |
 | `videoAfter` | optional | number | Render the video inline right after this body paragraph index (default: after the body) |
 | `keywords` | optional | string[] | JSON-LD `keywords` + JSON Feed `tags` |
 | `articleSection` | optional | string | JSON-LD `articleSection` |

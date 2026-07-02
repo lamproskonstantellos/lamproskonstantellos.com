@@ -56,6 +56,15 @@
     if (article.video !== undefined && typeof article.video !== "string") {
       throw new Error(`[article] "${article.slug}" has non-string video`);
     }
+    // Optional open-codec (VP9/AV1 WebM) fallback source for the video.
+    if (article.videoWebm !== undefined && typeof article.videoWebm !== "string") {
+      throw new Error(`[article] "${article.slug}" has non-string videoWebm`);
+    }
+    // Optional SEO meta description (<=~160 chars) used for the meta/OG/Twitter
+    // description in place of the fuller card/feed excerpt when present.
+    if (article.seoDescription !== undefined && typeof article.seoDescription !== "string") {
+      throw new Error(`[article] "${article.slug}" has non-string seoDescription`);
+    }
     if (article.poster !== undefined && typeof article.poster !== "string") {
       throw new Error(`[article] "${article.slug}" has non-string poster`);
     }
