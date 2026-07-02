@@ -132,15 +132,39 @@ function Lightbox({ src, alt, onClose }) {
       }
     };
     document.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
+    // Scroll lock goes on <html>, not just <body>: styles.css sets an explicit
+    // overflow-y on the root element (scrollbar-gutter reservation), and once
+    // the root has its own overflow the body's no longer propagates to the
+    // viewport — so hiding only body left the page scrollable behind the modal.
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
     if (closeRef.current) closeRef.current.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
       if (triggerEl && typeof triggerEl.focus === "function") triggerEl.focus();
     };
   }, [onClose]);
+
+  // Same AVIF → WebP → original negotiation the in-page <Picture> uses, so the
+  // full-screen view doesn't re-download the multi-megabyte original when an
+  // optimized sibling exists. display:contents (styles.css) keeps the <img>
+  // the direct flex child so its max-width/height sizing is unchanged.
+  const isRaster = /\.(jpe?g|png)$/i.test(src);
+  const base = isRaster ? src.replace(/\.(jpe?g|png)$/i, "") : null;
+  const img = (
+    <img
+      className="lightbox-img"
+      src={src}
+      alt={alt || ""}
+      loading="eager"
+      decoding="async"
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
 
   return (
     <div
@@ -159,14 +183,13 @@ function Lightbox({ src, alt, onClose }) {
       >
         ×
       </button>
-      <img
-        className="lightbox-img"
-        src={src}
-        alt={alt || ""}
-        loading="eager"
-        decoding="async"
-        onClick={(e) => e.stopPropagation()}
-      />
+      {isRaster ? (
+        <picture>
+          <source srcSet={`${base}.avif`} type="image/avif" />
+          <source srcSet={`${base}.webp`} type="image/webp" />
+          {img}
+        </picture>
+      ) : img}
     </div>
   );
 }

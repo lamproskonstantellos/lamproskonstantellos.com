@@ -257,7 +257,11 @@ main {
   border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 500;
-  transition: all var(--transition);
+  /* Explicit property list (not `all`): `all` also animated the 2px
+     :focus-visible outline in from 0, so rapid keyboard tabbing never showed
+     a focus ring. Same reasoning on every former `transition: all` below. */
+  transition: background var(--transition), color var(--transition),
+    border-color var(--transition), transform var(--transition);
   border: 1px solid transparent;
 }
 /* The CTAs are <a> elements, and the global a:hover outranks a lone class,
@@ -292,6 +296,12 @@ main {
 section.block {
   padding: 56px 0;
   border-top: 1px solid var(--line);
+  /* Native fragment navigation (a direct /#publications load, or opening a
+     section link in a new tab) must clear the sticky header exactly like the
+     SPA's own -70px scroll. Without this the browser's deferred anchor scroll
+     wins the race against the app's corrective scroll and leaves the section
+     heading hidden under the header. */
+  scroll-margin-top: 70px;
 }
 /* Strip the divider above the first content block. On the homepage the first
    <section> is `.hero` (no `.block`), so `:first-of-type` alone never matches
@@ -365,7 +375,8 @@ section.block:first-of-type,
   opacity: 0;
   transform: translateY(4px);
   animation: chip-in 480ms cubic-bezier(.2,.7,.2,1) forwards;
-  transition: all var(--transition);
+  transition: border-color var(--transition), color var(--transition),
+    transform var(--transition);
   cursor: default;
 }
 .chip:hover {
@@ -470,7 +481,8 @@ section.block:first-of-type,
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 24px 26px 22px 28px;
-  transition: all var(--transition);
+  transition: border-color var(--transition), transform var(--transition),
+    box-shadow var(--transition);
   overflow: hidden;
   cursor: default;
   display: flex;
@@ -607,7 +619,7 @@ section.block:first-of-type,
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface);
-  transition: all var(--transition);
+  transition: border-color var(--transition), background var(--transition);
 }
 .pub-links a:hover {
   border-color: var(--accent);
@@ -630,7 +642,8 @@ section.block:first-of-type,
   border-radius: var(--radius-md);
   overflow: hidden;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: border-color var(--transition), transform var(--transition),
+    box-shadow var(--transition);
   display: flex;
   flex-direction: column;
 }
@@ -889,6 +902,11 @@ section.block:first-of-type,
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+/* The lightbox image ships inside a <picture> (AVIF/WebP negotiation, same as
+   the in-page photos). display:contents removes the picture's own box so the
+   <img> stays the direct flex child of .lightbox and its max-width/max-height
+   viewport sizing keeps working. */
+.lightbox picture { display: contents; }
 .lightbox-img {
   max-width: min(100%, 1100px);
   max-height: 100%;
@@ -951,7 +969,8 @@ section.block:first-of-type,
   border-radius: 6px;
   background: var(--surface);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: color var(--transition), border-color var(--transition),
+    background var(--transition);
 }
 .article-share a:hover,
 .article-share button:hover {
@@ -1002,7 +1021,8 @@ section.block:first-of-type,
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  transition: all var(--transition);
+  transition: border-color var(--transition), transform var(--transition),
+    box-shadow var(--transition), color var(--transition);
   font-size: 14px;
   font-weight: 500;
   color: var(--ink);
@@ -1029,7 +1049,8 @@ section.block:first-of-type,
   margin-left: auto;
   color: var(--muted-2);
   opacity: 0;
-  transition: all var(--transition);
+  transition: opacity var(--transition), transform var(--transition),
+    color var(--transition);
 }
 .contact-card:hover .ext { opacity: 1; transform: translate(2px, -2px); color: var(--accent); }
 
@@ -1196,6 +1217,14 @@ section.block:first-of-type,
   /* Show only the LK badge on small phones; the name/role are hidden so the
      four nav links keep plenty of room (no horizontal overflow at 360px). */
   .brand-text { display: none; }
+}
+/* At ultra-narrow widths a classic scrollbar (or the reserved gutter) leaves
+   only ~305px of layout width at a 320px viewport, and the badge + four nav
+   links at 16px gaps overran it by 2px. Tighter gaps keep the header inside
+   the viewport with a few px to spare. */
+@media (max-width: 360px) {
+  .site-header-inner { gap: 8px; }
+  .nav { gap: 10px; }
 }
 
 /* ===== Accessibility: respect user motion preferences ===== */

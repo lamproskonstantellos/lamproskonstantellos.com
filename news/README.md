@@ -33,6 +33,7 @@ defineArticle({
   ],
   video: "news/my-article-slug/video.mp4",         // optional: self-hosted <video>
   poster: "news/my-article-slug/video-cover.jpg",  // optional: still shown before the video plays
+  captions: "news/my-article-slug/video.vtt",      // optional: WebVTT captions track for the video
   body: [
     "First paragraph. Use **double asterisks** for inline bold.",
     "• A bullet — prefix a paragraph with a literal '• ' (there is no Markdown list syntax).",
@@ -68,6 +69,7 @@ defineArticle({
 | `photos` | optional | (string \| `{ src, align?, after?, caption? }`)[] | Article photos — see [Photos](#photos) below |
 | `video` | optional | path | Self-hosted `<video>` embed (e.g. `news/<slug>/video.mp4`) |
 | `poster` | optional | path | Still image shown before the video plays (no poster is shown if omitted) |
+| `captions` | optional | path | WebVTT (`.vtt`) captions track for the video; renders as a default `<track kind="captions">` (English) |
 | `videoAfter` | optional | number | Render the video inline right after this body paragraph index (default: after the body) |
 | `keywords` | optional | string[] | JSON-LD `keywords` + JSON Feed `tags` |
 | `articleSection` | optional | string | JSON-LD `articleSection` |

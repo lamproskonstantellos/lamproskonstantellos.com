@@ -80,6 +80,31 @@ test("traversal attempts never disclose files outside the site", async () => {
   }
 });
 
+// Encoded traversals that NORMALIZE BACK ONTO a private file inside the root
+// (not merely escaping it) must still be denied: the denylist check runs on the
+// path AFTER "." / ".." collapse, so "/news/..%2fserver.js" -> "/server.js" is
+// blocked. Before the fix these returned 200 with the file contents because
+// isPrivatePath saw the un-normalized "/news/../server.js".
+test("encoded traversal that re-enters the root onto a private file is blocked", async () => {
+  const corpus = [
+    "/news/..%2fserver.js",
+    "/news/..%2fpackage.json",
+    "/news/..%2f.git%2fconfig",
+    "/news/..%2f.git%2fHEAD",
+    "/news/..%2fdist%2fmanifest.json",
+    "/news/..%2fREADME.md",
+    "/news/..%2ftest%2funit.test.js",
+    "/news/..%2fscripts%2foptimize-images.js",
+  ];
+  for (const p of corpus) {
+    const res = await request(base, p);
+    assert.equal(res.status, 404, `${p} -> ${res.status} (private file must 404)`);
+    const body = res.body.toString("utf8");
+    assert.ok(!body.includes("require("), `${p} leaked JS source`);
+    assert.ok(!body.includes("\"name\":"), `${p} leaked JSON config`);
+  }
+});
+
 test("sibling-directory prefix cannot escape the public root", async () => {
   // path.join(PUBLIC_DIR, "/../<dir>-x") would startWith(PUBLIC_DIR) under the
   // old check; the trailing-separator check rejects it.
