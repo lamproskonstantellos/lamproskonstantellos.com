@@ -9,6 +9,7 @@ defineArticle({
   location: "Boeotia, Greece",
   title: "Foundation Pour at the 23.1 MW Wind Farm",
   excerpt: "Notes from site during the continuous, uninterrupted concrete pour of a wind turbine foundation, and why the engineering is decided in the logistics, not only in the concrete.",
+  seoDescription: "Notes from site during the continuous concrete pour of a wind turbine foundation, and why the engineering is decided in the logistics, not the concrete.",
   keywords: [
     "wind energy",
     "wind turbine foundation",

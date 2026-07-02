@@ -17,6 +17,39 @@ function scrollBehavior() {
     : "smooth";
 }
 
+// The live height of the sticky header, used as the scroll offset so an
+// anchored section's heading lands just below the header (not tucked under it).
+// Measured from the DOM rather than hardcoded because the header height changes
+// with viewport (padding/type shrink on small screens). Falls back to 70 before
+// the header exists or in a non-DOM context.
+function headerOffset() {
+  if (typeof document === "undefined") return 70;
+  const header = document.querySelector(".site-header");
+  return header ? Math.round(header.getBoundingClientRect().height) : 70;
+}
+
+// Restore a saved scroll position after a Back/Forward navigation. The
+// destination's images load asynchronously, so the document may still be too
+// short to hold `y` on the first frame; re-apply across a few frames until the
+// target is reached (or the page settles shorter), instead of clamping to a
+// premature max and snapping to the top. `control` ({ raf, gen }) lets a later
+// navigation cancel an in-flight restore so the two never fight over the scroll.
+function restoreScroll(y, control) {
+  const gen = (control.gen += 1);
+  cancelAnimationFrame(control.raf);
+  if (!y || y <= 0) { window.scrollTo(0, 0); return; }
+  let tries = 0;
+  const attempt = () => {
+    if (control.gen !== gen) return; // superseded by a newer navigation
+    window.scrollTo(0, y);
+    tries += 1;
+    if (Math.abs(window.scrollY - y) > 2 && tries < 30) {
+      control.raf = requestAnimationFrame(attempt);
+    }
+  };
+  control.raf = requestAnimationFrame(attempt);
+}
+
 /* ============================================================
    ROUTING — URL-based (parseRoute lives in routes.js, shared
    with server.js so the route table can never diverge)
@@ -346,9 +379,50 @@ function App() {
   const [activeSection, setActiveSection] = useState(null);
   const mainRef = useRef(null);
   const firstRender = useRef(true);
+  // Manual scroll restoration. The browser's own restoration is unreliable in
+  // this SPA: on popstate it restores synchronously, before React has re-rendered
+  // the destination, so the page is too short to hold the old offset and the
+  // scroll collapses to the top. Instead we tag every history entry with a `key`,
+  // remember each entry's latest scroll position, and re-apply it after the new
+  // view has rendered. Fresh (push) navigations still start at the top.
+  const scrollPositions = useRef(new Map());
+  const currentKey = useRef(0);
+  const keyCounter = useRef(0);
+  const restoreCtl = useRef({ raf: 0, gen: 0 });
 
   useEffect(() => {
-    const onPop = () => setRoute(parseRoute(window.location.pathname));
+    const supported = "scrollRestoration" in window.history;
+    const prev = supported ? window.history.scrollRestoration : null;
+    if (supported) window.history.scrollRestoration = "manual";
+    // Seed the initial entry with a key so its scroll can be tracked/restored.
+    const st = window.history.state || {};
+    if (st.key === undefined) window.history.replaceState({ ...st, key: 0 }, "");
+    currentKey.current = (window.history.state && window.history.state.key) || 0;
+    return () => { if (supported) window.history.scrollRestoration = prev; };
+  }, []);
+
+  // Continuously remember the current entry's scroll position (throttled to one
+  // write per frame) so Back/Forward can restore it.
+  useEffect(() => {
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        scrollPositions.current.set(currentKey.current, window.scrollY);
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
+  }, []);
+
+  useEffect(() => {
+    const onPop = () => {
+      const key = (window.history.state && window.history.state.key) || 0;
+      currentKey.current = key;
+      setRoute(parseRoute(window.location.pathname));
+      restoreScroll(scrollPositions.current.get(key) || 0, restoreCtl.current);
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
@@ -441,19 +515,46 @@ function App() {
     requestAnimationFrame(() => {
       const el = document.getElementById(id);
       if (el) {
-        const y = el.getBoundingClientRect().top + window.scrollY - 70;
+        const y = el.getBoundingClientRect().top + window.scrollY - headerOffset();
         window.scrollTo({ top: y, behavior: scrollBehavior() });
       }
     });
   }, []);
 
+  // Expose the live header height to CSS as --header-offset so native fragment
+  // navigation (scroll-margin-top on sections) clears the header by the same
+  // measured amount the JS scrolls use. Kept in sync on resize.
+  useEffect(() => {
+    const setVar = () =>
+      document.documentElement.style.setProperty("--header-offset", headerOffset() + "px");
+    setVar();
+    window.addEventListener("resize", setVar);
+    return () => window.removeEventListener("resize", setVar);
+  }, []);
+
   const navigate = useCallback((next, opts = {}) => {
-    const targetPath = routeToPath(next).split("#")[0] || "/";
-    const stateData = opts.from !== undefined ? { from: opts.from } : {};
-    if (window.location.pathname !== targetPath) {
-      window.history.pushState(stateData, "", targetPath);
-    } else if (opts.from !== undefined) {
-      window.history.replaceState(stateData, "", targetPath);
+    // A fresh navigation supersedes any in-flight Back/Forward scroll restore, so
+    // the two don't fight over the scroll position.
+    restoreCtl.current.gen += 1;
+    cancelAnimationFrame(restoreCtl.current.raf);
+    // Full target path, keeping any "#section" so a section link is copyable
+    // from the address bar; the pathname alone drives the pushState/replaceState
+    // decision (parseRoute ignores the hash, so history entries stay route-based).
+    const targetPath = routeToPath(next);
+    const targetPathname = targetPath.split("#")[0] || "/";
+    const desiredUrl = next.page === "home" && next.section ? targetPath : targetPathname;
+    const fromState = opts.from !== undefined ? { from: opts.from } : {};
+    const currentUrl = window.location.pathname + window.location.hash;
+    if (window.location.pathname !== targetPathname) {
+      // Remember where we were before leaving, then start a freshly-keyed entry.
+      scrollPositions.current.set(currentKey.current, window.scrollY);
+      const key = ++keyCounter.current;
+      window.history.pushState({ ...fromState, key }, "", desiredUrl);
+      currentKey.current = key;
+    } else if (currentUrl !== desiredUrl || opts.from !== undefined) {
+      // Same page: update (or clear) the hash without piling on history entries
+      // for in-page section jumps. Keep the current entry's key.
+      window.history.replaceState({ ...fromState, key: currentKey.current }, "", desiredUrl);
     }
     setRoute(next);
 
@@ -461,12 +562,18 @@ function App() {
       requestAnimationFrame(() => {
         const el = document.getElementById(next.section);
         if (el) {
-          const y = el.getBoundingClientRect().top + window.scrollY - 70;
+          const y = el.getBoundingClientRect().top + window.scrollY - headerOffset();
           window.scrollTo({ top: y, behavior: scrollBehavior() });
         }
       });
-    } else if (next.page === "home" && !next.section) {
+    } else if (next.page === "home") {
       window.scrollTo({ top: 0, behavior: scrollBehavior() });
+    } else {
+      // List/article: a fresh (push/link) navigation lands at the top. This runs
+      // ONLY from navigate() — i.e. on real navigations, never on popstate — so
+      // the browser's native scroll restoration still returns you to your prior
+      // position when you press Back/Forward into a page you had scrolled.
+      window.scrollTo({ top: 0 });
     }
   }, []);
 

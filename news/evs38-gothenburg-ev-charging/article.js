@@ -9,6 +9,7 @@ defineArticle({
   location: "Gothenburg, Sweden",
   title: "EV Charging Research at EVS38 in Gothenburg",
   excerpt: "Our EVS38 paper used BiGRU neural networks to predict long-term EV charger behaviour from short-term test data, with a prediction error as low as 4.9% for chargers with consistent control logic.",
+  seoDescription: "Our EVS38 paper uses BiGRU neural networks to predict long-term EV charger behaviour from short-term test data, with error as low as 4.9%.",
   keywords: [
     "EVS38",
     "EV charging",

@@ -9,6 +9,7 @@ defineArticle({
   location: "Boeotia, Greece",
   title: "Turbine Erection at the 23.1 MW Wind Farm",
   excerpt: "Field notes from the erection of a wind turbine, lifted section by section from the bottom tower to the three blades, and why the sequence and the weather govern the day.",
+  seoDescription: "Field notes from erecting a wind turbine, lifted section by section from the bottom tower to the three blades, and why sequence and weather govern the day.",
   keywords: [
     "wind energy",
     "wind turbine",
