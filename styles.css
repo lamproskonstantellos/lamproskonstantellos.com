@@ -195,23 +195,12 @@ main {
    link) so screen-reader/keyboard users land in the new content. It is a focus
    *target*, not a control, so no focus ring is drawn. */
 #main-content:focus { outline: none; }
-.page {
-  animation: fade-up 360ms cubic-bezier(.2,.7,.2,1);
-}
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
 
-.reveal {
-  opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 600ms cubic-bezier(.2,.7,.2,1),
-              transform 600ms cubic-bezier(.2,.7,.2,1),
-              border-color 200ms ease,
-              box-shadow 200ms ease;
-}
-.reveal.in { opacity: 1; transform: translateY(0); }
+/* Content appears in its final position on load — no page fade-up and no
+   card slide-in reveal (cards/paragraphs are visible immediately). Hover
+   feedback lives on the individual card rules. */
+.reveal,
+.reveal.in { opacity: 1; transform: none; }
 
 /* ===== Hero ===== */
 .hero-photo {
@@ -372,9 +361,6 @@ section.block:first-of-type,
   border: 1px solid var(--line);
   padding: 5px 11px;
   border-radius: 999px;
-  opacity: 0;
-  transform: translateY(4px);
-  animation: chip-in 480ms cubic-bezier(.2,.7,.2,1) forwards;
   transition: border-color var(--transition), color var(--transition),
     transform var(--transition);
   cursor: default;
@@ -383,9 +369,6 @@ section.block:first-of-type,
   border-color: var(--accent);
   color: var(--accent);
   transform: translateY(-1px);
-}
-@keyframes chip-in {
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .about-stream {
@@ -396,8 +379,7 @@ section.block:first-of-type,
   padding: 4px 0 4px 22px;
 }
 /* A short navy accent tick at the top of the bio (pull-quote marker) replaces
-   the old full-height grey rail — minimal, but keeps the brand navy note. It
-   still scales in on reveal via .about-stream.in::before. */
+   the old full-height grey rail — minimal, but keeps the brand navy note. */
 .about-stream::before {
   content: "";
   position: absolute;
@@ -407,11 +389,8 @@ section.block:first-of-type,
   height: 40px;
   background: var(--accent);
   border-radius: 2px;
-  transform: scaleY(0);
   transform-origin: top;
-  transition: transform 700ms cubic-bezier(.2,.7,.2,1) 120ms;
 }
-.about-stream.in::before { transform: scaleY(1); }
 .about-paragraph {
   margin: 0;
   color: var(--ink-soft);
@@ -419,10 +398,6 @@ section.block:first-of-type,
   line-height: 1.75;
   hyphens: auto;
   -webkit-hyphens: auto;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 700ms cubic-bezier(.2,.7,.2,1),
-              transform 700ms cubic-bezier(.2,.7,.2,1);
 }
 @media (min-width: 720px) {
   .about-paragraph { text-align: justify; }
@@ -433,10 +408,6 @@ section.block:first-of-type,
   color: var(--ink);
   font-weight: 450;
   letter-spacing: -0.005em;
-}
-.about-stream.in .about-paragraph {
-  opacity: 1;
-  transform: translateY(0);
 }
 /* Quiet navy emphasis on the credibility phrases (institutions + award),
    wrapped in **bold** in data.js and parsed by renderInline. */
@@ -1289,9 +1260,9 @@ section.block:first-of-type,
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  /* Reveal-on-scroll elements start hidden and are shown by a JS-added .in
-     class (IntersectionObserver). For reduced-motion users there is nothing to
-     animate, so show them outright - content never depends on the observer. */
+  /* Entrance animations are disabled site-wide, so these elements are already
+     visible; this is a defensive guarantee that content never depends on any
+     motion/observer for reduced-motion users. */
   .reveal,
   .about-paragraph,
   .chip {
