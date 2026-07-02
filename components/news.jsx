@@ -78,9 +78,8 @@ function NewsListPage({ navigate }) {
   const visible = useReveal();
   const items = getRecentNews();
 
-  React.useEffect(() => {
-    window.scrollTo({ top: 0 });
-  }, []);
+  // Scroll-to-top on arrival is handled by App.navigate (fresh navigations
+  // only), so Back/Forward restores the prior scroll position natively.
 
   const backRoute = { page: "home", section: "news" };
 
@@ -118,17 +117,45 @@ function NewsListPage({ navigate }) {
   );
 }
 
-function Lightbox({ src, alt, onClose }) {
+function Lightbox({ photos, index, onIndex, onClose }) {
   const closeRef = React.useRef(null);
+  const dialogRef = React.useRef(null);
+  const count = photos.length;
+  const multi = count > 1;
+  const current = photos[index] || photos[0];
+
+  // Keep the latest index/handlers in a ref so the key listener (bound once, so
+  // the scroll lock + focus restore run only on open/close) always sees the
+  // current photo when Arrow keys page through a multi-photo gallery.
+  const nav = React.useRef();
+  nav.current = { index, count, onIndex, onClose };
 
   React.useEffect(() => {
     const triggerEl = document.activeElement;
     const onKey = (e) => {
-      if (e.key === "Escape") { onClose(); return; }
-      // Single focusable element — keep focus trapped inside the modal
-      if (e.key === "Tab") {
+      const s = nav.current;
+      if (e.key === "Escape") { s.onClose(); return; }
+      if (s.count > 1 && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
         e.preventDefault();
-        if (closeRef.current) closeRef.current.focus();
+        const delta = e.key === "ArrowRight" ? 1 : -1;
+        s.onIndex((s.index + delta + s.count) % s.count);
+        return;
+      }
+      // Trap Tab / Shift+Tab within the dialog's controls (close + prev/next).
+      if (e.key === "Tab") {
+        const focusables = dialogRef.current
+          ? Array.from(dialogRef.current.querySelectorAll("button"))
+          : [];
+        if (!focusables.length) { e.preventDefault(); return; }
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+        const inside = dialogRef.current && dialogRef.current.contains(active);
+        if (e.shiftKey && (active === first || !inside)) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && (active === last || !inside)) {
+          e.preventDefault(); first.focus();
+        }
       }
     };
     document.addEventListener("keydown", onKey);
@@ -147,19 +174,25 @@ function Lightbox({ src, alt, onClose }) {
       document.body.style.overflow = prevBodyOverflow;
       if (triggerEl && typeof triggerEl.focus === "function") triggerEl.focus();
     };
-  }, [onClose]);
+  }, []);
+
+  const page = (delta) => (e) => {
+    e.stopPropagation();
+    onIndex((index + delta + count) % count);
+  };
 
   // Same AVIF → WebP → original negotiation the in-page <Picture> uses, so the
   // full-screen view doesn't re-download the multi-megabyte original when an
   // optimized sibling exists. display:contents (styles.css) keeps the <img>
   // the direct flex child so its max-width/height sizing is unchanged.
+  const src = current.src;
   const isRaster = /\.(jpe?g|png)$/i.test(src);
   const base = isRaster ? src.replace(/\.(jpe?g|png)$/i, "") : null;
   const img = (
     <img
       className="lightbox-img"
       src={src}
-      alt={alt || ""}
+      alt={current.alt || ""}
       loading="eager"
       decoding="async"
       onClick={(e) => e.stopPropagation()}
@@ -169,10 +202,11 @@ function Lightbox({ src, alt, onClose }) {
   return (
     <div
       className="lightbox"
+      ref={dialogRef}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Photo viewer"
+      aria-label={multi ? `Photo viewer, ${index + 1} of ${count}` : "Photo viewer"}
     >
       <button
         type="button"
@@ -183,6 +217,16 @@ function Lightbox({ src, alt, onClose }) {
       >
         ×
       </button>
+      {multi && (
+        <button
+          type="button"
+          className="lightbox-nav lightbox-prev"
+          aria-label="Previous photo"
+          onClick={page(-1)}
+        >
+          ‹
+        </button>
+      )}
       {isRaster ? (
         <picture>
           <source srcSet={`${base}.avif`} type="image/avif" />
@@ -190,6 +234,19 @@ function Lightbox({ src, alt, onClose }) {
           {img}
         </picture>
       ) : img}
+      {multi && (
+        <button
+          type="button"
+          className="lightbox-nav lightbox-next"
+          aria-label="Next photo"
+          onClick={page(1)}
+        >
+          ›
+        </button>
+      )}
+      {multi && (
+        <div className="lightbox-counter" aria-hidden="true">{index + 1} / {count}</div>
+      )}
     </div>
   );
 }
@@ -270,12 +327,14 @@ function ArticleShare({ article }) {
 
 function Article({ slug, navigate }) {
   const article = React.useMemo(() => getArticle(slug), [slug]);
-  const [lightboxSrc, setLightboxSrc] = React.useState(null);
-  const closeLightbox = React.useCallback(() => setLightboxSrc(null), []);
+  // The lightbox pages across ALL of an article's photos; it holds the index of
+  // the open photo (null when closed) into the flat `openable` list built below.
+  const [lightboxIndex, setLightboxIndex] = React.useState(null);
+  const closeLightbox = React.useCallback(() => setLightboxIndex(null), []);
 
-  React.useEffect(() => {
-    window.scrollTo({ top: 0 });
-  }, [slug]);
+  // Scroll-to-top on a fresh navigation is handled centrally in App.navigate
+  // (push/link only), so Back/Forward keeps the browser's native scroll
+  // restoration instead of being yanked to the top on every popstate remount.
 
   const from = window.history.state?.from;
   const backRoute = from === "home"
@@ -308,29 +367,35 @@ function Article({ slug, navigate }) {
   const photos = (article.photos || []).map((p) =>
     typeof p === "string" ? { src: p } : p
   );
+  const photoAlt = (photo) => photo.caption || `Photo from “${article.title}”`;
+  // Flat list of every openable photo, in author order, that the lightbox pages
+  // through with prev/next + Arrow keys. Each figure/gallery tile opens at its
+  // own index into this list.
+  const openable = photos.map((photo) => ({ src: asset(photo.src), alt: photoAlt(photo) }));
+
   const inlineAfter = new Map();
   const galleryPhotos = [];
-  photos.forEach((photo) => {
+  photos.forEach((photo, index) => {
+    const entry = { photo, index };
     if (Number.isInteger(photo.after)) {
       const list = inlineAfter.get(photo.after) || [];
-      list.push(photo);
+      list.push(entry);
       inlineAfter.set(photo.after, list);
     } else {
-      galleryPhotos.push(photo);
+      galleryPhotos.push(entry);
     }
   });
 
-  const photoAlt = (photo) => photo.caption || `Photo from “${article.title}”`;
-  const openPhoto = (photo, alt) => (e) => {
+  const openPhoto = (index) => (e) => {
     // Focus the trigger first so the Lightbox returns focus here on close, even
     // in browsers that don't focus a clicked div on mousedown (e.g. Safari).
     if (e && e.currentTarget && e.currentTarget.focus) e.currentTarget.focus();
-    setLightboxSrc({ src: asset(photo.src), alt });
+    setLightboxIndex(index);
   };
 
-  const renderInlineFigure = (photo, key) => {
+  const renderInlineFigure = ({ photo, index }, key) => {
     const alt = photoAlt(photo);
-    const open = openPhoto(photo, alt);
+    const open = openPhoto(index);
     return (
       <figure className="article-figure" key={key}>
         <div
@@ -362,6 +427,13 @@ function Article({ slug, navigate }) {
         poster={article.poster ? asset(article.poster) : undefined}
       >
         <source src={asset(article.video)} type="video/mp4" />
+        {/* Open-codec fallback: browsers built without the proprietary H.264
+            decoder (e.g. some Linux Chromium packages) skip the MP4 and use the
+            VP9/WebM here. Listed second so the universally hardware-decoded
+            H.264 stays the default everywhere it is supported. */}
+        {article.videoWebm && (
+          <source src={asset(article.videoWebm)} type="video/webm" />
+        )}
         {/* Captions render only when the article supplies a WebVTT file, so a
             clip with speech can be made accessible without shipping an empty
             placeholder track for silent b-roll. */}
@@ -404,13 +476,13 @@ function Article({ slug, navigate }) {
       {article.video && videoAfter === null && renderVideo()}
       {galleryPhotos.length > 0 && (
         <div className="article-gallery">
-          {galleryPhotos.map((photo, i) => {
+          {galleryPhotos.map(({ photo, index }) => {
             const alt = photoAlt(photo);
-            const open = openPhoto(photo, alt);
+            const open = openPhoto(index);
             return (
               <div
                 className={"photo" + (photo.align === "top" ? " photo-align-top" : "")}
-                key={i}
+                key={index}
                 role="button"
                 tabIndex={0}
                 aria-label={`Open ${alt} in full screen`}
@@ -428,8 +500,13 @@ function Article({ slug, navigate }) {
           })}
         </div>
       )}
-      {lightboxSrc && (
-        <Lightbox src={lightboxSrc.src} alt={lightboxSrc.alt} onClose={closeLightbox} />
+      {lightboxIndex !== null && (
+        <Lightbox
+          photos={openable}
+          index={lightboxIndex}
+          onIndex={setLightboxIndex}
+          onClose={closeLightbox}
+        />
       )}
       <ArticleShare article={article} />
       {article.sources && article.sources.length > 0 && (

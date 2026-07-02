@@ -9,6 +9,7 @@ defineArticle({
   location: "Munich, Germany",
   title: "Reflections from Intersolar Europe 2026 and The smarter E Europe",
   excerpt: "Notes from Munich on battery storage as a revenue asset, hybrid PV plus storage, grid-forming inverters, energy management software, bidirectional charging, and what structural curtailment means for Greece.",
+  seoDescription: "Notes from Intersolar Europe 2026 in Munich on battery storage as a revenue asset, hybrid PV plus storage, grid-forming inverters, and curtailment in Greece.",
   keywords: [
     "Intersolar Europe",
     "The smarter E Europe",
