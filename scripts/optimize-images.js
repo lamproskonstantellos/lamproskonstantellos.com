@@ -18,6 +18,13 @@ const EXTENSIONS = [".jpg", ".jpeg", ".png"];
 const SKIP_DIRS = new Set(["node_modules", "dist", ".git", "vendor", "scripts"]);
 const WEBP_QUALITY = 80;
 const AVIF_QUALITY = 65;
+// The widest display slot on the site is the 1100px content column, so 2200px
+// (2x DPR) is the most a <picture> variant can usefully provide. Downscaling
+// to that cap turns multi-thousand-pixel phone-camera originals into a
+// fraction of the bytes with no visible loss anywhere they render (cards,
+// article covers, the lightbox). The raw original is untouched — it stays the
+// <img> fallback and the source of og:image dimensions.
+const MAX_VARIANT_SIZE = 2200;
 
 // Per-article social share crop. og:image wants a landscape ~1.91:1 card; the
 // raw covers are full-res and sometimes portrait/4:3, which social platforms
@@ -53,8 +60,15 @@ async function optimize(srcPath) {
   if (fresh(webp) && fresh(avif)) return false;
 
   console.log(`Optimizing ${srcPath}`);
-  await sharp(srcPath).webp({ quality: WEBP_QUALITY }).toFile(webp);
-  await sharp(srcPath).avif({ quality: AVIF_QUALITY }).toFile(avif);
+  const resized = () =>
+    sharp(srcPath).resize({
+      width: MAX_VARIANT_SIZE,
+      height: MAX_VARIANT_SIZE,
+      fit: "inside",
+      withoutEnlargement: true,
+    });
+  await resized().webp({ quality: WEBP_QUALITY }).toFile(webp);
+  await resized().avif({ quality: AVIF_QUALITY }).toFile(avif);
   return true;
 }
 

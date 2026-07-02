@@ -262,8 +262,21 @@ function buildStatic({ outDir = DEFAULT_OUT } = {}) {
   for (const rel of ROOT_PLAIN_FILES) copyFile(outDir, rel);
   for (const rel of ROOT_IMAGE_BASES) copyImage(outDir, rel);
   copyDir(outDir, "vendor");
-  // dist/ hashed bundles, but never the esbuild metafile.
-  copyDir(outDir, "dist", (src) => path.basename(src) === "manifest.json");
+  // dist/: only the CURRENT hashed bundles — the ones the asset map (and thus
+  // the rendered HTML) references. esbuild leaves older-hash siblings behind
+  // after local rebuilds, and copying the whole directory shipped that dead
+  // weight into the deploy output. Never the esbuild metafile. If the asset
+  // map is somehow empty, fall back to copying everything (minus the metafile)
+  // rather than shipping no scripts at all.
+  const liveDistFiles = new Set(
+    Object.values(ASSET_MAP).map((p) => path.join(ROOT, p.replace(/^\//, "")))
+  );
+  copyDir(outDir, "dist", (src) => {
+    if (path.basename(src) === "manifest.json") return true;
+    if (liveDistFiles.size === 0) return false;
+    if (fs.statSync(src).isDirectory()) return false;
+    return !liveDistFiles.has(src);
+  });
   // Each discovered article folder ships whole: article.js + images + video.
   for (const slug of slugs) copyDir(outDir, path.join("news", slug));
 

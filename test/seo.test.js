@@ -185,8 +185,8 @@ test("sitemap.xml is well-formed with absolute locs and YYYY-MM-DD lastmod", asy
 
 // ---- robots directive + no-JS fallback on every route ----------------------
 
-test("every route carries the image-preview robots directive and a noscript fallback", async () => {
-  for (const p of ["/", "/news", "/publications", `/news/${ARTICLE}`, "/no-such-page"]) {
+test("indexable routes carry the image-preview robots directive and a noscript fallback", async () => {
+  for (const p of ["/", "/news", "/publications", `/news/${ARTICLE}`]) {
     const html = (await request(base, p)).body.toString("utf8");
     assert.match(
       html,
@@ -198,6 +198,25 @@ test("every route carries the image-preview robots directive and a noscript fall
     assert.match(noscript[1], /href="\/news"/, `${p}: noscript links to /news`);
     assert.match(noscript[1], /href="\/publications"/, `${p}: noscript links to /publications`);
   }
+});
+
+// The not-found page must NOT ask to be indexed (it is served with HTTP 404),
+// and it must emit no JSON-LD block at all — an empty ld+json script is invalid
+// JSON that structured-data validators reject.
+test("the 404 route is noindex and emits no empty JSON-LD block", async () => {
+  const res = await request(base, "/no-such-page");
+  assert.equal(res.status, 404, "unknown route must be HTTP 404");
+  const html = res.body.toString("utf8");
+  assert.match(html, /<meta name="robots" content="noindex,follow" \/>/, "404 must be noindex");
+  assert.ok(
+    !/<meta name="robots" content="index,follow/.test(html),
+    "404 must not carry the index directive"
+  );
+  assert.ok(
+    !/<script type="application\/ld\+json">\s*<\/script>/.test(html),
+    "404 must not emit an empty ld+json block"
+  );
+  assert.ok(!html.includes('type="application/ld+json"'), "404 emits no JSON-LD at all");
 });
 
 // ---- Crawler view (JS disabled): server HTML carries full meta -------------

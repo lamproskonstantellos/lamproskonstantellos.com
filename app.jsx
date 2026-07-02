@@ -384,10 +384,14 @@ function App() {
   // on purpose: nav clicks scroll a section's top to ~70px (the -70 offset
   // below), so the "active" line has to be up there too — a mid-viewport band
   // would land in the NEXT section right after a click and highlight it instead
-  // (off-by-one). The observer reports only entries that CHANGED, so `latest`
-  // keeps the most recent observation per section and pickActiveSection
-  // (ui-helpers.js) resolves the winner — null while the hero is in view.
-  // Disconnected when leaving home.
+  // (off-by-one). Every trigger recomputes ALL four sections' geometry fresh
+  // (getBoundingClientRect) rather than caching observer entries: the observer
+  // only reports sections whose intersection CHANGED, so cached entries went
+  // stale after an INSTANT jump (reduced-motion back-to-top / brand click) and
+  // left a section highlighted while the hero was in view. The passive scroll
+  // listener covers jumps that flip no section's intersection state at all.
+  // pickActiveSection (ui-helpers.js) resolves the winner — null while the
+  // hero is in view. Disconnected when leaving home.
   useEffect(() => {
     if (route.page !== "home") {
       setActiveSection(null);
@@ -397,26 +401,36 @@ function App() {
       .map((id) => document.getElementById(id))
       .filter(Boolean);
     if (!sections.length) return;
-    const latest = new Map();
-    const io = new IntersectionObserver(
-      (entries) => {
-        const bandTop = window.innerHeight * 0.15;
-        for (const e of entries) {
-          latest.set(e.target.id, {
-            id: e.target.id,
-            // isIntersecting is the authoritative "crosses the band" signal: a
-            // tall section barely overlapping the thin band can round its
-            // ratio down to 0, so clamp crossing entries to a positive value.
-            ratio: e.isIntersecting ? Math.max(e.intersectionRatio, 1e-6) : 0,
-            top: e.boundingClientRect.top - bandTop,
-          });
-        }
-        setActiveSection(pickActiveSection([...latest.values()], HOME_SECTION_IDS));
-      },
-      { rootMargin: "-15% 0px -80% 0px" }
-    );
+    const recompute = () => {
+      // The band the rootMargin below describes: 15%–20% of viewport height.
+      const bandTop = window.innerHeight * 0.15;
+      const bandBottom = window.innerHeight * 0.2;
+      const observations = sections.map((el) => {
+        const rect = el.getBoundingClientRect();
+        const overlap = Math.min(rect.bottom, bandBottom) - Math.max(rect.top, bandTop);
+        return {
+          id: el.id,
+          // A tall section barely overlapping the thin band can round its
+          // ratio down to 0, so clamp crossing sections to a positive value.
+          ratio: overlap > 0 ? Math.max(overlap / Math.max(rect.height, 1), 1e-6) : 0,
+          top: rect.top - bandTop,
+        };
+      });
+      setActiveSection(pickActiveSection(observations, HOME_SECTION_IDS));
+    };
+    const io = new IntersectionObserver(recompute, { rootMargin: "-15% 0px -80% 0px" });
     sections.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; recompute(); });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      io.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
+    };
   }, [route.page]);
 
   // On first load, honor a #section hash (e.g. /#publications shared as a link).
