@@ -434,17 +434,16 @@ section.block {
   letter-spacing: -0.005em;
 }
 /* Quiet navy emphasis on the credibility phrases (institutions + award),
-   wrapped in **bold** in data.js and parsed by renderInline, plus a discreet
-   accent underline — the same blue note as the hero keywords, thin and soft.
+   wrapped in **bold** in data.js and parsed by renderInline, plus the same
+   soft accent highlight band the hero keywords carry.
    (.article-body strong, further down, carries the identical treatment.) */
 .about-paragraph strong {
   color: var(--ink);
   font-weight: 600;
-  text-decoration: underline;
-  text-decoration-color: rgba(31, 58, 138, 0.35);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-  text-decoration-skip-ink: none;
+  background: linear-gradient(to top, rgba(31, 58, 138, 0.14) 26%, transparent 26%);
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 @media (max-width: 820px) {
@@ -866,16 +865,15 @@ section.block {
   }
 }
 .article-body p { margin: 0 0 22px; }
-/* Bold emphasis in article prose: same navy weight + discreet accent
-   underline as .about-paragraph strong (kept in sync by hand). */
+/* Bold emphasis in article prose: same navy weight + soft accent highlight
+   band as .about-paragraph strong (kept in sync by hand). */
 .article-body strong {
   color: var(--ink);
   font-weight: 600;
-  text-decoration: underline;
-  text-decoration-color: rgba(31, 58, 138, 0.35);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-  text-decoration-skip-ink: none;
+  background: linear-gradient(to top, rgba(31, 58, 138, 0.14) 26%, transparent 26%);
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 /* Inline article figure: a photo placed between paragraphs (photos[].after),
