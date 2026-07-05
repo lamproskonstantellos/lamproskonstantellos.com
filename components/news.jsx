@@ -1,6 +1,6 @@
 /* global React, Icon, Picture, SITE, getRecentNews, getArticle, LIMITS,
    asset, routeToPath, handleAnchorClick, shareLinks,
-   useReveal, renderInline, SectionHeader, ViewAllLink */
+   renderInline, SectionHeader, ViewAllLink */
 
 /* ============================================================
    NEWS / ARTICLES
@@ -10,14 +10,12 @@
    - Article:         /news/<slug> full article view
    ============================================================ */
 
-function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from, headingLevel = "h3" }) {
+function NewsCard({ article, navigate, from, headingLevel = "h3" }) {
   const Title = headingLevel;
   const route = { page: "article", slug: article.slug };
   return (
     <a
-      className={`news-card reveal ${isVisible ? "in" : ""}`}
-      data-reveal={revealKey}
-      style={{ transitionDelay: `${index * 80}ms` }}
+      className="news-card"
       href={routeToPath(route)}
       onClick={(e) => handleAnchorClick(e, navigate, route, { from })}
     >
@@ -41,7 +39,6 @@ function NewsCard({ article, index = 0, navigate, revealKey, isVisible, from, he
 }
 
 function NewsPreview({ navigate }) {
-  const visible = useReveal();
   const limit = LIMITS.newsPreview;
   const items = getRecentNews(limit);
   const showViewAll = getRecentNews().length > limit;
@@ -58,16 +55,8 @@ function NewsPreview({ navigate }) {
         ) : null}
       />
       <div className="news-grid">
-        {items.map((n, i) => (
-          <NewsCard
-            key={n.slug}
-            article={n}
-            index={i}
-            navigate={navigate}
-            revealKey={`news-${i}`}
-            isVisible={visible.has(`news-${i}`)}
-            from="home"
-          />
+        {items.map((n) => (
+          <NewsCard key={n.slug} article={n} navigate={navigate} from="home" />
         ))}
       </div>
     </section>
@@ -75,7 +64,6 @@ function NewsPreview({ navigate }) {
 }
 
 function NewsListPage({ navigate }) {
-  const visible = useReveal();
   const items = getRecentNews();
 
   // Scroll-to-top on arrival is handled by App.navigate (fresh navigations
@@ -100,14 +88,11 @@ function NewsListPage({ navigate }) {
         <p className="list-empty">No articles yet.</p>
       ) : (
         <div className="news-grid">
-          {items.map((n, i) => (
+          {items.map((n) => (
             <NewsCard
               key={n.slug}
               article={n}
-              index={i}
               navigate={navigate}
-              revealKey={`news-list-${i}`}
-              isVisible={visible.has(`news-list-${i}`)}
               from="news-list"
               headingLevel="h2"
             />

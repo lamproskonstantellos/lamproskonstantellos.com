@@ -1,6 +1,6 @@
 /* global React, Icon, getRecentPublications, LIMITS,
    routeToPath, handleAnchorClick,
-   useReveal, SectionHeader, ViewAllLink, renderInline */
+   SectionHeader, ViewAllLink, renderInline */
 
 /* ============================================================
    PUBLICATIONS
@@ -48,13 +48,9 @@ function PubLinks({ links }) {
   );
 }
 
-function PublicationCard({ pub, index = 0, revealKey, isVisible }) {
+function PublicationCard({ pub }) {
   return (
-    <article
-      className={`pub-card reveal ${isVisible ? "in" : ""}`}
-      data-reveal={revealKey}
-      style={{ transitionDelay: `${index * 80}ms` }}
-    >
+    <article className="pub-card">
       <PubMetaRow pub={pub} />
       <h3 className="pub-title">{pub.title}</h3>
       <p className="pub-authors">{renderInline(pub.authors)}</p>
@@ -65,7 +61,6 @@ function PublicationCard({ pub, index = 0, revealKey, isVisible }) {
 }
 
 function PublicationsPreview({ navigate }) {
-  const visible = useReveal();
   const limit = LIMITS.publicationsPreview;
   const items = getRecentPublications(limit);
   const showViewAll = getRecentPublications().length > limit;
@@ -83,13 +78,7 @@ function PublicationsPreview({ navigate }) {
       />
       <div className="pub-list">
         {items.map((p, i) => (
-          <PublicationCard
-            key={i}
-            pub={p}
-            index={i}
-            revealKey={`pub-${i}`}
-            isVisible={visible.has(`pub-${i}`)}
-          />
+          <PublicationCard key={i} pub={p} />
         ))}
       </div>
     </section>

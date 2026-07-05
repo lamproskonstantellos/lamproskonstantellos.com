@@ -6,7 +6,6 @@
                     so they resolve from site root regardless of
                     the current SPA URL (e.g. /news/<slug>)
    - renderInline:  inline **bold** parser for body paragraphs
-   - useReveal:     IntersectionObserver-driven reveal hook
    - SectionHeader: <h2> + optional right-aligned action
    - ViewAllLink:   "View all →" CTA
    (routeToPath now lives in routes.js, shared with the server.)
@@ -39,26 +38,6 @@ function renderInline(text) {
   });
 }
 
-function useReveal() {
-  const [visible, setVisible] = React.useState(new Set());
-  React.useEffect(() => {
-    const items = document.querySelectorAll("[data-reveal]");
-    if (!items.length) return;
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) {
-          const k = e.target.dataset.reveal;
-          setVisible((prev) => { const n = new Set(prev); n.add(k); return n; });
-          io.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.12 });
-    items.forEach((it) => io.observe(it));
-    return () => io.disconnect();
-  }, []);
-  return visible;
-}
-
 function SectionHeader({ title, action }) {
   return (
     <div className="section-label">
@@ -78,5 +57,5 @@ function ViewAllLink({ href, onClick }) {
 
 Object.assign(window, {
   asset, handleAnchorClick, renderInline,
-  useReveal, SectionHeader, ViewAllLink,
+  SectionHeader, ViewAllLink,
 });

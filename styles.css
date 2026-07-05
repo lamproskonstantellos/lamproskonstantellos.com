@@ -197,10 +197,7 @@ main {
 #main-content:focus { outline: none; }
 
 /* Content appears in its final position on load — no page fade-up and no
-   card slide-in reveal (cards/paragraphs are visible immediately). Hover
-   feedback lives on the individual card rules. */
-.reveal,
-.reveal.in { opacity: 1; transform: none; }
+   card slide-in reveal. Hover feedback lives on the individual card rules. */
 
 /* ===== Hero ===== */
 .hero-photo {
@@ -1386,15 +1383,6 @@ section.block {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-  /* Entrance animations are disabled site-wide, so these elements are already
-     visible; this is a defensive guarantee that content never depends on any
-     motion/observer for reduced-motion users. */
-  .reveal,
-  .about-paragraph,
-  .chip {
-    opacity: 1 !important;
-    transform: none !important;
   }
 }
 
