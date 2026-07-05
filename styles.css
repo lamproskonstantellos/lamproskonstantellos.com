@@ -295,15 +295,16 @@ main {
    mobile rules live in the 820px media query below. */
 .hero-intro { display: none; }
 .hero-intro-photo {
-  /* Sized so the name beside it stays on ONE line down to ~360px wide. */
+  /* Sized so the name beside it stays on ONE line down to ~360px wide.
+     The photo fills the rounded frame edge-to-edge (no inner inset). */
   width: 96px;
   height: 96px;
   flex-shrink: 0;
-  padding: 4px;
-  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 24px;
+  overflow: hidden;
   box-shadow: var(--shadow-md);
+  background: #d9dde6;
 }
 .hero-intro-photo img,
 .hero-intro-photo picture {
@@ -313,7 +314,6 @@ main {
 .hero-intro-photo img {
   object-fit: cover;
   object-position: center 15%;
-  border-radius: 20px;
 }
 .hero-intro-text {
   display: flex;
