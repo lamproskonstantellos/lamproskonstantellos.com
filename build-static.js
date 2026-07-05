@@ -78,21 +78,23 @@ const ROOT_IMAGE_BASES = [
 ];
 
 // Excluded from the build entirely — source, tooling, config, docs and the
-// esbuild metafile. Asserted absent from build/ at the end.
+// esbuild metafile. Asserted absent from build/ at the end. Keep this in sync
+// with server.js's isPrivatePath deny rules.
 const MUST_BE_ABSENT = [
   "server.js",
   "build-static.js",
   "feeds.js",
   "package.json",
   "package-lock.json",
-  "Dockerfile",
-  ".dockerignore",
   ".gitignore",
   "LICENSE",
   "README.md",
+  "AUDIT.md",
+  "docs",
   "news/README.md",
   "scripts",
   "test",
+  "node_modules",
   "dist/manifest.json",
   // Uncompiled JSX sources are never copied (the hashed dist/ bundles are used).
   "app.jsx",

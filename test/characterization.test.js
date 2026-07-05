@@ -165,19 +165,26 @@ test("no Accept-Encoding → identity, no Vary surprise", async () => {
 test("private paths are not served", async () => {
   for (const p of [
     "/server.js",
+    "/feeds.js",
+    "/build-static.js",
     "/package.json",
     "/package-lock.json",
-    "/Dockerfile",
-    "/.dockerignore",
     "/.gitignore",
     "/LICENSE",
     "/dist/manifest.json",
     "/scripts/optimize-images.js",
     "/.git/config",
     "/README.md",
+    "/AUDIT.md",
+    "/docs/MIGRATION.md",
+    "/docs/QA-UX-REVIEW.md",
     "/news/README.md",
     "/test/helper.js",
     "/test/golden/home.html",
+    "/node_modules/esbuild/package.json",
+    "/app.jsx",
+    "/icons.jsx",
+    "/components/about.jsx",
   ]) {
     const res = await request(base, p);
     assert.equal(res.status, 404, `${p} should be 404, got ${res.status}`);

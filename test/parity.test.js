@@ -89,10 +89,10 @@ test("build feed.json matches the committed golden", () => {
 test("no private/excluded file leaked into build/", () => {
   const mustBeAbsent = [
     "server.js", "build-static.js", "feeds.js",
-    "package.json", "package-lock.json", "Dockerfile",
-    ".dockerignore", ".gitignore", "LICENSE",
-    "README.md", "news/README.md",
-    "scripts", "test", "dist/manifest.json",
+    "package.json", "package-lock.json",
+    ".gitignore", "LICENSE",
+    "README.md", "AUDIT.md", "docs", "news/README.md",
+    "scripts", "test", "node_modules", "dist/manifest.json",
     "app.jsx", "icons.jsx", "components",
   ];
   for (const rel of mustBeAbsent) {
