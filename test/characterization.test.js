@@ -2,7 +2,7 @@
 
 // Golden characterization of TODAY's served output. These lock the behaviour
 // that must not change accidentally; deliberate fixes update the golden in the
-// same commit, with a justification in the audit report.
+// same commit, with a justification in the commit message.
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert");
@@ -167,6 +167,7 @@ test("private paths are not served", async () => {
     "/scripts/optimize-images.js",
     "/.git/config",
     "/README.md",
+    "/PUBLICATIONS.md",
     "/news/README.md",
     "/test/helper.js",
     "/test/golden/home.html",

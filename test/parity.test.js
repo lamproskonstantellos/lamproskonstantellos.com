@@ -91,7 +91,7 @@ test("no private/excluded file leaked into build/", () => {
     "server.js", "build-static.js", "feeds.js",
     "package.json", "package-lock.json",
     ".gitignore", "LICENSE",
-    "README.md", "news/README.md",
+    "README.md", "PUBLICATIONS.md", "news/README.md",
     "scripts", "test", "node_modules", "dist/manifest.json",
     "app.jsx", "icons.jsx", "components",
   ];
