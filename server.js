@@ -814,9 +814,9 @@ function isPrivatePath(pathname) {
   if (pathname.startsWith("/node_modules/")) return true; // dependency tree
   if (pathname.startsWith("/components/")) return true; // uncompiled sources
   if (pathname.startsWith("/.")) return true; // dotfiles (.git, .github, ...)
-  // No public asset is Markdown (covers README.md, AUDIT.md, news/README.md,
-  // and any future notes) or raw JSX (the browser loads the compiled /dist/
-  // bundles; app.jsx / icons.jsx / components/*.jsx are source only).
+  // No public asset is Markdown (covers README.md, news/README.md, and any
+  // future notes) or raw JSX (the browser loads the compiled /dist/ bundles;
+  // app.jsx / icons.jsx / components/*.jsx are source only).
   if (/\.(md|jsx)$/i.test(pathname)) return true;
   return false;
 }

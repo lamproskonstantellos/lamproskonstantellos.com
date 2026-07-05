@@ -49,9 +49,6 @@ tooling and config never are.
 | Build output directory | `build` |
 | Environment variable | `NODE_VERSION=20` |
 
-See [`docs/MIGRATION.md`](./docs/MIGRATION.md) for the full Railway → Cloudflare
-Pages migration notes.
-
 ## Project structure
 
 ```
@@ -73,8 +70,6 @@ Pages migration notes.
 ├── vendor/                Self-hosted React 18 UMD builds + Inter woff2 subsets (vendor/fonts/)
 ├── test/                  node:test suite + golden files (test/golden/)
 ├── .github/workflows/     CI (npm ci → build → test)
-├── docs/                  MIGRATION.md (Railway → Cloudflare) and QA-UX-REVIEW.md
-├── AUDIT.md               Security / SEO / performance / a11y audit report
 ├── robots.txt             Search-engine directives
 ├── dist/                  Built JS (gitignored; produced by `npm run build`)
 ├── build/                 Static Cloudflare Pages output (gitignored; `npm run build:static`)
