@@ -1302,7 +1302,9 @@ section.block {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  /* A single centred line — the © notice is all that lives here. */
+  justify-content: center;
+  text-align: center;
   gap: 10px 16px;
   margin-top: 44px;
   padding-top: 22px;
@@ -1311,12 +1313,6 @@ section.block {
   color: rgba(255, 255, 255, 0.52);
 }
 .site-footer .copy { display: flex; align-items: center; gap: 6px; }
-.footer-top-link {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 13px;
-  transition: color var(--transition);
-}
-.footer-top-link:hover { color: #fff; }
 
 /* ===== Responsive ===== */
 @media (max-width: 820px) {
@@ -1387,7 +1383,6 @@ section.block {
   .footer-col a { padding-top: 10px; padding-bottom: 10px; }
   .view-all,
   .back-link,
-  .footer-top-link,
   .pub-links a,
   .pub-filter,
   .article-share a,
