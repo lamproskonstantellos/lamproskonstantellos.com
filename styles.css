@@ -558,10 +558,15 @@ section.block {
   background: var(--muted-2);
   margin: 0 10px;
 }
-/* Award pill, inline on the meta row right after the venue/year tokens. */
+/* Award pill, inline on the meta row right after the venue/year tokens.
+   All award/type pills share one standard size — the width of the widest
+   current label ("3rd Best Paper Award") — so the row of badges reads as a
+   uniform system; min-width (not width) lets a longer future label still fit. */
 .pub-award {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 144px;
   font-family: "Inter", sans-serif;
   font-size: 11px;
   font-weight: 600;
@@ -578,10 +583,13 @@ section.block {
 }
 /* Category tag for non-peer-reviewed work (thesis / report). Sits on the meta
    row like the award pill (they never coexist), but a quiet navy outline
-   rather than gold, so it reads as a "type" marker, not a distinction. */
+   rather than gold, so it reads as a "type" marker, not a distinction.
+   Same standard 144px size as .pub-award. */
 .pub-type {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 144px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.01em;
