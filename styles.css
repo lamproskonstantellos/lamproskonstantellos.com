@@ -385,9 +385,15 @@ section.block {
   border: none;
   padding: 0;
   cursor: pointer;
-  transition: color var(--transition), gap var(--transition);
+  /* Discreet accent underline, shared with the publication/read/back links. */
+  text-decoration: underline;
+  text-decoration-color: rgba(31, 58, 138, 0.35);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: color var(--transition), gap var(--transition),
+    text-decoration-color var(--transition);
 }
-.view-all:hover { gap: 9px; color: var(--accent-hover); }
+.view-all:hover { gap: 9px; color: var(--accent-hover); text-decoration-color: currentColor; }
 .view-all svg { transition: transform var(--transition); }
 .view-all:hover svg { transform: translateX(2px); }
 
@@ -768,7 +774,13 @@ section.block {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  text-decoration: underline;
+  text-decoration-color: rgba(31, 58, 138, 0.35);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: text-decoration-color var(--transition);
 }
+.news-card:hover .read { text-decoration-color: currentColor; }
 
 /* ===== List pages (/news, /publications) ===== */
 .list-page {
@@ -812,13 +824,17 @@ section.block {
   font-weight: 500;
   color: var(--accent);
   margin-bottom: 32px;
-  transition: gap var(--transition);
+  text-decoration: underline;
+  text-decoration-color: rgba(31, 58, 138, 0.35);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: gap var(--transition), text-decoration-color var(--transition);
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
 }
-.back-link:hover { gap: 10px; }
+.back-link:hover { gap: 10px; text-decoration-color: currentColor; }
 .article-meta {
   font-size: 12px;
   letter-spacing: 0.1em;
