@@ -73,7 +73,7 @@ const ROOT_IMAGE_BASES = [
   "icon-256.png",
   "icon-512.png",
   "apple-touch-icon.png",
-  "og-image.png",
+  "og-image.jpg",
   "lampros-konstantellos-picture.jpg",
 ];
 

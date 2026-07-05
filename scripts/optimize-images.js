@@ -13,9 +13,12 @@ const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
 
-const SOURCE_DIRS = [".", "news"];
+// Walking "." already covers news/ recursively.
+const SOURCE_DIRS = ["."];
 const EXTENSIONS = [".jpg", ".jpeg", ".png"];
-const SKIP_DIRS = new Set(["node_modules", "dist", ".git", "vendor", "scripts"]);
+// "build" (the static deploy output) and "scratch" are generated trees — never
+// re-encode inside them.
+const SKIP_DIRS = new Set(["node_modules", "dist", "build", "scratch", ".git", "vendor", "scripts"]);
 const WEBP_QUALITY = 80;
 const AVIF_QUALITY = 65;
 // The widest display slot on the site is the 1100px content column, so 2200px
