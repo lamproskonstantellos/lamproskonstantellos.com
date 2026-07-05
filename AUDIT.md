@@ -1,5 +1,12 @@
 # Website Audit - lamproskonstantellos.com
 
+> **Point-in-time report.** Findings, statuses, and verification counts below
+> describe the repository as of the audit snapshot; the codebase has moved on
+> since (the test suite has grown with the publications restyle and the
+> pre-delivery hardening pass — `npm test` prints the current count). See
+> "Post-audit changes" below for deliberate golden-file updates made after
+> this report.
+
 Full-stack security, SEO, performance, UI/UX and accessibility audit of the
 personal website. The site is a no-framework SPA (React from a vendored global,
 JSX compiled with esbuild) served by `server.js` and pre-rendered to `build/`
@@ -49,9 +56,19 @@ section).
 
 Verification evidence:
 
-- Test suite: 130 -> 135 passing (five regression tests added: footer rgba
-  contrast, reduced-motion reveal, robots + noscript, video/aria-current wiring,
-  and the 1200x630 social crop). `npm audit`: 0 vulnerabilities.
+- Test suite: 130 -> 135 passing at the audit snapshot (five regression tests
+  added: footer rgba contrast, reduced-motion reveal, robots + noscript,
+  video/aria-current wiring, and the 1200x630 social crop). `npm audit`:
+  0 vulnerabilities.
+
+Post-audit changes (pre-delivery pass) — deliberate golden updates:
+
+- feed.json / article HTML goldens regenerated after `plainBody()` started
+  stripping inline `**bold**` markers from JSON-LD articleBody and JSON Feed
+  content_text (marker removal is the only diff).
+- HTML goldens regenerated after the default social card moved from
+  `og-image.png` (733 KB) to a visually identical `og-image.jpg` (~35 KB);
+  only the og:image / twitter:image / JSON-LD image URLs changed.
 - Contrast: footer headings 4.30:1 -> 6.56:1 (measured, composited over navy).
 - Fonts: two third-party origins removed from the CSP; the font stylesheet no
   longer render-blocks; Inter is served from this origin (verified loading in a
@@ -285,8 +302,10 @@ optional P3 maintenance.
 - **Impact:** 2.2 MB-plus of dead weight in the repository (no user-facing impact).
 - **Fix:** `git rm` the unreferenced assets if they are not kept as design sources.
 - **Effort:** S.
-- **Status:** fixed (removed with owner sign-off; the shipped `og-image.png` and
-  icon set are untouched, and git history retains the originals).
+- **Status:** fixed (removed with owner sign-off; git history retains the
+  originals). `apple-touch-icon.svg` — initially kept — was removed in the
+  pre-delivery pass as well, and the default share image now ships as
+  `og-image.jpg` (see "Post-audit changes").
 
 ### SEC-05 (P3) - CI action tags not pinned to SHAs
 

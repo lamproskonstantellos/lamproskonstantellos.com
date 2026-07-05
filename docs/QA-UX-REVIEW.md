@@ -1,5 +1,13 @@
 # Pre-Delivery QA & UI/UX Review — lamproskonstantellos.com
 
+> **Historical snapshot.** This is the point-in-time review brief used for the
+> pre-delivery QA pass; the site has since been restyled (stacked publications
+> preview, filterable year-grouped `/publications`, hero keyword highlight
+> bands, divider above About, mobile profile-card hero) and entrance
+> animations were removed. Facts below were refreshed to match the shipped
+> site at handover; where a checklist item and the live site disagree, the
+> code and the test suite are authoritative.
+
 ## Role & Objective
 
 You are a **senior QA engineer and UI/UX reviewer** performing a **pre-delivery pass** on
@@ -89,14 +97,16 @@ What "green" looks like:
 
 - [ ] `npm install` exits 0 with **0 vulnerabilities**. (If `sharp` fails to encode AVIF on this
       platform, stop and report it — it blocks the build and the image tests.)
-- [ ] `npm run build` logs `Image optimization complete (20 processed).`, then emits **7 hashed
-      bundles + `dist/manifest.json`**, exits 0.
-- [ ] After build, every Picture-served source has siblings:
-      `find . -path ./node_modules -prune -o -type f \( -iname '*.webp' -o -iname '*.avif' \) -print | wc -l`
-      returns **40**.
+- [ ] `npm run build` logs `Image optimization complete (N processed).` (N = images whose
+      variants were stale; 0 on a warm re-run), then emits **7 hashed bundles +
+      `dist/manifest.json`**, exits 0.
+- [ ] After build, every Picture-served source has `.webp`/`.avif` siblings (and each article
+      cover a `cover-og.jpg` crop):
+      `find . \( -path ./node_modules -o -path ./build \) -prune -o -type f \( -iname '*.webp' -o -iname '*.avif' \) -print | wc -l`
+      returns two siblings per source image.
 - [ ] `npm run build:static` logs `Static build complete → build` and `12 HTML pages + 404.html, 9 articles`.
-- [ ] `npm test` reports **129 tests, 0 fail**, exit 0. If any fail, capture the names and treat
-      as **P0** unless clearly environmental.
+- [ ] `npm test` reports **0 fail**, exit 0 (the suite's test count is printed in its summary
+      line). If any fail, capture the names and treat as **P0** unless clearly environmental.
 - [ ] `npm start` prints the running message and `GET /` returns `200 text/html; charset=utf-8`.
 
 > There are **9** news articles and **4** publications (2 conference papers + 1 thesis + 1 report).
@@ -175,15 +185,11 @@ Use the browser. Click, hover, Tab, resize, emulate touch. Watch the console thr
       the home route; it loads promptly and lifts slightly on hover. The three CTAs (View
       publications / Read news / Contact) smooth-scroll to their sections.
 
-### Reveal-on-scroll
-- [ ] `[data-reveal]` cards (publications, news) fade up (opacity 0→1, translateY, ~600ms) with a
-      staggered delay. **Critical edge case:** cards **above the fold on load and after SPA
-      navigation must still reveal** — hard-check that no card is stuck at `opacity:0`. Under
-      `prefers-reduced-motion` the reveal must still **end visible**. (Note: a card taller than
-      the viewport could in theory never reach the 12% intersection threshold — verify on a short
-      mobile viewport.)
-- [ ] The About paragraphs fade in on first reveal via their own observer; confirm they end
-      visible.
+### Entrance motion
+- [ ] There is **no** entrance/reveal animation: cards, About paragraphs, and chips are visible
+      immediately in their final position, on load and after SPA navigation, at every viewport.
+      No content may ever be gated behind an IntersectionObserver or `opacity:0` state (the old
+      reveal machinery was removed outright; a test guards against reintroducing it).
 
 ### News
 - [ ] Home news preview shows at most **3** newest cards; «View all →» appears (there are 9
@@ -206,10 +212,12 @@ Use the browser. Click, hover, Tab, resize, emulate touch. Watch the console thr
       `navigator.share` exists. Verify the `execCommand` clipboard fallback.
 
 ### Publications
-- [ ] Home preview shows **3** newest; «View all →» links to `/publications`; `/publications`
-      lists all 4 with a «Back to Home» link. The IEEE paper shows the gold award pill; the thesis
-      and report show the navy type pill; the meta line (venue · location · year) wraps clear of
-      the pill at every card width.
+- [ ] Home preview shows the **3** newest as stacked full-width cards; «View all →» links to
+      `/publications`; `/publications` lists all 4 in hairline-separated rows grouped under large
+      muted year labels, with filter pills «All (4) / Peer-reviewed (2) / Theses & reports (2)»
+      (active pill navy, `aria-pressed`) and a «Back to Home» link. The IEEE paper shows the gold
+      award pill; the thesis and report show the navy type pill, inline on the meta row. Card meta
+      lines read venue · location · year; list rows omit the year (the group label carries it).
 
 ### Contact + footer
 - [ ] All 8 contact cards (LinkedIn, Google Scholar, IEEE Xplore, ORCID, Zenodo, ResearchGate,
@@ -229,15 +237,16 @@ Open each page at desktop, tablet, and mobile widths and actually *look*.
       container.
 - [ ] **No horizontal overflow / scrollbars at any width** — check 360, 390, 480, 560, 720, 820,
       960, 1200px. (The header nav previously overran at 360px; confirm the narrow-width fix holds.)
-- [ ] No stray dividers — confirm there is **no** hairline between the hero and the About block on
-      the home page.
+- [ ] Section dividers — confirm the hairline **above the About block is present** and spaced
+      evenly (56px both sides), exactly like the dividers between the other home sections.
 - [ ] Lonely-item check: the 3-card news preview leaves a single stretched card on row 2 between
       ~720–959px (2 columns); the 8-card contact grid leaves one empty trailing cell ≥721px (3
       columns). Both are acceptable but note if they read as unfinished.
 
 ### Typography & hierarchy
 - [ ] Exactly one obvious `<h1>` per route; consistent H2/H3 styling; readable body sizes and line
-      lengths. On `/news` and `/publications` confirm the card titles are `<h2>` (no h1→h3 skip).
+      lengths. On `/news` the card titles are `<h2>`; on `/publications` the year-group labels are
+      `<h2>` and the entry titles `<h3>` (no skipped levels).
 - [ ] Justified English prose (≥720px, About + article bodies) hyphenates without rivers of
       whitespace; en-dashes and «…» render correctly.
 
@@ -310,10 +319,10 @@ Open each page at desktop, tablet, and mobile widths and actually *look*.
       `Article` (headline/datePublished==dateModified/author/publisher/`inLanguage=en`) +
       `BreadcrumbList`. **Validate with Google Rich Results Test (0 errors)**; confirm `<` is
       escaped (no `</script>` breakout — covered by `test/injection.test.js`).
-- [ ] Favicons & manifest: `favicon.svg` (renders the navy "LK" glyph), `favicon-16/32/48`,
-      `favicon.ico`, `apple-touch-icon.png`, `site.webmanifest` all return 200; manifest is valid
-      JSON (theme_color `#0a1f44`, icons svg + 180). **Note:** the manifest has **no `lang`** field
-      and `display:"browser"` — flag as a minor gap if PWA polish is wanted.
+- [ ] Favicons & manifest: `favicon.svg` (renders the navy "LK" glyph), the `favicon-16…512`
+      PNG set, `favicon.ico`, `apple-touch-icon.png`, `site.webmanifest` all return 200; manifest
+      is valid JSON (theme_color `#0a1f44`, `lang: "en"`, full icon set including maskable
+      entries).
 - [ ] `robots.txt`: `User-agent: *`, `Allow: /`, absolute `Sitemap:`; no `noindex` anywhere.
 - [ ] `sitemap.xml`: well-formed, **12 `<loc>`** (home + /news + /publications + 9 articles), all
       absolute https, `lastmod` `YYYY-MM-DD`. Static-page lastmod derives from the newest article
@@ -381,18 +390,18 @@ Open each page at desktop, tablet, and mobile widths and actually *look*.
       `Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=()`,
       `Cross-Origin-Opener-Policy: same-origin`, and a full `Content-Security-Policy`. Check `/`,
       an interior route, an asset, and a 404. (`build/_headers` must reproduce them verbatim.)
-- [ ] CSP is tight and matches what the page loads:
+- [ ] CSP is tight and matches what the page loads (Inter is self-hosted from `/vendor/fonts/`,
+      so no font origins appear):
       `default-src 'self'; script-src 'self' https://plausible.io; style-src 'self'
-      https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com;
-      img-src 'self' data:; connect-src 'self' https://plausible.io; object-src 'none';
-      base-uri 'self'; frame-ancestors 'none'; form-action 'none'`. Confirm **Plausible**
-      (`plausible.io`) is whitelisted in `script-src` **and** `connect-src`, Google Fonts in
-      `style-src`/`font-src`, and **nothing else external**. Note `style-src 'unsafe-inline'` is
-      intentional (Google Fonts link + React inline `style` props) — flag it as a known trade-off.
+      'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'
+      https://plausible.io; object-src 'none'; base-uri 'self'; frame-ancestors 'none';
+      form-action 'none'`. Confirm **Plausible** (`plausible.io`) is whitelisted in `script-src`
+      **and** `connect-src`, and **nothing else external**. Note `style-src 'unsafe-inline'` is
+      intentional (React inline `style` props) — a known trade-off.
 - [ ] **Console + Network must be clean** while clicking through every page/interaction: **zero
       CSP violations**, zero JS errors, zero 404s (especially image AVIF/WebP siblings and the LCP
-      preload). The Plausible script and Google Fonts must load (or be gracefully absent) without
-      CSP errors.
+      preload). The Plausible script must load (or be gracefully absent) without CSP errors; the
+      self-hosted Inter woff2 files must load from this origin.
 - [ ] Server robustness (covered by `test/security.test.js`, spot-confirm): bad `%`-encoding /
       `%00` → 400; path traversal / private paths → 403/404 and never leak source; `OPTIONS` → 204
       with `Allow`; other methods → 405; the server stays up after malformed input.
