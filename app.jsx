@@ -250,9 +250,8 @@ function Contact() {
    ============================================================ */
 
 function Footer({ navigate }) {
+  // Current year only, derived — never hardcoded (locked by a test).
   const year = new Date().getFullYear();
-  const since = 2023;
-  const years = year > since ? `${since}-${year}` : `${year}`;
 
   // Sitemap: the two standalone pages plus the two home-only sections.
   const explore = [
@@ -316,14 +315,7 @@ function Footer({ navigate }) {
         </div>
 
         <div className="footer-bottom">
-          <span className="copy">© {years} {PROFILE.name}</span>
-          <button
-            type="button"
-            className="footer-top-link"
-            onClick={() => window.scrollTo({ top: 0, behavior: scrollBehavior() })}
-          >
-            Back to top ↑
-          </button>
+          <span className="copy">© {year} {PROFILE.name}</span>
         </div>
       </div>
     </footer>

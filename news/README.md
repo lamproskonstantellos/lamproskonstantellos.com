@@ -92,6 +92,25 @@ Photos without `after` collect into a gallery grid at the end of the article. Bo
 
 **Render order** of an article: cover → body paragraphs (with any inline photos — and the video, if `videoAfter` is set — interleaved) → video (if not placed inline) → end gallery → share row → sources.
 
+### SEO checklist
+
+Everything page-level (title, canonical, Open Graph/Twitter tags, `Article`
+JSON-LD, `sitemap.xml`, `rss.xml`, `feed.json`) is generated automatically at
+build time — you only supply good inputs:
+
+1. **`excerpt`** — one or two sentences; it is the card preview, the feed
+   summary, and the meta description fallback.
+2. **`seoDescription`** — add it when the excerpt runs past ~160 characters, so
+   Google shows a clean snippet instead of truncating.
+3. **`keywords` / `articleSection` / `topics`** — power JSON-LD rich results
+   and feed tags; `topics` entries should point `sameAs` at a canonical page
+   (e.g. Wikipedia).
+4. **`cover.jpg`** — commit the raw image; the build derives the 1200×630
+   `cover-og.jpg` social card (smart-cropped) that LinkedIn/WhatsApp show on
+   shares, plus the `.webp`/`.avif` variants the page serves.
+5. **Bold sparingly** — `**bold**` phrases render highlighted on the page and
+   are stripped to plain text in JSON-LD and the feeds.
+
 ### Body formatting
 
 `body` is an array of strings, each rendered as one `<p>`. The only inline formatting is **`**bold**`** (double asterisks) — there is no Markdown link or list syntax. For a bulleted list, make each bullet its own `body` entry beginning with a literal `• ` (see `renewable-energytech-expo-thessaloniki/article.js`).

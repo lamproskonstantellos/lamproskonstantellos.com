@@ -62,7 +62,7 @@ Pages migration notes.
 ├── site.config.js         Single source of truth for site identity (dual Node/browser)
 ├── routes.js              Route table: parseRoute / routeToPath / isValidSpaRoute / pageTitle (dual)
 ├── article-schema.js      Article validation + newest-first comparator (dual)
-├── ui-helpers.js          Share links + scroll-spy resolver (dual Node/browser)
+├── ui-helpers.js          Share links, scroll-spy, publication filters/grouping, hero joiner (dual)
 ├── data.js                Profile, hero, about, publications, contact, selectors
 ├── styles.css             Global stylesheet
 ├── index.html             Single HTML entry with __META_*__ placeholders
@@ -103,9 +103,47 @@ serves. Golden snapshots live in `test/golden/`; a deliberate output change is
 refreshed with `UPDATE_GOLDEN=1 npm test`. CI runs the same `build` + `test` on
 every push.
 
-## Adding a new article
+## Adding content
 
-See [`news/README.md`](./news/README.md). In short: create a folder under `news/<slug>/`, drop in `cover.jpg` and any photos, write `article.js`. The build auto-discovers it at build time and it ships on the next deploy (git push), with no edits to `data.js`, `index.html`, or any other file needed.
+### New article (News)
+
+See [`news/README.md`](./news/README.md) for the complete guide — folder layout, the `article.js` template, every field (including photos, video, and the SEO fields), and validation. In short: create a folder under `news/<slug>/`, drop in `cover.jpg` and any photos, write `article.js` from the template. The build auto-discovers it and it ships on the next deploy (git push), with no edits to `data.js`, `index.html`, or any other file needed.
+
+### New publication
+
+Publications live in exactly one place: the `publications` array in [`data.js`](./data.js). Add one object there and it appears everywhere automatically — the homepage preview (the 3 most recent), the `/publications` list (newest first, grouped by year), and the filter pill counts.
+
+```js
+{
+  // Omit `type` for a peer-reviewed paper. Set it for non-peer-reviewed work
+  // ("Master's Thesis", "Internship Report", …) — it renders as the navy
+  // badge and files the entry under the "Theses & reports" filter.
+  type: "Master's Thesis",
+  venue: "University of Patras",     // required — first meta token
+  location: "Patras, Greece",        // optional — second meta token
+  year: "2025",                      // required, string — sorting + year group label
+  title: "Full publication title",   // required
+  // required — wrap your own name in ** so it reads bold:
+  authors: "**Konstantellos, L.**, Coauthor, A., & Coauthor, B. (2025)",
+  award: "3rd Best Paper Award",     // optional — gold badge (use award OR type, not both)
+  description: "Optional one-line summary shown under the authors.",
+  links: [                           // at least one external link
+    { label: "IEEE Xplore", href: "https://ieeexplore.ieee.org/document/…" },
+    { label: "Zenodo",      href: "https://zenodo.org/records/…" },
+  ],
+},
+```
+
+Notes:
+
+- Entries sort by `Number(year)` descending; within the same year they keep array order — put the newest first.
+- All award/type badges render at one standard size (144px min-width), so any new label lines up with the existing set; a longer label still expands rather than clips.
+- Publications render inside the SPA pages (there is no per-publication URL). The `/publications` meta description lives in `server.js` → `computePageMeta` (publications-list branch) — refresh it if the list's focus changes materially.
+
+### SEO checklist for new content
+
+- **Articles:** fill `excerpt` (and `seoDescription` when the excerpt runs past ~160 characters), plus `keywords`, `articleSection`, and `topics` for rich results; commit a `cover.jpg` — the build derives the 1200×630 `cover-og.jpg` social card automatically. `<title>`, meta description, canonical, Open Graph/Twitter tags, `Article` JSON-LD, `sitemap.xml`, `rss.xml`, and `feed.json` all update automatically at build time.
+- **Publications:** no extra steps — the page-level meta and JSON-LD are already in place; just keep titles/venues accurate and links working.
 
 ## SEO
 
