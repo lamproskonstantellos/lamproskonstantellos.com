@@ -203,3 +203,29 @@ test("news preview cap: View-all appears only when items exceed the limit", () =
   assert.equal(window.getRecentNews().length > cap, true, "cap+1 → View-all");
   assert.equal(window.getRecentNews(cap).length, cap, "preview is sliced to the cap");
 });
+
+// ---- Publications list page: filters + year grouping -------------------------
+
+test("compiled publications bundle carries the filter and year-group wiring", () => {
+  const code = compiledBundle("components/publications.jsx");
+  assert.ok(code.includes("pub-filter"), "filter pill class missing from bundle");
+  assert.ok(code.includes("aria-pressed"), "filter pills must expose aria-pressed");
+  assert.ok(code.includes("pub-year"), "year-group label class missing from bundle");
+  assert.ok(code.includes("PUB_FILTERS"), "bundle must use the shared PUB_FILTERS");
+  assert.ok(
+    code.includes("groupPublicationsByYear"),
+    "bundle must group via the shared, unit-tested helper"
+  );
+});
+
+// ---- Hero: highlighted keywords ----------------------------------------------
+
+test("Hero emphasizes each headline keyword via the shared joiner", () => {
+  const src = fs.readFileSync(path.join(ROOT, "app.jsx"), "utf8");
+  assert.ok(src.includes("PROFILE.hero.headlineHighlights"), "hero must read headlineHighlights");
+  assert.match(src, /<em>\{phrase\}<\/em>/, "each phrase must render inside <em>");
+  assert.ok(src.includes("headlineJoiner(i, phrases.length)"), "joiners must come from ui-helpers");
+  const code = compiledBundle("app.jsx");
+  assert.ok(code.includes("headlineHighlights"), "bundle missing headlineHighlights wiring");
+  assert.ok(code.includes("headlineJoiner"), "bundle missing the shared joiner");
+});

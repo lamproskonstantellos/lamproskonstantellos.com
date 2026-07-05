@@ -1,16 +1,23 @@
 "use strict";
 
 // Unit tests for ui-helpers.js — the pure logic behind the article share row
-// (shareLinks) and the homepage scroll-spy nav (pickActiveSection). The module
-// follows the dual Node/browser pattern of routes.js, so it is exercised here
-// directly via require, with no JSX compilation involved.
+// (shareLinks), the homepage scroll-spy nav (pickActiveSection), the
+// /publications filter pills + year grouping, and the hero headline joiners.
+// The module follows the dual Node/browser pattern of routes.js, so it is
+// exercised here directly via require, with no JSX compilation involved.
 
 const { test } = require("node:test");
 const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const { shareLinks, pickActiveSection } = require("../ui-helpers.js");
+const {
+  shareLinks,
+  pickActiveSection,
+  PUB_FILTERS,
+  groupPublicationsByYear,
+  headlineJoiner,
+} = require("../ui-helpers.js");
 
 // ---- shareLinks --------------------------------------------------------------
 
@@ -113,4 +120,70 @@ test("index.html loads ui-helpers.js after article-schema.js and before data.js"
 test("ui-helpers.js assigns its API to window in the browser", () => {
   const src = fs.readFileSync(path.join(__dirname, "../ui-helpers.js"), "utf8");
   assert.match(src, /Object\.assign\(window,\s*api\)/);
+});
+
+// ---- PUB_FILTERS (publications filter pills) ----------------------------------
+
+test("PUB_FILTERS splits real publications into peer-reviewed vs theses/reports", () => {
+  // Reproduce the component's predicates against the real data via the data.js
+  // shim (the same technique the news preview cap test uses in ux.test.js).
+  const SITE = require("../site.config.js");
+  const schema = require("../article-schema.js");
+  const window = {
+    SITE,
+    validateArticle: schema.validateArticle,
+    compareByDateDesc: schema.compareByDateDesc,
+  };
+  // eslint-disable-next-line no-new-func
+  new Function("window", fs.readFileSync(path.join(__dirname, "../data.js"), "utf8"))(window);
+  const pubs = window.getRecentPublications();
+
+  const byId = Object.fromEntries(PUB_FILTERS.map((f) => [f.id, f]));
+  assert.deepEqual(Object.keys(byId), ["all", "peer-reviewed", "reports"]);
+
+  const all = pubs.filter(byId["all"].match);
+  const papers = pubs.filter(byId["peer-reviewed"].match);
+  const reports = pubs.filter(byId["reports"].match);
+  assert.equal(all.length, pubs.length, "All must match every entry");
+  // The two type filters partition the set: no overlap, nothing dropped.
+  assert.equal(papers.length + reports.length, pubs.length);
+  assert.ok(papers.every((p) => !p.type), "peer-reviewed must exclude typed entries");
+  assert.ok(reports.every((p) => p.type), "reports must only include typed entries");
+});
+
+// ---- groupPublicationsByYear ---------------------------------------------------
+
+test("groupPublicationsByYear groups consecutive years, newest-first order kept", () => {
+  const items = [
+    { year: "2025", title: "a" },
+    { year: "2025", title: "b" },
+    { year: "2023", title: "c" },
+  ];
+  assert.deepEqual(groupPublicationsByYear(items), [
+    { year: "2025", items: [items[0], items[1]] },
+    { year: "2023", items: [items[2]] },
+  ]);
+  assert.deepEqual(groupPublicationsByYear([]), []);
+  assert.deepEqual(groupPublicationsByYear(undefined), []);
+});
+
+test("groupPublicationsByYear only merges CONSECUTIVE equal years", () => {
+  // The input contract is a sorted list; an unsorted list must not be silently
+  // re-merged across the gap (that would hide a broken sort upstream).
+  const items = [{ year: "2025" }, { year: "2023" }, { year: "2025" }];
+  const groups = groupPublicationsByYear(items);
+  assert.deepEqual(groups.map((g) => g.year), ["2025", "2023", "2025"]);
+});
+
+// ---- headlineJoiner ------------------------------------------------------------
+
+test("headlineJoiner renders an Oxford-comma list ending in a period", () => {
+  const join = (phrases) =>
+    phrases.map((p, i) => p + headlineJoiner(i, phrases.length)).join("");
+  assert.equal(join(["a"]), "a.");
+  assert.equal(join(["a", "b"]), "a, and b.");
+  assert.equal(
+    join(["renewable energy", "grid flexibility", "battery storage"]),
+    "renewable energy, grid flexibility, and battery storage."
+  );
 });

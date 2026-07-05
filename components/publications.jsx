@@ -1,5 +1,5 @@
 /* global React, Icon, getRecentPublications, LIMITS,
-   routeToPath, handleAnchorClick,
+   routeToPath, handleAnchorClick, PUB_FILTERS, groupPublicationsByYear,
    SectionHeader, ViewAllLink, renderInline */
 
 /* ============================================================
@@ -100,27 +100,13 @@ function PublicationRow({ pub }) {
   );
 }
 
-// The `type` field marks non-peer-reviewed work (thesis / report), so it also
-// drives the list filter split.
-const PUB_FILTERS = [
-  { id: "all", label: "All", match: () => true },
-  { id: "peer-reviewed", label: "Peer-reviewed", match: (p) => !p.type },
-  { id: "reports", label: "Theses & reports", match: (p) => Boolean(p.type) },
-];
-
 function PublicationsListPage({ navigate }) {
   const [filterId, setFilterId] = React.useState("all");
   const all = getRecentPublications();
+  // PUB_FILTERS and the consecutive-year grouping live in ui-helpers.js
+  // (pure, shared, unit-tested without compiling JSX).
   const activeFilter = PUB_FILTERS.find((f) => f.id === filterId) || PUB_FILTERS[0];
-
-  // Group the (already newest-first) entries by consecutive year, so each year
-  // renders once as a large left-hand label beside its entries.
-  const groups = [];
-  for (const pub of all.filter(activeFilter.match)) {
-    const last = groups[groups.length - 1];
-    if (last && last.year === pub.year) last.items.push(pub);
-    else groups.push({ year: pub.year, items: [pub] });
-  }
+  const groups = groupPublicationsByYear(all.filter(activeFilter.match));
 
   // Scroll-to-top on arrival is handled by App.navigate (fresh navigations
   // only), so Back/Forward restores the prior scroll position natively.
