@@ -133,12 +133,20 @@ function Header({ route, navigate, activeSection }) {
    ============================================================ */
 
 function Hero({ navigate }) {
+  const phrases = PROFILE.hero.headlineHighlights;
   return (
     <section className="hero">
       <div className="hero-text">
         <h1>
           {PROFILE.hero.headlinePre}{" "}
-          <em>{PROFILE.hero.headlineEm}</em>
+          {phrases.map((phrase, i) => (
+            <React.Fragment key={phrase}>
+              <em>{phrase}</em>
+              {/* Oxford-comma joiners, kept OUTSIDE the <em> so the commas,
+                  the "and", and the final period stay plain ink. */}
+              {i < phrases.length - 2 ? ", " : i === phrases.length - 2 ? ", and " : "."}
+            </React.Fragment>
+          ))}
         </h1>
         <p>{PROFILE.hero.sub}</p>
         <div className="hero-actions">

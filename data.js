@@ -18,7 +18,9 @@ const PROFILE = {
   role: window.SITE.jobTitle,
   hero: {
     headlinePre: "Electrical & Computer Engineer focusing on",
-    headlineEm: "renewable energy, grid flexibility, and battery storage.",
+    // Each phrase is emphasized (accent color + highlight underline) on its
+    // own; the joining commas / "and" / final period stay plain ink.
+    headlineHighlights: ["renewable energy", "grid flexibility", "battery storage"],
     sub: "Focused on applied energy system modelling, techno-economic assessment, and industry-driven research for PV, wind, storage, and flexible electricity systems.",
   },
   about: [
