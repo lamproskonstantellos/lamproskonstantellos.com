@@ -200,13 +200,6 @@ main {
    card slide-in reveal. Hover feedback lives on the individual card rules. */
 
 /* ===== Hero ===== */
-.hero-photo {
-  transition: transform 500ms cubic-bezier(.2,.7,.2,1), box-shadow 500ms ease;
-}
-.hero-photo:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 32px 80px rgba(10, 31, 68, 0.14);
-}
 .hero {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
@@ -385,17 +378,26 @@ section.block {
   border: none;
   padding: 0;
   cursor: pointer;
-  /* Discreet accent underline, shared with the publication/read/back links. */
-  text-decoration: underline;
-  text-decoration-color: rgba(31, 58, 138, 0.35);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 4px;
-  transition: color var(--transition), gap var(--transition),
-    text-decoration-color var(--transition);
+  transition: color var(--transition);
 }
-.view-all:hover { gap: 9px; color: var(--accent-hover); text-decoration-color: currentColor; }
-.view-all svg { transition: transform var(--transition); }
-.view-all:hover svg { transform: translateX(2px); }
+.view-all:hover { color: var(--accent-hover); }
+
+/* Highlighter-style marker under the View all / Read article / Back link
+   labels — the same soft accent band the hero keywords carry. Sits on an
+   inner span so the coarse-pointer 44px tap boxes stay unpainted. */
+.link-marker {
+  background: linear-gradient(to top, rgba(31, 58, 138, 0.16) 34%, transparent 34%);
+  padding: 0 2px;
+  margin: 0 -2px;
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.view-all:hover .link-marker,
+.news-card:hover .read .link-marker,
+.back-link:hover .link-marker {
+  background: linear-gradient(to top, rgba(31, 58, 138, 0.30) 34%, transparent 34%);
+}
 
 /* ===== About ===== */
 .about-shell {
@@ -489,12 +491,14 @@ section.block {
 }
 
 /* ===== Publications ===== */
-/* One full-width card per entry, stacked newest-first — titles get a whole
-   line, so no equal-height juggling is needed. */
+/* One full-width card per entry, stacked newest-first. grid-auto-rows: 1fr
+   makes every white card the same height — the tallest entry sets the shared
+   size, and a new, longer entry simply raises it for the whole set. */
 .pub-list {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
+  grid-auto-rows: 1fr;
 }
 .pub-card {
   position: relative;
@@ -506,7 +510,12 @@ section.block {
     box-shadow var(--transition);
   overflow: hidden;
   cursor: default;
+  /* Fill the shared row height; the links pin to the bottom edge so every
+     card closes the same way. */
+  display: flex;
+  flex-direction: column;
 }
+.pub-card .pub-links { margin-top: auto; padding-top: 4px; }
 .pub-card::before {
   content: "";
   position: absolute;
@@ -558,15 +567,10 @@ section.block {
   background: var(--muted-2);
   margin: 0 10px;
 }
-/* Award pill, inline on the meta row right after the venue/year tokens.
-   All award/type pills share one standard size — the width of the widest
-   current label ("3rd Best Paper Award") — so the row of badges reads as a
-   uniform system; min-width (not width) lets a longer future label still fit. */
+/* Award pill, inline on the meta row right after the venue/year tokens. */
 .pub-award {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 144px;
   font-family: "Inter", sans-serif;
   font-size: 11px;
   font-weight: 600;
@@ -583,13 +587,10 @@ section.block {
 }
 /* Category tag for non-peer-reviewed work (thesis / report). Sits on the meta
    row like the award pill (they never coexist), but a quiet navy outline
-   rather than gold, so it reads as a "type" marker, not a distinction.
-   Same standard 144px size as .pub-award. */
+   rather than gold, so it reads as a "type" marker, not a distinction. */
 .pub-type {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 144px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -782,13 +783,7 @@ section.block {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  text-decoration: underline;
-  text-decoration-color: rgba(31, 58, 138, 0.35);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 4px;
-  transition: text-decoration-color var(--transition);
 }
-.news-card:hover .read { text-decoration-color: currentColor; }
 
 /* ===== List pages (/news, /publications) ===== */
 .list-page {
@@ -832,17 +827,12 @@ section.block {
   font-weight: 500;
   color: var(--accent);
   margin-bottom: 32px;
-  text-decoration: underline;
-  text-decoration-color: rgba(31, 58, 138, 0.35);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 4px;
-  transition: gap var(--transition), text-decoration-color var(--transition);
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
 }
-.back-link:hover { gap: 10px; text-decoration-color: currentColor; }
+
 .article-meta {
   font-size: 12px;
   letter-spacing: 0.1em;
