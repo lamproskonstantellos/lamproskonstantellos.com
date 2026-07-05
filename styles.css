@@ -200,13 +200,6 @@ main {
    card slide-in reveal. Hover feedback lives on the individual card rules. */
 
 /* ===== Hero ===== */
-.hero-photo {
-  transition: transform 500ms cubic-bezier(.2,.7,.2,1), box-shadow 500ms ease;
-}
-.hero-photo:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 32px 80px rgba(10, 31, 68, 0.14);
-}
 .hero {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
@@ -393,9 +386,7 @@ section.block {
   transition: color var(--transition), gap var(--transition),
     text-decoration-color var(--transition);
 }
-.view-all:hover { gap: 9px; color: var(--accent-hover); text-decoration-color: currentColor; }
-.view-all svg { transition: transform var(--transition); }
-.view-all:hover svg { transform: translateX(2px); }
+.view-all:hover { color: var(--accent-hover); }
 
 /* ===== About ===== */
 .about-shell {
@@ -841,7 +832,7 @@ section.block {
   cursor: pointer;
   padding: 0;
 }
-.back-link:hover { gap: 10px; text-decoration-color: currentColor; }
+
 .article-meta {
   font-size: 12px;
   letter-spacing: 0.1em;
