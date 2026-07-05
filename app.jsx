@@ -137,6 +137,21 @@ function Hero({ navigate }) {
   return (
     <section className="hero">
       <div className="hero-text">
+        {/* Small profile card (photo + name + role), shown ONLY on small
+            screens where the large portrait on the right is hidden — the
+            single mobile carrier of the photo. Decorative there (alt=""):
+            the adjacent text already names the person. */}
+        <div className="hero-intro" aria-hidden="true">
+          <div className="hero-intro-photo">
+            {/* Same (preloaded) asset as the big portrait, so this costs no
+                extra download; eager because it is the mobile LCP image. */}
+            <Picture src={SITE.heroImage} alt="" width="220" height="220" loading="eager" fetchPriority="high" />
+          </div>
+          <div className="hero-intro-text">
+            <span className="hero-intro-name">{PROFILE.name}</span>
+            <span className="hero-intro-role">{PROFILE.role}</span>
+          </div>
+        </div>
         <h1>
           {PROFILE.hero.headlinePre}{" "}
           {phrases.map((phrase, i) => (
