@@ -489,12 +489,14 @@ section.block {
 }
 
 /* ===== Publications ===== */
-/* One full-width card per entry, stacked newest-first — titles get a whole
-   line, so no equal-height juggling is needed. */
+/* One full-width card per entry, stacked newest-first. grid-auto-rows: 1fr
+   makes every white card the same height — the tallest entry sets the shared
+   size, and a new, longer entry simply raises it for the whole set. */
 .pub-list {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
+  grid-auto-rows: 1fr;
 }
 .pub-card {
   position: relative;
@@ -506,7 +508,12 @@ section.block {
     box-shadow var(--transition);
   overflow: hidden;
   cursor: default;
+  /* Fill the shared row height; the links pin to the bottom edge so every
+     card closes the same way. */
+  display: flex;
+  flex-direction: column;
 }
+.pub-card .pub-links { margin-top: auto; padding-top: 4px; }
 .pub-card::before {
   content: "";
   position: absolute;
@@ -558,15 +565,10 @@ section.block {
   background: var(--muted-2);
   margin: 0 10px;
 }
-/* Award pill, inline on the meta row right after the venue/year tokens.
-   All award/type pills share one standard size — the width of the widest
-   current label ("3rd Best Paper Award") — so the row of badges reads as a
-   uniform system; min-width (not width) lets a longer future label still fit. */
+/* Award pill, inline on the meta row right after the venue/year tokens. */
 .pub-award {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 144px;
   font-family: "Inter", sans-serif;
   font-size: 11px;
   font-weight: 600;
@@ -583,13 +585,10 @@ section.block {
 }
 /* Category tag for non-peer-reviewed work (thesis / report). Sits on the meta
    row like the award pill (they never coexist), but a quiet navy outline
-   rather than gold, so it reads as a "type" marker, not a distinction.
-   Same standard 144px size as .pub-award. */
+   rather than gold, so it reads as a "type" marker, not a distinction. */
 .pub-type {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 144px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.01em;

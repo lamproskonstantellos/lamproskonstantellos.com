@@ -137,7 +137,7 @@ Publications live in exactly one place: the `publications` array in [`data.js`](
 Notes:
 
 - Entries sort by `Number(year)` descending; within the same year they keep array order — put the newest first.
-- All award/type badges render at one standard size (144px min-width), so any new label lines up with the existing set; a longer label still expands rather than clips.
+- The three homepage preview cards share one height (the tallest entry sets it), with the links pinned to the bottom edge — a new, longer entry simply raises the shared size. Award/type badges size to their own label.
 - Publications render inside the SPA pages (there is no per-publication URL). The `/publications` meta description lives in `server.js` → `computePageMeta` (publications-list branch) — refresh it if the list's focus changes materially.
 
 ### SEO checklist for new content
