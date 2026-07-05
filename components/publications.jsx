@@ -9,6 +9,42 @@
    - PublicationsListPage:   /publications full list
    ============================================================ */
 
+// Meta line (venue · location · year) with the award / type pill inline on the
+// same row. The pill sits OUTSIDE .pub-meta so the uppercase/dot-separator
+// styling of the meta items never leaks into it, and the last meta item keeps
+// its :last-child status (no stray "·" before the pill). The year is omitted on
+// the /publications list, where the year-group label already carries it.
+function PubMetaRow({ pub, showYear = true }) {
+  return (
+    <div className="pub-meta-row">
+      <div className="pub-meta">
+        {/* Each separator is glued to the token BEFORE it (inside the same
+            nowrap item) so a wrapped meta line never starts with a stray "·"
+            at narrow widths. */}
+        <span className="pub-meta-item">{pub.venue}</span>
+        {pub.location && <span className="pub-meta-item">{pub.location}</span>}
+        {showYear && <span className="pub-meta-item">{pub.year}</span>}
+      </div>
+      {pub.award && <span className="pub-award">{pub.award}</span>}
+      {pub.type && <span className="pub-type">{pub.type}</span>}
+    </div>
+  );
+}
+
+function PubLinks({ links }) {
+  if (!links || links.length === 0) return null;
+  return (
+    <div className="pub-links">
+      {links.map((l, j) => (
+        <a key={j} href={l.href} target="_blank" rel="noopener noreferrer">
+          {l.label}
+          <Icon.external style={{ width: 12, height: 12 }} />
+        </a>
+      ))}
+    </div>
+  );
+}
+
 function PublicationCard({ pub, index = 0, revealKey, isVisible, headingLevel = "h3" }) {
   const Title = headingLevel;
   return (
@@ -18,33 +54,11 @@ function PublicationCard({ pub, index = 0, revealKey, isVisible, headingLevel = 
       style={{ transitionDelay: `${index * 80}ms` }}
     >
       <div className="pub-body">
-        {pub.award && (
-          <div className="pub-award">{pub.award}</div>
-        )}
-        {pub.type && (
-          <div className="pub-type">{pub.type}</div>
-        )}
-        <div className="pub-meta">
-          {/* Each separator is glued to the token BEFORE it (inside the same
-              nowrap item) so a wrapped meta line never starts with a stray "·"
-              at narrow widths. */}
-          <span className="pub-meta-item">{pub.venue}</span>
-          {pub.location && <span className="pub-meta-item">{pub.location}</span>}
-          <span className="pub-meta-item">{pub.year}</span>
-        </div>
+        <PubMetaRow pub={pub} />
         <Title className="pub-title">{pub.title}</Title>
         <p className="pub-authors">{renderInline(pub.authors)}</p>
         {pub.description && <p className="pub-description">{pub.description}</p>}
-        {pub.links && pub.links.length > 0 && (
-          <div className="pub-links">
-            {pub.links.map((l, j) => (
-              <a key={j} href={l.href} target="_blank" rel="noopener noreferrer">
-                {l.label}
-                <Icon.external style={{ width: 12, height: 12 }} />
-              </a>
-            ))}
-          </div>
-        )}
+        <PubLinks links={pub.links} />
       </div>
     </article>
   );

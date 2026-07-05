@@ -431,20 +431,12 @@ section.block:first-of-type,
 }
 
 /* ===== Publications ===== */
+/* One full-width card per entry, stacked newest-first — titles get a whole
+   line, so no equal-height juggling is needed. */
 .pub-list {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
-  /* Equal-height rows so every publication box has uniform dimensions
-     regardless of title/author length (links pin to the bottom via margin). */
-  grid-auto-rows: 1fr;
-}
-@media (min-width: 720px) {
-  .pub-list { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 719px) {
-  .pub-list { grid-auto-rows: 1fr; }
-  .pub-card { min-height: 260px; }
 }
 .pub-card {
   position: relative;
@@ -478,6 +470,14 @@ section.block:first-of-type,
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
+/* Meta line + inline award/type pill on one wrappable row. */
+.pub-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-bottom: 10px;
+}
 .pub-meta {
   display: flex;
   flex-wrap: wrap;
@@ -490,7 +490,6 @@ section.block:first-of-type,
   color: var(--muted-2);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 10px;
   font-feature-settings: "tnum";
 }
 .pub-meta-item { display: inline-flex; align-items: center; white-space: nowrap; }
@@ -506,10 +505,8 @@ section.block:first-of-type,
   background: var(--muted-2);
   margin: 0 10px;
 }
+/* Award pill, inline on the meta row right after the venue/year tokens. */
 .pub-award {
-  position: absolute;
-  top: 16px;
-  right: 16px;
   display: inline-flex;
   align-items: center;
   font-family: "Inter", sans-serif;
@@ -525,20 +522,11 @@ section.block:first-of-type,
   border: 1px solid #dcc488;
   padding: 5px 12px;
   border-radius: 999px;
-  z-index: 1;
-}
-/* Keep the meta line clear of the absolute badge: it wraps before the badge
-   edge at any card width (badge ≈141px wide + 16px right offset). */
-.pub-award + .pub-meta {
-  padding-right: 110px;
 }
 /* Category tag for non-peer-reviewed work (thesis / report). Same slot as the
    award pill (they never coexist), but a quiet navy outline rather than gold,
    so it reads as a "type" marker, not a distinction. */
 .pub-type {
-  position: absolute;
-  top: 16px;
-  right: 16px;
   display: inline-flex;
   align-items: center;
   font-size: 11px;
@@ -550,22 +538,6 @@ section.block:first-of-type,
   border: 1px solid #c7d0e8;
   padding: 5px 12px;
   border-radius: 999px;
-  z-index: 1;
-}
-.pub-type + .pub-meta {
-  padding-right: 120px;
-}
-@media (max-width: 600px) {
-  .pub-award,
-  .pub-type {
-    position: static;
-    align-self: flex-start;
-    margin-bottom: 10px;
-  }
-  .pub-award + .pub-meta,
-  .pub-type + .pub-meta {
-    padding-right: 0;
-  }
 }
 .pub-card .pub-title {
   font-size: 16.5px;
@@ -573,7 +545,9 @@ section.block:first-of-type,
   line-height: 1.42;
   color: var(--ink);
   margin: 0 0 8px;
-  text-wrap: balance;
+  /* Natural wrapping (no `balance`): on a full-width card, balance splits a
+     two-line title into two half-width lines and the card looks half-empty. */
+  text-wrap: pretty;
 }
 .pub-authors {
   font-size: 13.5px;
@@ -590,9 +564,10 @@ section.block:first-of-type,
   line-height: 1.55;
   margin: 0 0 16px;
 }
+/* Plain underlined text links (quieter than the old boxed buttons). */
 .pub-links {
   display: flex;
-  gap: 8px;
+  gap: 6px 18px;
   flex-wrap: wrap;
 }
 .pub-links a {
@@ -601,15 +576,14 @@ section.block:first-of-type,
   gap: 5px;
   font-size: 13px;
   font-weight: 500;
-  padding: 6px 10px 6px 11px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--surface);
-  transition: border-color var(--transition), background var(--transition);
+  text-decoration: underline;
+  text-decoration-color: rgba(31, 58, 138, 0.35);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: color var(--transition), text-decoration-color var(--transition);
 }
 .pub-links a:hover {
-  border-color: var(--accent);
-  background: rgba(31, 58, 138, 0.04);
+  text-decoration-color: currentColor;
 }
 .pub-links a svg { transition: transform var(--transition); }
 .pub-links a:hover svg { transform: translate(2px, -2px); }

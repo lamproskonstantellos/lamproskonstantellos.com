@@ -90,7 +90,7 @@ const PROFILE = {
 /* ---- Display caps for homepage previews ---- */
 const LIMITS = {
   newsPreview: 3,
-  publicationsPreview: 2,
+  publicationsPreview: 3,
 };
 
 /* ---- Selectors (auto-sorted, newest first) ---- */
