@@ -61,6 +61,7 @@ tooling and config never are.
 ├── article-schema.js      Article validation + newest-first comparator (dual)
 ├── ui-helpers.js          Share links, scroll-spy, publication filters/grouping, hero joiner (dual)
 ├── data.js                Profile, hero, about, publications, contact, selectors
+├── PUBLICATIONS.md        Guide: adding publications (peer-reviewed / theses / reports)
 ├── styles.css             Global stylesheet
 ├── index.html             Single HTML entry with __META_*__ placeholders
 ├── feeds.js               sitemap.xml / rss.xml / feed.json builders (shared by server + build)
@@ -79,9 +80,11 @@ tooling and config never are.
 Four modules are loaded both in the browser (as `window` globals, before
 `data.js`) and in Node (via `require` from `server.js`): `site.config.js`
 (site identity), `routes.js` (the route table, titles), `article-schema.js`
-(article validation and sort order) and `ui-helpers.js` (share links and the
-scroll-spy resolver). Because both worlds share one definition, the client and
-server can never diverge on routes, titles, validation, sort order or identity.
+(article validation, sort order, and the plain-text body flattener) and
+`ui-helpers.js` (share links, the scroll-spy resolver, the publications
+filters/grouping, and the hero joiner). Because both worlds share one
+definition, the client and server can never diverge on routes, titles,
+validation, sort order or identity.
 
 ## Testing
 
@@ -106,39 +109,17 @@ See [`news/README.md`](./news/README.md) for the complete guide — folder layou
 
 ### New publication
 
-Publications live in exactly one place: the `publications` array in [`data.js`](./data.js). Add one object there and it appears everywhere automatically — the homepage preview (the 3 most recent), the `/publications` list (newest first, grouped by year), and the filter pill counts.
-
-```js
-{
-  // Omit `type` for a peer-reviewed paper. Set it for non-peer-reviewed work
-  // ("Master's Thesis", "Internship Report", …) — it renders as the navy
-  // badge and files the entry under the "Theses & reports" filter.
-  type: "Master's Thesis",
-  venue: "University of Patras",     // required — first meta token
-  location: "Patras, Greece",        // optional — second meta token
-  year: "2025",                      // required, string — sorting + year group label
-  title: "Full publication title",   // required
-  // required — wrap your own name in ** so it reads bold:
-  authors: "**Konstantellos, L.**, Coauthor, A., & Coauthor, B. (2025)",
-  award: "3rd Best Paper Award",     // optional — gold badge (use award OR type, not both)
-  description: "Optional one-line summary shown under the authors.",
-  links: [                           // at least one external link
-    { label: "IEEE Xplore", href: "https://ieeexplore.ieee.org/document/…" },
-    { label: "Zenodo",      href: "https://zenodo.org/records/…" },
-  ],
-},
-```
-
-Notes:
-
-- Entries sort by `Number(year)` descending; within the same year they keep array order — put the newest first.
-- The three homepage preview cards share one height (the tallest entry sets it), with the links pinned to the bottom edge — a new, longer entry simply raises the shared size. Award/type badges size to their own label.
-- Publications render inside the SPA pages (there is no per-publication URL). The `/publications` meta description lives in `server.js` → `computePageMeta` (publications-list branch) — refresh it if the list's focus changes materially.
+See [`PUBLICATIONS.md`](./PUBLICATIONS.md) for the complete guide — the entry
+template with every field explained, how peer-reviewed papers are split from
+theses/reports (the `type` field drives the badge and the filter), where and
+how entries render, a publishing checklist, and common mistakes. In short: add
+one object to the `publications` array in [`data.js`](./data.js), newest first
+— nothing else changes.
 
 ### SEO checklist for new content
 
 - **Articles:** fill `excerpt` (and `seoDescription` when the excerpt runs past ~160 characters), plus `keywords`, `articleSection`, and `topics` for rich results; commit a `cover.jpg` — the build derives the 1200×630 `cover-og.jpg` social card automatically. `<title>`, meta description, canonical, Open Graph/Twitter tags, `Article` JSON-LD, `sitemap.xml`, `rss.xml`, and `feed.json` all update automatically at build time.
-- **Publications:** no extra steps — the page-level meta and JSON-LD are already in place; just keep titles/venues accurate and links working.
+- **Publications:** no extra steps — page-level meta and JSON-LD are already in place (details in [`PUBLICATIONS.md`](./PUBLICATIONS.md)).
 
 ## SEO
 
