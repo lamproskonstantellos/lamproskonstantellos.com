@@ -85,6 +85,7 @@ const MUST_BE_ABSENT = [
   ".gitignore",
   "LICENSE",
   "README.md",
+  "PUBLICATIONS.md",
   "news/README.md",
   "scripts",
   "test",

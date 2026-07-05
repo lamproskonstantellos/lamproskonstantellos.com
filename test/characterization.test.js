@@ -167,6 +167,7 @@ test("private paths are not served", async () => {
     "/scripts/optimize-images.js",
     "/.git/config",
     "/README.md",
+    "/PUBLICATIONS.md",
     "/news/README.md",
     "/test/helper.js",
     "/test/golden/home.html",
