@@ -109,11 +109,12 @@ still works if you ever need it.
 ```
 news/
 ├── README.md
-└── 7th-power-gas-forum-athens/
+└── ai-hub-mayor-western-achaia/
     ├── article.js            ← article text, metadata, sources
     ├── cover.jpg             ← card / article cover
     ├── photo-01.jpg          ← optional in-article gallery
-    └── photo-02.jpg
+    ├── photo-02.jpg
+    └── photo-03.jpg
 ```
 
 ## Routes

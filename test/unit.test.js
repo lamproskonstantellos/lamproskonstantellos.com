@@ -1,9 +1,9 @@
 "use strict";
 
-// Unit tests for pure helpers, as they ship today. parseRoute/routeToPath are
-// exercised here from COMPILED output (routeToPath) and via the server route
-// table (computePageMeta / isValidSpaRoute). Direct parseRoute unit tests are
-// added once it moves to the shared route module.
+// Unit tests for pure helpers: the server's own (escapeHtml, jsonLdScript,
+// cacheHeaderFor, computePageMeta, isValidSpaRoute), the shared route table
+// (parseRoute / routeToPath, from routes.js), the shared plainBody flattener,
+// and article validation via the data.js window shim.
 
 const { test } = require("node:test");
 const assert = require("node:assert");
@@ -150,6 +150,18 @@ test("defineArticle rejects non-array body / photos / keywords / topics", () => 
   assert.throws(() => defineArticle(bad((a) => (a.photos = "no"))), /non-array photos/);
   assert.throws(() => defineArticle(bad((a) => (a.keywords = "no"))), /non-array keywords/);
   assert.throws(() => defineArticle(bad((a) => (a.topics = "no"))), /non-array topics/);
+});
+
+// ---- plainBody (shared machine-text flattener) -------------------------------
+
+test("plainBody joins paragraphs and strips inline bold markers", () => {
+  const { plainBody } = require("../article-schema.js");
+  assert.equal(
+    plainBody(["I met **Dr. X** at **the expo**.", "Second paragraph."]),
+    "I met Dr. X at the expo.\n\nSecond paragraph."
+  );
+  assert.equal(plainBody([]), "");
+  assert.equal(plainBody(undefined), "");
 });
 
 // ---- PROFILE.contact entries (data.js via window shim) ----------------------

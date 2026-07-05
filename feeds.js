@@ -21,7 +21,7 @@
 
 "use strict";
 
-const { compareByDateDesc } = require("./article-schema.js");
+const { compareByDateDesc, plainBody } = require("./article-schema.js");
 
 // Local copy of server.js's escapeHtml so this module stays self-contained
 // (no require cycle with server.js). Deliberately byte-identical to that one:
@@ -138,7 +138,9 @@ function buildFeed({ articles, siteCfg }) {
         id: url,
         url,
         title: a.title,
-        content_text: Array.isArray(a.body) ? a.body.join("\n\n") : "",
+        // JSON Feed 1.1 content_text is plain text — plainBody strips the
+        // inline **bold** markers the on-page renderer consumes.
+        content_text: plainBody(a.body),
         summary: a.excerpt || "",
         date_published: new Date(`${a.date}T00:00:00Z`).toISOString(),
       };

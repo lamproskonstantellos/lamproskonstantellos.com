@@ -12,7 +12,9 @@ const SITE = {
   name: "Lampros Konstantellos",
   jobTitle: "Electrical & Computer Engineer",
   email: "info@lamproskonstantellos.com",
-  defaultImage: "/og-image.png",
+  // JPEG, not PNG: the social card is photographic, and scrapers (WhatsApp
+  // especially) skip oversized preview images — the JPEG is ~35 KB vs 733 KB.
+  defaultImage: "/og-image.jpg",
   heroImage: "/lampros-konstantellos-picture.jpg",
   defaultDescription:
     "Exploring renewable energy, battery storage, grid flexibility, and electricity markets through engineering, modelling, and applied research.",

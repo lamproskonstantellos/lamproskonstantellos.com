@@ -95,12 +95,14 @@ test("structural a11y guarantees", () => {
   assert.match(CSS, /#main-content:focus\s*\{\s*outline:\s*none/, "route-change focus target");
 });
 
-test("reduced-motion shows reveal content without depending on the observer", () => {
-  // Inside the prefers-reduced-motion query, .reveal must be forced visible so
-  // content is never gated on IntersectionObserver for these users.
-  assert.match(
-    CSS,
-    /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.reveal[\s\S]*?opacity:\s*1/,
-    "reduced-motion must reset .reveal opacity"
-  );
+test("no content is gated behind entrance-reveal machinery", () => {
+  // The entrance-reveal system was removed outright: nothing may reintroduce
+  // opacity/observer gating that could hide content (reveal classes in
+  // components, or data-reveal hooks) without also restoring its safeguards.
+  const componentDir = path.join(__dirname, "../components");
+  for (const f of fs.readdirSync(componentDir)) {
+    const src = fs.readFileSync(path.join(componentDir, f), "utf8");
+    assert.ok(!src.includes("data-reveal"), `${f} reintroduces data-reveal gating`);
+    assert.ok(!/className=\{?[^}\n]*\breveal\b/.test(src), `${f} reintroduces a reveal class`);
+  }
 });

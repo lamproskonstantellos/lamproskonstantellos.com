@@ -40,13 +40,6 @@ const Icon = {
       <path d="M3 8.5l3.5 3.5L13 4.5" />
     </svg>
   ),
-  medal: (p) => (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" {...p}>
-      <circle cx="8" cy="5.5" r="3.5" />
-      <path d="M10.1 8.4 11 13.5 8 11.7 5 13.5 5.9 8.4" />
-    </svg>
-  ),
-
   /* ---- Brand icons ---- */
   brandLinkedin: (p) => (
     <svg viewBox="0 0 24 24" fill="#0A66C2" aria-hidden="true" focusable="false" {...p}>

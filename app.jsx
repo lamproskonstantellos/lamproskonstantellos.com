@@ -1,6 +1,6 @@
 /* global React, ReactDOM, SITE, PROFILE, Icon, SectionHeader, Picture,
    parseRoute, routeToPath, pageTitle, getArticle, handleAnchorClick,
-   pickActiveSection,
+   pickActiveSection, headlineJoiner,
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
 
@@ -157,9 +157,10 @@ function Hero({ navigate }) {
           {phrases.map((phrase, i) => (
             <React.Fragment key={phrase}>
               <em>{phrase}</em>
-              {/* Oxford-comma joiners, kept OUTSIDE the <em> so the commas,
-                  the "and", and the final period stay plain ink. */}
-              {i < phrases.length - 2 ? ", " : i === phrases.length - 2 ? ", and " : "."}
+              {/* Oxford-comma joiners (ui-helpers.js), kept OUTSIDE the <em>
+                  so the commas, the "and", and the final period stay plain
+                  ink. */}
+              {headlineJoiner(i, phrases.length)}
             </React.Fragment>
           ))}
         </h1>

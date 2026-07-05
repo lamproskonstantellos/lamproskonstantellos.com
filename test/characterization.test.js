@@ -12,14 +12,6 @@ let base;
 before(async () => { ({ base } = await start()); });
 after(async () => { await stop(); });
 
-const ARTICLE_SLUGS = [
-  "7th-power-gas-forum-athens",
-  "7th-renewable-storage-forum",
-  "ai-hub-mayor-western-achaia",
-  "ieee-pess-2025-best-paper-award",
-  "intersolar-europe-2026",
-];
-
 // ---- Full normalized HTML per route ----------------------------------------
 
 const HTML_ROUTES = [
@@ -165,19 +157,26 @@ test("no Accept-Encoding → identity, no Vary surprise", async () => {
 test("private paths are not served", async () => {
   for (const p of [
     "/server.js",
+    "/feeds.js",
+    "/build-static.js",
     "/package.json",
     "/package-lock.json",
-    "/Dockerfile",
-    "/.dockerignore",
     "/.gitignore",
     "/LICENSE",
     "/dist/manifest.json",
     "/scripts/optimize-images.js",
     "/.git/config",
     "/README.md",
+    "/AUDIT.md",
+    "/docs/MIGRATION.md",
+    "/docs/QA-UX-REVIEW.md",
     "/news/README.md",
     "/test/helper.js",
     "/test/golden/home.html",
+    "/node_modules/esbuild/package.json",
+    "/app.jsx",
+    "/icons.jsx",
+    "/components/about.jsx",
   ]) {
     const res = await request(base, p);
     assert.equal(res.status, 404, `${p} should be 404, got ${res.status}`);

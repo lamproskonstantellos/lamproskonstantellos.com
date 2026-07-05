@@ -28,19 +28,16 @@ const {
   ASSET_MAP,
   SECURITY_HEADERS,
   SITE_CFG,
+  // Same cache-busting token the server stamps (CF_PAGES_COMMIT_SHA with a
+  // timestamp fallback) — reused rather than re-derived so the two can never
+  // drift. The ?v= token is the one allowed difference vs server output; the
+  // parity test normalizes it on both sides.
+  DEPLOY_VERSION,
 } = require("./server.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
 
 const ROOT = __dirname;
 const DEFAULT_OUT = path.join(ROOT, "build");
-
-// Same cache-busting token the server stamps, sourced from Cloudflare's build
-// env (CF_PAGES_COMMIT_SHA) with a build timestamp fallback for local builds.
-// The ?v= token is the one allowed difference vs server output; the parity test
-// normalizes it on both sides.
-const DEPLOY_VERSION = process.env.CF_PAGES_COMMIT_SHA
-  ? process.env.CF_PAGES_COMMIT_SHA.slice(0, 12)
-  : String(Date.now());
 
 // Any unknown path renders the same not-found page (computePageMeta's not-found
 // branch ignores the requested pathname), so 404.html is route-independent.
@@ -59,7 +56,6 @@ const ROOT_PLAIN_FILES = [
   "robots.txt",
   "favicon.ico",
   "favicon.svg",
-  "apple-touch-icon.svg",
 ];
 
 const ROOT_IMAGE_BASES = [
@@ -73,26 +69,28 @@ const ROOT_IMAGE_BASES = [
   "icon-256.png",
   "icon-512.png",
   "apple-touch-icon.png",
-  "og-image.png",
+  "og-image.jpg",
   "lampros-konstantellos-picture.jpg",
 ];
 
 // Excluded from the build entirely — source, tooling, config, docs and the
-// esbuild metafile. Asserted absent from build/ at the end.
+// esbuild metafile. Asserted absent from build/ at the end. Keep this in sync
+// with server.js's isPrivatePath deny rules.
 const MUST_BE_ABSENT = [
   "server.js",
   "build-static.js",
   "feeds.js",
   "package.json",
   "package-lock.json",
-  "Dockerfile",
-  ".dockerignore",
   ".gitignore",
   "LICENSE",
   "README.md",
+  "AUDIT.md",
+  "docs",
   "news/README.md",
   "scripts",
   "test",
+  "node_modules",
   "dist/manifest.json",
   // Uncompiled JSX sources are never copied (the hashed dist/ bundles are used).
   "app.jsx",

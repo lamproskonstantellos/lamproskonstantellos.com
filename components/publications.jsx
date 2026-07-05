@@ -1,6 +1,6 @@
 /* global React, Icon, getRecentPublications, LIMITS,
-   routeToPath, handleAnchorClick,
-   useReveal, SectionHeader, ViewAllLink, renderInline */
+   routeToPath, handleAnchorClick, PUB_FILTERS, groupPublicationsByYear,
+   SectionHeader, ViewAllLink, renderInline */
 
 /* ============================================================
    PUBLICATIONS
@@ -48,13 +48,9 @@ function PubLinks({ links }) {
   );
 }
 
-function PublicationCard({ pub, index = 0, revealKey, isVisible }) {
+function PublicationCard({ pub }) {
   return (
-    <article
-      className={`pub-card reveal ${isVisible ? "in" : ""}`}
-      data-reveal={revealKey}
-      style={{ transitionDelay: `${index * 80}ms` }}
-    >
+    <article className="pub-card">
       <PubMetaRow pub={pub} />
       <h3 className="pub-title">{pub.title}</h3>
       <p className="pub-authors">{renderInline(pub.authors)}</p>
@@ -65,7 +61,6 @@ function PublicationCard({ pub, index = 0, revealKey, isVisible }) {
 }
 
 function PublicationsPreview({ navigate }) {
-  const visible = useReveal();
   const limit = LIMITS.publicationsPreview;
   const items = getRecentPublications(limit);
   const showViewAll = getRecentPublications().length > limit;
@@ -83,13 +78,7 @@ function PublicationsPreview({ navigate }) {
       />
       <div className="pub-list">
         {items.map((p, i) => (
-          <PublicationCard
-            key={i}
-            pub={p}
-            index={i}
-            revealKey={`pub-${i}`}
-            isVisible={visible.has(`pub-${i}`)}
-          />
+          <PublicationCard key={i} pub={p} />
         ))}
       </div>
     </section>
@@ -111,27 +100,13 @@ function PublicationRow({ pub }) {
   );
 }
 
-// The `type` field marks non-peer-reviewed work (thesis / report), so it also
-// drives the list filter split.
-const PUB_FILTERS = [
-  { id: "all", label: "All", match: () => true },
-  { id: "peer-reviewed", label: "Peer-reviewed", match: (p) => !p.type },
-  { id: "reports", label: "Theses & reports", match: (p) => Boolean(p.type) },
-];
-
 function PublicationsListPage({ navigate }) {
   const [filterId, setFilterId] = React.useState("all");
   const all = getRecentPublications();
+  // PUB_FILTERS and the consecutive-year grouping live in ui-helpers.js
+  // (pure, shared, unit-tested without compiling JSX).
   const activeFilter = PUB_FILTERS.find((f) => f.id === filterId) || PUB_FILTERS[0];
-
-  // Group the (already newest-first) entries by consecutive year, so each year
-  // renders once as a large left-hand label beside its entries.
-  const groups = [];
-  for (const pub of all.filter(activeFilter.match)) {
-    const last = groups[groups.length - 1];
-    if (last && last.year === pub.year) last.items.push(pub);
-    else groups.push({ year: pub.year, items: [pub] });
-  }
+  const groups = groupPublicationsByYear(all.filter(activeFilter.match));
 
   // Scroll-to-top on arrival is handled by App.navigate (fresh navigations
   // only), so Back/Forward restores the prior scroll position natively.

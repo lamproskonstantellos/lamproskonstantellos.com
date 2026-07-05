@@ -40,6 +40,6 @@ defineArticle({
   ],
   sources: [
     { label: "IEEE Xplore, Paper",     href: "https://ieeexplore.ieee.org/document/11443073" },
-    { label: "VDE Verlag, Proceedings", href: "https://www.vde-verlag.de/proceedings-de/566656006.html" },
+    { label: "VDE Verlag, Proceedings", href: "https://www.vde-verlag.de/proceedings-en/566656006.html" },
   ],
 });

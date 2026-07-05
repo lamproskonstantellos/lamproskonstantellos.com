@@ -6,7 +6,7 @@ const crypto = require("crypto");
 const { URL } = require("url");
 const SITE_CFG = require("./site.config.js");
 const { parseRoute, isValidSpaRoute: routeIsValidSpa, pageTitle } = require("./routes.js");
-const { validateArticle } = require("./article-schema.js");
+const { validateArticle, plainBody } = require("./article-schema.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
 
 const PORT = process.env.PORT || 3000;
@@ -24,7 +24,6 @@ const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
-  ".jsx": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".webmanifest": "application/manifest+json",
   ".png": "image/png",
@@ -361,7 +360,9 @@ function computePageMeta(pathname) {
         ? social.dims
         : article.cover ? ARTICLE_COVER_DIMS[route.slug] : DEFAULT_IMAGE_DIMS;
 
-      const articleBody = Array.isArray(article.body) ? article.body.join("\n\n") : "";
+      // plainBody strips the inline **bold** markers the on-page renderer
+      // consumes, so JSON-LD (and its wordCount) carries clean prose.
+      const articleBody = plainBody(article.body);
       const wordCount = articleBody ? articleBody.trim().split(/\s+/).length : 0;
       // Meta/OG/Twitter/JSON-LD description: a dedicated, SERP-length (<=~160
       // char) seoDescription when the article provides one, else the fuller
@@ -647,7 +648,7 @@ function renderHtml(templateHtml, pathname, { deployVersion, articleScripts, ass
   // version is a commit SHA or a timestamp (no $), so the string form is
   // correct — this is not the same hazard as the meta injection above.
   const versioned = hashed.replace(
-    /((?:src|href)=")(\/(?!dist\/)[^"?]+\.(?:css|js|jsx))(")/g,
+    /((?:src|href)=")(\/(?!dist\/)[^"?]+\.(?:css|js))(")/g,
     `$1$2?v=${deployVersion}$3`
   );
   return versioned;
@@ -792,17 +793,16 @@ const SECURITY_HEADERS = {
 // Intended public set: index.html, styles.css, the app scripts (site.config.js,
 // routes.js, article-schema.js, ui-helpers.js, data.js), dist/* bundles, vendor/* React,
 // favicons/og-image/manifest/robots, and news/<slug>/article.js + images.
-// Everything below is source, config, tooling or docs and is blocked.
+// Everything below is source, config, tooling or docs and is blocked. Keep this
+// in sync with build-static.js's MUST_BE_ABSENT list.
 const PRIVATE_PATHS = new Set([
   "/server.js",
+  "/feeds.js",
+  "/build-static.js",
   "/package.json",
   "/package-lock.json",
-  "/Dockerfile",
-  "/.dockerignore",
   "/.gitignore",
   "/LICENSE",
-  "/README.md",
-  "/news/README.md",
   "/dist/manifest.json",
 ]);
 
@@ -810,7 +810,14 @@ function isPrivatePath(pathname) {
   if (PRIVATE_PATHS.has(pathname)) return true;
   if (pathname.startsWith("/scripts/")) return true; // build tooling
   if (pathname.startsWith("/test/")) return true; // test suite
+  if (pathname.startsWith("/docs/")) return true; // internal docs
+  if (pathname.startsWith("/node_modules/")) return true; // dependency tree
+  if (pathname.startsWith("/components/")) return true; // uncompiled sources
   if (pathname.startsWith("/.")) return true; // dotfiles (.git, .github, ...)
+  // No public asset is Markdown (covers README.md, AUDIT.md, news/README.md,
+  // and any future notes) or raw JSX (the browser loads the compiled /dist/
+  // bundles; app.jsx / icons.jsx / components/*.jsx are source only).
+  if (/\.(md|jsx)$/i.test(pathname)) return true;
   return false;
 }
 

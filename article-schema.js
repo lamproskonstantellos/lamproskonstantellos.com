@@ -94,12 +94,20 @@
     return 0;
   }
 
-  const api = { validateArticle, compareByDateDesc };
+  // Flatten an article body to plain text for machine-readable consumers
+  // (JSON-LD articleBody/wordCount, JSON Feed content_text). Body paragraphs
+  // are authored with inline **bold** markers that the React renderer strips
+  // (renderInline); machine output must not ship the raw asterisks.
+  function plainBody(body) {
+    return (Array.isArray(body) ? body.join("\n\n") : "").replace(/\*\*/g, "");
+  }
+
+  const api = { validateArticle, compareByDateDesc, plainBody };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
   }
   if (typeof window !== "undefined") {
-    Object.assign(window, { ArticleSchema: api, validateArticle, compareByDateDesc });
+    Object.assign(window, { ArticleSchema: api, validateArticle, compareByDateDesc, plainBody });
   }
 })();

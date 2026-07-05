@@ -1,11 +1,13 @@
 /* ============================================================
-   ui-helpers.js — shared UI logic (share links, scroll-spy)
+   ui-helpers.js — shared UI logic (share links, scroll-spy,
+   publications filters/grouping, hero joiner)
    ------------------------------------------------------------
-   Pure functions behind the article share row and the homepage
-   scroll-spy nav. No React, no DOM, no Node APIs — so the logic
-   loads identically in the browser (window globals) and in Node
-   (require) and is unit-testable without compiling JSX, exactly
-   like routes.js / site.config.js.
+   Pure functions behind the article share row, the homepage
+   scroll-spy nav, the /publications filter pills + year groups,
+   and the hero headline joiners. No React, no DOM, no Node APIs
+   — so the logic loads identically in the browser (window
+   globals) and in Node (require) and is unit-testable without
+   compiling JSX, exactly like routes.js / site.config.js.
    ============================================================ */
 
 (function () {
@@ -50,7 +52,44 @@
     return crossing || passed;
   }
 
-  const api = { shareLinks, pickActiveSection };
+  // /publications filter pills. The `type` field marks non-peer-reviewed work
+  // (thesis / report), so it also drives the filter split.
+  const PUB_FILTERS = [
+    { id: "all", label: "All", match: () => true },
+    { id: "peer-reviewed", label: "Peer-reviewed", match: (p) => !p.type },
+    { id: "reports", label: "Theses & reports", match: (p) => Boolean(p.type) },
+  ];
+
+  // Group an already newest-first publications list by consecutive year, so
+  // each year renders once as a large group label beside/above its entries.
+  function groupPublicationsByYear(items) {
+    const groups = [];
+    for (const pub of items || []) {
+      const last = groups[groups.length - 1];
+      if (last && last.year === pub.year) last.items.push(pub);
+      else groups.push({ year: pub.year, items: [pub] });
+    }
+    return groups;
+  }
+
+  // Joiner that follows the i-th of n emphasized hero phrases, so the headline
+  // reads as an Oxford-comma list ending in a period:
+  //   ["a"]            → "a."
+  //   ["a","b"]        → "a, and b."
+  //   ["a","b","c"]    → "a, b, and c."
+  function headlineJoiner(index, total) {
+    if (index === total - 1) return ".";
+    if (index === total - 2) return ", and ";
+    return ", ";
+  }
+
+  const api = {
+    shareLinks,
+    pickActiveSection,
+    PUB_FILTERS,
+    groupPublicationsByYear,
+    headlineJoiner,
+  };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

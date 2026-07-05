@@ -17,6 +17,16 @@ after(async () => { await stop(); });
 
 const ARTICLE = "ieee-pess-2025-best-paper-award";
 
+// ---- Machine-readable article text is plain (no authoring markers) ---------
+
+test("JSON-LD articleBody and feed content_text carry no ** markers", async () => {
+  const article = (await request(base, `/news/${ARTICLE}`)).body.toString("utf8");
+  const jsonLd = article.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1];
+  assert.ok(!jsonLd.includes("**"), "JSON-LD still contains raw markdown markers");
+  const feed = (await request(base, "/feed.json")).body.toString("utf8");
+  assert.ok(!feed.includes("**"), "feed.json still contains raw markdown markers");
+});
+
 // ---- SEO1: /index.html redirects to / (no duplicate home) ------------------
 
 test("/index.html → 301 redirect to /", async () => {
@@ -83,14 +93,15 @@ test("article meta matches article.js source", () => {
 // ---- og:image is a per-article 1200x630 social crop ------------------------
 
 test("og:image is a per-article 1200x630 social crop, not the raw cover", async () => {
-  // The default share image (home / list / 404) is genuinely 1200x630.
-  const buf = fs.readFileSync(path.join(__dirname, "../og-image.png"));
-  // PNG: 8-byte sig, then IHDR length(4)+type(4), width @16, height @20 (BE).
-  assert.equal(buf.readUInt32BE(16), 1200);
-  assert.equal(buf.readUInt32BE(20), 630);
+  // The default share image (home / list / 404) is genuinely 1200x630. Its
+  // dimensions come from the server's own JPEG header parser (computePageMeta
+  // reads the real file), so this also locks the file's existence.
+  const homeMeta = server.computePageMeta("/");
+  assert.equal(homeMeta.imageWidth, 1200);
+  assert.equal(homeMeta.imageHeight, 630);
 
   const home = (await request(base, "/")).body.toString("utf8");
-  assert.match(home, /<meta property="og:image" content="[^"]*\/og-image\.png/);
+  assert.match(home, /<meta property="og:image" content="[^"]*\/og-image\.jpg/);
   assert.match(home, /<meta property="og:image:width" content="1200" \/>/);
   assert.match(home, /<meta property="og:image:height" content="630" \/>/);
 

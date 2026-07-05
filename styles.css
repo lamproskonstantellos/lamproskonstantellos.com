@@ -197,10 +197,7 @@ main {
 #main-content:focus { outline: none; }
 
 /* Content appears in its final position on load — no page fade-up and no
-   card slide-in reveal (cards/paragraphs are visible immediately). Hover
-   feedback lives on the individual card rules. */
-.reveal,
-.reveal.in { opacity: 1; transform: none; }
+   card slide-in reveal. Hover feedback lives on the individual card rules. */
 
 /* ===== Hero ===== */
 .hero-photo {
@@ -295,15 +292,16 @@ main {
    mobile rules live in the 820px media query below. */
 .hero-intro { display: none; }
 .hero-intro-photo {
-  /* Sized so the name beside it stays on ONE line down to ~360px wide. */
+  /* Sized so the name beside it stays on ONE line down to ~360px wide.
+     The photo fills the rounded frame edge-to-edge (no inner inset). */
   width: 96px;
   height: 96px;
   flex-shrink: 0;
-  padding: 4px;
-  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 24px;
+  overflow: hidden;
   box-shadow: var(--shadow-md);
+  background: #d9dde6;
 }
 .hero-intro-photo img,
 .hero-intro-photo picture {
@@ -313,7 +311,6 @@ main {
 .hero-intro-photo img {
   object-fit: cover;
   object-position: center 15%;
-  border-radius: 20px;
 }
 .hero-intro-text {
   display: flex;
@@ -375,12 +372,6 @@ section.block {
 .list-header h1::after {
   width: 34px;
   margin-top: 10px;
-}
-.section-label .count {
-  font-size: 12px;
-  color: var(--muted-2);
-  font-feature-settings: "tnum";
-  font-variant-numeric: tabular-nums;
 }
 .section-label-action { margin-left: auto; }
 .view-all {
@@ -1386,15 +1377,6 @@ section.block {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-  /* Entrance animations are disabled site-wide, so these elements are already
-     visible; this is a defensive guarantee that content never depends on any
-     motion/observer for reduced-motion users. */
-  .reveal,
-  .about-paragraph,
-  .chip {
-    opacity: 1 !important;
-    transform: none !important;
   }
 }
 
