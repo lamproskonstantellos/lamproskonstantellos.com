@@ -12,14 +12,6 @@ let base;
 before(async () => { ({ base } = await start()); });
 after(async () => { await stop(); });
 
-const ARTICLE_SLUGS = [
-  "7th-power-gas-forum-athens",
-  "7th-renewable-storage-forum",
-  "ai-hub-mayor-western-achaia",
-  "ieee-pess-2025-best-paper-award",
-  "intersolar-europe-2026",
-];
-
 // ---- Full normalized HTML per route ----------------------------------------
 
 const HTML_ROUTES = [

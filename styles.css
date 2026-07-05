@@ -373,12 +373,6 @@ section.block {
   width: 34px;
   margin-top: 10px;
 }
-.section-label .count {
-  font-size: 12px;
-  color: var(--muted-2);
-  font-feature-settings: "tnum";
-  font-variant-numeric: tabular-nums;
-}
 .section-label-action { margin-left: auto; }
 .view-all {
   display: inline-flex;

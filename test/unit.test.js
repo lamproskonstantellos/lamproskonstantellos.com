@@ -1,9 +1,9 @@
 "use strict";
 
-// Unit tests for pure helpers, as they ship today. parseRoute/routeToPath are
-// exercised here from COMPILED output (routeToPath) and via the server route
-// table (computePageMeta / isValidSpaRoute). Direct parseRoute unit tests are
-// added once it moves to the shared route module.
+// Unit tests for pure helpers: the server's own (escapeHtml, jsonLdScript,
+// cacheHeaderFor, computePageMeta, isValidSpaRoute), the shared route table
+// (parseRoute / routeToPath, from routes.js), the shared plainBody flattener,
+// and article validation via the data.js window shim.
 
 const { test } = require("node:test");
 const assert = require("node:assert");
