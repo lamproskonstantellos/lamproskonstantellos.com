@@ -539,14 +539,14 @@ section.block:first-of-type,
   padding: 5px 12px;
   border-radius: 999px;
 }
-.pub-card .pub-title {
+.pub-title {
   font-size: 16.5px;
   font-weight: 600;
   line-height: 1.42;
   color: var(--ink);
   margin: 0 0 8px;
-  /* Natural wrapping (no `balance`): on a full-width card, balance splits a
-     two-line title into two half-width lines and the card looks half-empty. */
+  /* Natural wrapping (no `balance`): on a full-width entry, balance splits a
+     two-line title into two half-width lines and the entry looks half-empty. */
   text-wrap: pretty;
 }
 .pub-authors {
@@ -587,6 +587,64 @@ section.block:first-of-type,
 }
 .pub-links a svg { transition: transform var(--transition); }
 .pub-links a:hover svg { transform: translate(2px, -2px); }
+
+/* ===== Publications list page (/publications) ===== */
+/* Filter pills: the active one is filled navy, the rest quiet outlines. */
+.pub-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+.pub-filter {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: border-color var(--transition), background var(--transition),
+    color var(--transition);
+}
+.pub-filter:hover { border-color: var(--ink); }
+.pub-filter.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+/* Year groups: a large, quiet year label beside that year's entries. Entries
+   are plain rows split by hairlines; a full-width hairline splits the groups. */
+.pub-year-group {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 0 24px;
+  align-items: start;
+}
+.pub-year-group + .pub-year-group { border-top: 1px solid var(--line); }
+.pub-year {
+  margin: 0;
+  padding-top: 30px;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  /* Decorative scale, quiet color — the entries stay the loudest thing. */
+  color: #c3cbda;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+.pub-row { padding: 28px 0; }
+.pub-row + .pub-row { border-top: 1px solid var(--line); }
+@media (max-width: 719px) {
+  .pub-year-group { grid-template-columns: 1fr; }
+  .pub-year { padding-top: 26px; font-size: 32px; }
+  .pub-row { padding: 20px 0 24px; }
+  .pub-year + .pub-year-items .pub-row:first-child { padding-top: 14px; }
+}
 
 /* ===== News ===== */
 .news-grid {

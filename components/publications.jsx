@@ -4,9 +4,12 @@
 
 /* ============================================================
    PUBLICATIONS
-   - PublicationCard:        reusable single-entry card
+   - PubMetaRow / PubLinks:  shared entry fragments
+   - PublicationCard:        homepage single-entry card
    - PublicationsPreview:    homepage section, capped at LIMITS
-   - PublicationsListPage:   /publications full list
+   - PublicationRow:         /publications flat list entry
+   - PublicationsListPage:   /publications, filterable and
+                             grouped by year
    ============================================================ */
 
 // Meta line (venue · location · year) with the award / type pill inline on the
@@ -96,9 +99,42 @@ function PublicationsPreview({ navigate }) {
   );
 }
 
+// One entry on the /publications list: a plain hairline-separated row (no card
+// box). The year is carried by the group label, so the meta row omits it.
+function PublicationRow({ pub, headingLevel = "h3" }) {
+  const Title = headingLevel;
+  return (
+    <article className="pub-row">
+      <PubMetaRow pub={pub} showYear={false} />
+      <Title className="pub-title">{pub.title}</Title>
+      <p className="pub-authors">{renderInline(pub.authors)}</p>
+      {pub.description && <p className="pub-description">{pub.description}</p>}
+      <PubLinks links={pub.links} />
+    </article>
+  );
+}
+
+// The `type` field marks non-peer-reviewed work (thesis / report), so it also
+// drives the list filter split.
+const PUB_FILTERS = [
+  { id: "all", label: "All", match: () => true },
+  { id: "peer-reviewed", label: "Peer-reviewed", match: (p) => !p.type },
+  { id: "reports", label: "Theses & reports", match: (p) => Boolean(p.type) },
+];
+
 function PublicationsListPage({ navigate }) {
-  const visible = useReveal();
-  const items = getRecentPublications();
+  const [filterId, setFilterId] = React.useState("all");
+  const all = getRecentPublications();
+  const activeFilter = PUB_FILTERS.find((f) => f.id === filterId) || PUB_FILTERS[0];
+
+  // Group the (already newest-first) entries by consecutive year, so each year
+  // renders once as a large left-hand label beside its entries.
+  const groups = [];
+  for (const pub of all.filter(activeFilter.match)) {
+    const last = groups[groups.length - 1];
+    if (last && last.year === pub.year) last.items.push(pub);
+    else groups.push({ year: pub.year, items: [pub] });
+  }
 
   // Scroll-to-top on arrival is handled by App.navigate (fresh navigations
   // only), so Back/Forward restores the prior scroll position natively.
@@ -118,18 +154,33 @@ function PublicationsListPage({ navigate }) {
         <h1>Publications</h1>
         <p>Peer-reviewed papers, plus theses and reports, ordered from most recent.</p>
       </header>
-      <div className="pub-list">
-        {items.map((p, i) => (
-          <PublicationCard
-            key={i}
-            pub={p}
-            index={i}
-            revealKey={`pub-list-${i}`}
-            isVisible={visible.has(`pub-list-${i}`)}
-            headingLevel="h2"
-          />
+      <div className="pub-filters" role="group" aria-label="Filter publications">
+        {PUB_FILTERS.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            className={`pub-filter${f.id === filterId ? " active" : ""}`}
+            aria-pressed={f.id === filterId}
+            onClick={() => setFilterId(f.id)}
+          >
+            {f.label} ({all.filter(f.match).length})
+          </button>
         ))}
       </div>
+      {groups.length === 0 ? (
+        <p className="list-empty">No publications yet.</p>
+      ) : (
+        groups.map((g) => (
+          <section className="pub-year-group" key={g.year}>
+            <h2 className="pub-year">{g.year}</h2>
+            <div className="pub-year-items">
+              {g.items.map((p, i) => (
+                <PublicationRow key={`${g.year}-${i}`} pub={p} />
+              ))}
+            </div>
+          </section>
+        ))
+      )}
     </div>
   );
 }
