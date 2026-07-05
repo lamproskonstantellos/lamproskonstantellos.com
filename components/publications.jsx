@@ -48,21 +48,18 @@ function PubLinks({ links }) {
   );
 }
 
-function PublicationCard({ pub, index = 0, revealKey, isVisible, headingLevel = "h3" }) {
-  const Title = headingLevel;
+function PublicationCard({ pub, index = 0, revealKey, isVisible }) {
   return (
     <article
       className={`pub-card reveal ${isVisible ? "in" : ""}`}
       data-reveal={revealKey}
       style={{ transitionDelay: `${index * 80}ms` }}
     >
-      <div className="pub-body">
-        <PubMetaRow pub={pub} />
-        <Title className="pub-title">{pub.title}</Title>
-        <p className="pub-authors">{renderInline(pub.authors)}</p>
-        {pub.description && <p className="pub-description">{pub.description}</p>}
-        <PubLinks links={pub.links} />
-      </div>
+      <PubMetaRow pub={pub} />
+      <h3 className="pub-title">{pub.title}</h3>
+      <p className="pub-authors">{renderInline(pub.authors)}</p>
+      {pub.description && <p className="pub-description">{pub.description}</p>}
+      <PubLinks links={pub.links} />
     </article>
   );
 }
@@ -100,13 +97,13 @@ function PublicationsPreview({ navigate }) {
 }
 
 // One entry on the /publications list: a plain hairline-separated row (no card
-// box). The year is carried by the group label, so the meta row omits it.
-function PublicationRow({ pub, headingLevel = "h3" }) {
-  const Title = headingLevel;
+// box). The year is carried by the group label (an h2), so the meta row omits
+// it and the title is an h3.
+function PublicationRow({ pub }) {
   return (
     <article className="pub-row">
       <PubMetaRow pub={pub} showYear={false} />
-      <Title className="pub-title">{pub.title}</Title>
+      <h3 className="pub-title">{pub.title}</h3>
       <p className="pub-authors">{renderInline(pub.authors)}</p>
       {pub.description && <p className="pub-description">{pub.description}</p>}
       <PubLinks links={pub.links} />

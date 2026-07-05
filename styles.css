@@ -434,12 +434,12 @@ section.block {
   letter-spacing: -0.005em;
 }
 /* Quiet navy emphasis on the credibility phrases (institutions + award),
-   wrapped in **bold** in data.js and parsed by renderInline. */
-.about-paragraph strong { color: var(--ink); font-weight: 600; }
-/* Discreet accent underline on the bold phrases in body prose (about bio and
-   article text) — same blue note as the hero keywords, kept thin and soft. */
-.about-paragraph strong,
-.article-body strong {
+   wrapped in **bold** in data.js and parsed by renderInline, plus a discreet
+   accent underline — the same blue note as the hero keywords, thin and soft.
+   (.article-body strong, further down, carries the identical treatment.) */
+.about-paragraph strong {
+  color: var(--ink);
+  font-weight: 600;
   text-decoration: underline;
   text-decoration-color: rgba(31, 58, 138, 0.35);
   text-decoration-thickness: 2px;
@@ -482,12 +482,7 @@ section.block {
     box-shadow var(--transition);
   overflow: hidden;
   cursor: default;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
 }
-.pub-card .pub-body { flex: 1; display: flex; flex-direction: column; }
-.pub-card .pub-links { margin-top: auto; }
 .pub-card::before {
   content: "";
   position: absolute;
@@ -557,9 +552,9 @@ section.block {
   padding: 5px 12px;
   border-radius: 999px;
 }
-/* Category tag for non-peer-reviewed work (thesis / report). Same slot as the
-   award pill (they never coexist), but a quiet navy outline rather than gold,
-   so it reads as a "type" marker, not a distinction. */
+/* Category tag for non-peer-reviewed work (thesis / report). Sits on the meta
+   row like the award pill (they never coexist), but a quiet navy outline
+   rather than gold, so it reads as a "type" marker, not a distinction. */
 .pub-type {
   display: inline-flex;
   align-items: center;
@@ -666,8 +661,9 @@ section.block {
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.02em;
-  /* Decorative scale, quiet color — the entries stay the loudest thing. */
-  color: #c3cbda;
+  /* Quiet, but still readable: this h2 is the only carrier of the group year.
+     #7f8aa3 on --bg ≈ 3.2:1 — WCAG AA for large-scale text (SC 1.4.3). */
+  color: #7f8aa3;
   font-feature-settings: "tnum";
   font-variant-numeric: tabular-nums;
 }
@@ -870,7 +866,17 @@ section.block {
   }
 }
 .article-body p { margin: 0 0 22px; }
-.article-body strong { color: var(--ink); font-weight: 600; }
+/* Bold emphasis in article prose: same navy weight + discreet accent
+   underline as .about-paragraph strong (kept in sync by hand). */
+.article-body strong {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(31, 58, 138, 0.35);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+}
 
 /* Inline article figure: a photo placed between paragraphs (photos[].after),
    shown whole at its natural aspect ratio (capped), with an optional caption.
@@ -1348,6 +1354,7 @@ section.block {
   .back-link,
   .footer-top-link,
   .pub-links a,
+  .pub-filter,
   .article-share a,
   .article-share button {
     min-height: 44px;
