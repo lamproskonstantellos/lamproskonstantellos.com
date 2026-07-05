@@ -17,6 +17,16 @@ after(async () => { await stop(); });
 
 const ARTICLE = "ieee-pess-2025-best-paper-award";
 
+// ---- Machine-readable article text is plain (no authoring markers) ---------
+
+test("JSON-LD articleBody and feed content_text carry no ** markers", async () => {
+  const article = (await request(base, `/news/${ARTICLE}`)).body.toString("utf8");
+  const jsonLd = article.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1];
+  assert.ok(!jsonLd.includes("**"), "JSON-LD still contains raw markdown markers");
+  const feed = (await request(base, "/feed.json")).body.toString("utf8");
+  assert.ok(!feed.includes("**"), "feed.json still contains raw markdown markers");
+});
+
 // ---- SEO1: /index.html redirects to / (no duplicate home) ------------------
 
 test("/index.html → 301 redirect to /", async () => {

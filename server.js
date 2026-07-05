@@ -6,7 +6,7 @@ const crypto = require("crypto");
 const { URL } = require("url");
 const SITE_CFG = require("./site.config.js");
 const { parseRoute, isValidSpaRoute: routeIsValidSpa, pageTitle } = require("./routes.js");
-const { validateArticle } = require("./article-schema.js");
+const { validateArticle, plainBody } = require("./article-schema.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
 
 const PORT = process.env.PORT || 3000;
@@ -360,7 +360,9 @@ function computePageMeta(pathname) {
         ? social.dims
         : article.cover ? ARTICLE_COVER_DIMS[route.slug] : DEFAULT_IMAGE_DIMS;
 
-      const articleBody = Array.isArray(article.body) ? article.body.join("\n\n") : "";
+      // plainBody strips the inline **bold** markers the on-page renderer
+      // consumes, so JSON-LD (and its wordCount) carries clean prose.
+      const articleBody = plainBody(article.body);
       const wordCount = articleBody ? articleBody.trim().split(/\s+/).length : 0;
       // Meta/OG/Twitter/JSON-LD description: a dedicated, SERP-length (<=~160
       // char) seoDescription when the article provides one, else the fuller

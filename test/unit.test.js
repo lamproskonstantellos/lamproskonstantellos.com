@@ -152,6 +152,18 @@ test("defineArticle rejects non-array body / photos / keywords / topics", () => 
   assert.throws(() => defineArticle(bad((a) => (a.topics = "no"))), /non-array topics/);
 });
 
+// ---- plainBody (shared machine-text flattener) -------------------------------
+
+test("plainBody joins paragraphs and strips inline bold markers", () => {
+  const { plainBody } = require("../article-schema.js");
+  assert.equal(
+    plainBody(["I met **Dr. X** at **the expo**.", "Second paragraph."]),
+    "I met Dr. X at the expo.\n\nSecond paragraph."
+  );
+  assert.equal(plainBody([]), "");
+  assert.equal(plainBody(undefined), "");
+});
+
 // ---- PROFILE.contact entries (data.js via window shim) ----------------------
 
 test("PROFILE.contact lists ResearchGate and GitHub, with email kept last", () => {
