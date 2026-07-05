@@ -123,6 +123,39 @@ format, and that `body`/`photos`/`sources`/`keywords`/`topics` are arrays. The
 legacy `(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({ ... })` form
 still works if you ever need it.
 
+## Publishing checklist
+
+1. **Build:** `npm run build` — compiles the JSX and generates the `.webp`/`.avif`
+   siblings plus the article's `cover-og.jpg` social crop. Watch the log for an
+   error naming your slug: an invalid article is **skipped with a message**, not
+   shipped broken.
+2. **Test:** `npm test` — the suite must stay green (it validates every
+   discovered article, the feeds, and the sitemap).
+3. **Preview:** `npm start` → open `http://localhost:3000/news/<slug>` and the
+   homepage. Check the card, the cover crop, inline photos/captions, the
+   gallery, the video (if any), and the share row.
+4. **Ship:** commit the folder (only source `.jpg`/`.png`/`.mp4` — generated
+   variants are gitignored) and push. Cloudflare Pages builds and deploys
+   automatically; the article also enters `sitemap.xml`, `rss.xml`, and
+   `feed.json` on its own.
+
+## Common mistakes
+
+- **`slug` ≠ folder name** — the two must match exactly, or the article is
+  rejected at build time (the URLs would otherwise point nowhere).
+- **Date format** — `date` must be `YYYY-MM-DD`; `dateLabel` is free-form and
+  shown to readers. Articles sort by `date`, so a typo reorders the list.
+- **Paths without the folder prefix** — every `cover`/`photos`/`video` path
+  starts with `news/<slug>/…`, not just the filename.
+- **Committing generated files** — never commit `.webp`, `.avif`, or
+  `cover-og.jpg`; the build regenerates them (they are gitignored anyway).
+- **Huge originals are fine** — the pipeline caps display variants at 2200px
+  wide and serves those; the raw file stays as the fallback. But a video ships
+  as-is: keep `video.mp4` reasonably sized (and remux with `+faststart` so
+  playback starts before the whole file downloads).
+- **`after` is 0-based** — `after: 1` places a photo after the *second* body
+  paragraph.
+
 ## Folder structure
 
 ```
