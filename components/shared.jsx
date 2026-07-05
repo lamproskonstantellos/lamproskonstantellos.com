@@ -50,7 +50,7 @@ function SectionHeader({ title, action }) {
 function ViewAllLink({ href, onClick }) {
   return (
     <a className="view-all" href={href} onClick={onClick}>
-      View all <Icon.arrowRight style={{ width: 13, height: 13 }} />
+      <span className="link-marker">View all</span> <Icon.arrowRight style={{ width: 13, height: 13 }} />
     </a>
   );
 }

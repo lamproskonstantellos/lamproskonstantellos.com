@@ -31,7 +31,7 @@ function NewsCard({ article, navigate, from, headingLevel = "h3" }) {
         <Title className="news-title">{article.title}</Title>
         <p>{article.excerpt}</p>
         <span className="read">
-          Read article <Icon.arrowRight style={{ width: 13, height: 13 }} />
+          <span className="link-marker">Read article</span> <Icon.arrowRight style={{ width: 13, height: 13 }} />
         </span>
       </div>
     </a>
@@ -78,7 +78,7 @@ function NewsListPage({ navigate }) {
         href={routeToPath(backRoute)}
         onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
       >
-        <Icon.arrowLeft style={{ width: 14, height: 14 }} /> Back to Home
+        <Icon.arrowLeft style={{ width: 14, height: 14 }} /> <span className="link-marker">Back to Home</span>
       </a>
       <header className="list-header">
         <h1>News</h1>
@@ -333,7 +333,7 @@ function Article({ slug, navigate }) {
       href={routeToPath(backRoute)}
       onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
     >
-      <Icon.arrowLeft style={{ width: 14, height: 14 }} /> {backLabel}
+      <Icon.arrowLeft style={{ width: 14, height: 14 }} /> <span className="link-marker">{backLabel}</span>
     </a>
   );
 

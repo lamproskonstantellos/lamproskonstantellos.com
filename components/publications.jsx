@@ -120,7 +120,7 @@ function PublicationsListPage({ navigate }) {
         href={routeToPath(backRoute)}
         onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
       >
-        <Icon.arrowLeft style={{ width: 14, height: 14 }} /> Back to Home
+        <Icon.arrowLeft style={{ width: 14, height: 14 }} /> <span className="link-marker">Back to Home</span>
       </a>
       <header className="list-header">
         <h1>Publications</h1>
