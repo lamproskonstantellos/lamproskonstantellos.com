@@ -215,7 +215,9 @@ main {
   grid-template-columns: 1.15fr 0.85fr;
   gap: 64px;
   align-items: center;
-  padding: 72px 0 64px;
+  /* Bottom padding equals the 56px section padding so the divider above About
+     is spaced exactly like the dividers between the other sections. */
+  padding: 72px 0 56px;
 }
 .hero-text h1 {
   font-size: clamp(36px, 4.6vw, 56px);
@@ -299,11 +301,10 @@ section.block {
      the same measured amount and the heading never hides under the header. */
   scroll-margin-top: var(--header-offset, 70px);
 }
-/* Strip the divider above the first content block. On the homepage the first
-   <section> is `.hero` (no `.block`), so `:first-of-type` alone never matches
-   the About block — target the block right after the hero as well. */
-section.block:first-of-type,
-.hero + section.block { border-top: none; }
+/* Every home section keeps its top divider — including About, right after the
+   hero — so the four blocks read as evenly separated. The hero's bottom
+   padding matches the blocks' 56px so the line above About sits equidistant,
+   exactly like the lines between the later sections. */
 .section-label {
   display: flex;
   align-items: baseline;
@@ -1284,7 +1285,9 @@ section.block:first-of-type,
   .hero {
     grid-template-columns: 1fr;
     gap: 40px;
-    padding: 48px 0 32px;
+    /* Same rule as on desktop: bottom padding tracks the sections' 56px so
+       the divider above About stays equidistant on small screens too. */
+    padding: 48px 0 56px;
   }
   .hero-text h1 { line-height: 1.18; }
   .hero-photo { max-width: 320px; margin: 0 auto; }
