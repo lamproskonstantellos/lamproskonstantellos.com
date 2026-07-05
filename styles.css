@@ -290,6 +290,48 @@ main {
   object-position: center 15%;
 }
 
+/* Small profile card (photo + name + role) above the headline. Hidden on
+   desktop, where the large portrait on the right carries the photo; the
+   mobile rules live in the 820px media query below. */
+.hero-intro { display: none; }
+.hero-intro-photo {
+  /* Sized so the name beside it stays on ONE line down to ~360px wide. */
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow-md);
+}
+.hero-intro-photo img,
+.hero-intro-photo picture {
+  width: 100%;
+  height: 100%;
+}
+.hero-intro-photo img {
+  object-fit: cover;
+  object-position: center 15%;
+  border-radius: 20px;
+}
+.hero-intro-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.25;
+}
+.hero-intro-name {
+  font-size: 17.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.hero-intro-role {
+  font-size: 15px;
+  color: var(--muted);
+}
+
 /* ===== Section ===== */
 section.block {
   padding: 56px 0;
@@ -434,17 +476,16 @@ section.block {
   letter-spacing: -0.005em;
 }
 /* Quiet navy emphasis on the credibility phrases (institutions + award),
-   wrapped in **bold** in data.js and parsed by renderInline, plus a discreet
-   accent underline — the same blue note as the hero keywords, thin and soft.
+   wrapped in **bold** in data.js and parsed by renderInline, plus the same
+   soft accent highlight band the hero keywords carry.
    (.article-body strong, further down, carries the identical treatment.) */
 .about-paragraph strong {
   color: var(--ink);
   font-weight: 600;
-  text-decoration: underline;
-  text-decoration-color: rgba(31, 58, 138, 0.35);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-  text-decoration-skip-ink: none;
+  background: linear-gradient(to top, rgba(31, 58, 138, 0.14) 26%, transparent 26%);
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 @media (max-width: 820px) {
@@ -772,7 +813,8 @@ section.block {
   margin: 0;
   color: var(--muted);
   font-size: 15px;
-  max-width: 560px;
+  /* No max-width: the intro reads as ONE straight line on desktop
+     (it only wraps when the viewport itself is too narrow). */
 }
 .list-empty {
   color: var(--muted);
@@ -866,16 +908,15 @@ section.block {
   }
 }
 .article-body p { margin: 0 0 22px; }
-/* Bold emphasis in article prose: same navy weight + discreet accent
-   underline as .about-paragraph strong (kept in sync by hand). */
+/* Bold emphasis in article prose: same navy weight + soft accent highlight
+   band as .about-paragraph strong (kept in sync by hand). */
 .article-body strong {
   color: var(--ink);
   font-weight: 600;
-  text-decoration: underline;
-  text-decoration-color: rgba(31, 58, 138, 0.35);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-  text-decoration-skip-ink: none;
+  background: linear-gradient(to top, rgba(31, 58, 138, 0.14) 26%, transparent 26%);
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 /* Inline article figure: a photo placed between paragraphs (photos[].after),
@@ -1290,13 +1331,25 @@ section.block {
 @media (max-width: 820px) {
   .hero {
     grid-template-columns: 1fr;
-    gap: 40px;
     /* Same rule as on desktop: bottom padding tracks the sections' 56px so
        the divider above About stays equidistant on small screens too. */
-    padding: 48px 0 56px;
+    padding: 40px 0 56px;
   }
   .hero-text h1 { line-height: 1.18; }
-  .hero-photo { max-width: 320px; margin: 0 auto; }
+  /* On small screens the photo moves into the profile card above the
+     headline; the large portrait is hidden entirely. */
+  .hero-photo { display: none; }
+  .hero-intro {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 26px;
+  }
+  /* Button stack per the mobile design: the primary CTA takes the full row,
+     the two quiet actions share the next one. */
+  .hero-actions .btn { justify-content: center; }
+  .hero-actions .btn-primary { flex-basis: 100%; }
+  .hero-actions .btn-ghost { flex: 1; }
   .nav { gap: 16px; }
   .nav a { font-size: 13px; }
   .site-header-inner { padding: 14px 20px; }
