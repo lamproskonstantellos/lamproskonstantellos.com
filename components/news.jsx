@@ -94,6 +94,7 @@ function NewsListPage({ navigate }) {
       </a>
       <header className="list-header">
         <h1>News</h1>
+        <p>Conferences, forums, awards, and project milestones, ordered from most recent.</p>
       </header>
       {items.length === 0 ? (
         <p className="list-empty">No articles yet.</p>
