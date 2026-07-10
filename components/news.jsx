@@ -30,9 +30,7 @@ function NewsCard({ article, navigate, from, headingLevel = "h3" }) {
         </div>
         <Title className="news-title">{article.title}</Title>
         <p>{article.excerpt}</p>
-        <span className="read">
-          <span className="link-marker">Read article</span> <Icon.arrowRight style={{ width: 13, height: 13 }} />
-        </span>
+        <span className="read">Read article</span>
       </div>
     </a>
   );
@@ -78,7 +76,7 @@ function NewsListPage({ navigate }) {
         href={routeToPath(backRoute)}
         onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
       >
-        <Icon.arrowLeft style={{ width: 14, height: 14 }} /> <span className="link-marker">Back to Home</span>
+        Back
       </a>
       <header className="list-header">
         <h1>News</h1>
@@ -322,18 +320,19 @@ function Article({ slug, navigate }) {
   // (push/link only), so Back/Forward keeps the browser's native scroll
   // restoration instead of being yanked to the top on every popstate remount.
 
+  // The label is always "Back"; the destination still depends on where the
+  // reader came from (home News section vs the /news list).
   const from = window.history.state?.from;
   const backRoute = from === "home"
     ? { page: "home", section: "news" }
     : { page: "news-list" };
-  const backLabel = from === "home" ? "Back to Home" : "Back to News";
   const backLink = (
     <a
       className="back-link"
       href={routeToPath(backRoute)}
       onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
     >
-      <Icon.arrowLeft style={{ width: 14, height: 14 }} /> <span className="link-marker">{backLabel}</span>
+      Back
     </a>
   );
 
