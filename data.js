@@ -5,9 +5,9 @@
    appear on the homepage preview and on the /publications list
    page, sorted newest-first.
 
-   Publications fields:
+   Publications fields (full guide: PUBLICATIONS.md):
      - venue, year, title, authors, links   (required)
-     - location, description, award         (optional)
+     - location, description, award, type   (optional)
 
    News articles live in their own folders under news/<slug>/ as
    self-contained article.js files — see news/README.md.
