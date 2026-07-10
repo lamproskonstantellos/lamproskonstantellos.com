@@ -275,6 +275,33 @@ const ARTICLE_SCRIPTS = ARTICLE_SLUGS
   .join("\n");
 const ASSET_MAP = loadAssetMap();
 
+// Live view of the asset map for the REQUEST path: re-read whenever
+// dist/manifest.json changes, so the local `npm run watch` workflow serves
+// fresh bundles on the next refresh without a server restart (README promises
+// exactly that). The rendered-HTML compression cache is dropped on a change —
+// the cached bytes embed the old hashed names. In production every deploy is
+// a fresh process and the mtime never changes, so this costs one fs.stat per
+// HTML render. The exported ASSET_MAP snapshot (used by build-static.js, one
+// fresh process per build) is unaffected.
+let liveAssetMap = ASSET_MAP;
+let liveAssetMapMtime = assetManifestMtime();
+function assetManifestMtime() {
+  try {
+    return fs.statSync(path.join(PUBLIC_DIR, "dist", "manifest.json")).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+function currentAssetMap() {
+  const mtime = assetManifestMtime();
+  if (mtime !== liveAssetMapMtime) {
+    liveAssetMapMtime = mtime;
+    liveAssetMap = loadAssetMap();
+    COMPRESSION_CACHE.clear();
+  }
+  return liveAssetMap;
+}
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -693,7 +720,7 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
     const versioned = renderHtml(html, pathname, {
       deployVersion: DEPLOY_VERSION,
       articleScripts: ARTICLE_SCRIPTS,
-      assetMap: ASSET_MAP,
+      assetMap: currentAssetMap(),
     });
     const contentType = "text/html; charset=utf-8";
     // The rendered HTML for a given path is deterministic within a process, so

@@ -206,8 +206,12 @@ test("indexable routes carry the image-preview robots directive and a noscript f
     );
     const noscript = html.match(/<noscript>([\s\S]*?)<\/noscript>/);
     assert.ok(noscript, `${p}: has a <noscript> fallback`);
-    assert.match(noscript[1], /href="\/news"/, `${p}: noscript links to /news`);
-    assert.match(noscript[1], /href="\/publications"/, `${p}: noscript links to /publications`);
+    // The fallback promises only what actually works without JavaScript: the
+    // feeds. The HTML routes render an empty #root, so linking them would
+    // send a JS-off visitor in a circle.
+    assert.match(noscript[1], /href="\/rss\.xml"/, `${p}: noscript links to the RSS feed`);
+    assert.match(noscript[1], /href="\/feed\.json"/, `${p}: noscript links to the JSON feed`);
+    assert.ok(!/href="\/news"/.test(noscript[1]), `${p}: noscript must not promise the JS-only /news route`);
   }
 });
 
