@@ -1,4 +1,4 @@
-/* global React, Icon, routeToPath */
+/* global React, routeToPath */
 
 /* ============================================================
    SHARED HELPERS & SMALL UI PRIMITIVES
@@ -7,7 +7,7 @@
                     the current SPA URL (e.g. /news/<slug>)
    - renderInline:  inline **bold** parser for body paragraphs
    - SectionHeader: <h2> + optional right-aligned action
-   - ViewAllLink:   "View all →" CTA
+   - ViewAllLink:   "View all" pill CTA
    (routeToPath now lives in routes.js, shared with the server.)
    ============================================================ */
 
@@ -50,7 +50,7 @@ function SectionHeader({ title, action }) {
 function ViewAllLink({ href, onClick }) {
   return (
     <a className="view-all" href={href} onClick={onClick}>
-      <span className="link-marker">View all</span> <Icon.arrowRight style={{ width: 13, height: 13 }} />
+      View all
     </a>
   );
 }

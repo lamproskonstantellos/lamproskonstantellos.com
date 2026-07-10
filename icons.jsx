@@ -13,16 +13,6 @@ const Icon = {
       <path d="M5 11L11 5" /><path d="M6 5h5v5" />
     </svg>
   ),
-  arrowRight: (p) => (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" {...p}>
-      <path d="M3 8h10" /><path d="M9 4l4 4-4 4" />
-    </svg>
-  ),
-  arrowLeft: (p) => (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" {...p}>
-      <path d="M13 8H3" /><path d="M7 4L3 8l4 4" />
-    </svg>
-  ),
   external: (p) => (
     <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" {...p}>
       <path d="M5 9L9 5" /><path d="M6 5h3v3" />

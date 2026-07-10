@@ -356,7 +356,7 @@ function NotFound({ navigate }) {
           href="/"
           onClick={(e) => handleAnchorClick(e, navigate, { page: "home" })}
         >
-          Back to home
+          Back
         </a>
         <a
           className="btn btn-ghost"

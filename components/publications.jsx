@@ -1,4 +1,4 @@
-/* global React, Icon, getRecentPublications, LIMITS,
+/* global React, getRecentPublications, LIMITS,
    routeToPath, handleAnchorClick, PUB_FILTERS, groupPublicationsByYear,
    SectionHeader, ViewAllLink, renderInline */
 
@@ -41,7 +41,6 @@ function PubLinks({ links }) {
       {links.map((l, j) => (
         <a key={j} href={l.href} target="_blank" rel="noopener noreferrer">
           {l.label}
-          <Icon.external style={{ width: 12, height: 12 }} />
         </a>
       ))}
     </div>
@@ -120,7 +119,7 @@ function PublicationsListPage({ navigate }) {
         href={routeToPath(backRoute)}
         onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
       >
-        <Icon.arrowLeft style={{ width: 14, height: 14 }} /> <span className="link-marker">Back to Home</span>
+        Back
       </a>
       <header className="list-header">
         <h1>Publications</h1>
