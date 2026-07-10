@@ -1,4 +1,4 @@
-/* global React, getRecentPublications, LIMITS,
+/* global React, Icon, getRecentPublications, LIMITS,
    routeToPath, handleAnchorClick, PUB_FILTERS, groupPublicationsByYear,
    SectionHeader, ViewAllLink, renderInline */
 
@@ -41,6 +41,7 @@ function PubLinks({ links }) {
       {links.map((l, j) => (
         <a key={j} href={l.href} target="_blank" rel="noopener noreferrer">
           {l.label}
+          <Icon.external style={{ width: 12, height: 12 }} />
         </a>
       ))}
     </div>
