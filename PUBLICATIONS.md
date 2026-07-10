@@ -79,7 +79,7 @@ One optional field drives everything: **`type`**.
 | `year` | ✅ | string (`"2025"`) | Newest-first sorting and the `/publications` year-group label; homepage cards also show it on the meta line |
 | `title` | ✅ | string | The entry heading |
 | `authors` | ✅ | string | Author line; `**…**` renders bold (use it on your own name); keep the `(YYYY)` suffix |
-| `links` | ✅ | `{ label, href }[]` | Solid navy chip links; each opens in a new tab |
+| `links` | ✅ | `{ label, href }[]` | Quiet text links with the ↗ mark; each opens in a new tab |
 | `location` | optional | string | Second token of the meta line (`City, Country`) |
 | `type` | optional | string | Navy badge text **and** the peer-reviewed / theses-reports split (see above) |
 | `award` | optional | string | Gold badge text (e.g. an award); use instead of `type`, never together |
