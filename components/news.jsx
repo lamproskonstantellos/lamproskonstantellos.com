@@ -452,12 +452,15 @@ function Article({ slug, navigate }) {
       <h1>{article.title}</h1>
       {article.cover && (
         <div className={"article-cover" + (article.coverAlign === "top" ? " cover-align-top" : "")}>
+          {/* Eager + high priority: the cover is the page's LCP element and the
+              server preloads its AVIF sibling — the two must stay in step. */}
           <Picture
             src={asset(article.cover)}
             alt={article.title}
             width="1280"
             height="720"
             loading="eager"
+            fetchPriority="high"
           />
         </div>
       )}

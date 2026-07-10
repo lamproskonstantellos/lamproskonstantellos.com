@@ -38,9 +38,11 @@ function escapeHtml(s) {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 // sitemap.xml — home, /news and /publications, then one <url> per article in
-// the order given. The index pages share the most-recent article date as their
-// lastmod so the value only changes when content actually changes.
-function buildSitemap({ articles, siteCfg }) {
+// the order given. Each index page's lastmod tracks ITS OWN content: /news the
+// newest article, /publications the newest publication year (as YYYY-01-01 —
+// publications carry no finer date), and / the later of the two, so a value
+// only changes when that page's content actually changes.
+function buildSitemap({ articles, siteCfg, publicationYears }) {
   const list = Array.isArray(articles) ? articles : [];
 
   const articleDates = list
@@ -50,10 +52,19 @@ function buildSitemap({ articles, siteCfg }) {
     .reverse();
   const latestContentDate = articleDates[0] || "2026-01-01";
 
+  const years = (Array.isArray(publicationYears) ? publicationYears : [])
+    .filter(Number.isFinite);
+  const publicationsLastmod = years.length
+    ? `${Math.max(...years)}-01-01`
+    : latestContentDate;
+  // ISO dates compare correctly as strings.
+  const homeLastmod =
+    publicationsLastmod > latestContentDate ? publicationsLastmod : latestContentDate;
+
   const entries = [
-    { path: "/", lastmod: latestContentDate },
+    { path: "/", lastmod: homeLastmod },
     { path: "/news", lastmod: latestContentDate },
-    { path: "/publications", lastmod: latestContentDate },
+    { path: "/publications", lastmod: publicationsLastmod },
   ];
 
   for (const a of list) {

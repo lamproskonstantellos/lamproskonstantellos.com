@@ -24,6 +24,7 @@ const {
   renderHtml,
   discoverArticleSlugs,
   ARTICLES,
+  PUBLICATION_YEARS,
   ARTICLE_SCRIPTS,
   ASSET_MAP,
   SECURITY_HEADERS,
@@ -233,12 +234,19 @@ function buildStatic({ outDir = DEFAULT_OUT } = {}) {
 
   const slugs = discoverArticleSlugs();
 
-  // --- 1. Pre-render one HTML file per route to its directory-index path ----
+  // --- 1. Pre-render one HTML file per route -------------------------------
+  // FLAT files (news.html), not directory indexes (news/index.html): Cloudflare
+  // Pages serves foo.html at the slash-less /foo and 308-redirects /foo/ there,
+  // while foo/index.html canonicalizes the other way (/foo → /foo/). Every
+  // canonical tag, og:url, sitemap <loc> and feed link uses the slash-less
+  // form, so the flat layout is the one whose served URLs match the metadata
+  // without a redirect hop. Article asset folders (news/<slug>/) coexist with
+  // the news/<slug>.html pages.
   const htmlRoutes = [
     { pathname: "/", out: "index.html" },
-    { pathname: "/news", out: "news/index.html" },
-    { pathname: "/publications", out: "publications/index.html" },
-    ...slugs.map((slug) => ({ pathname: `/news/${slug}`, out: `news/${slug}/index.html` })),
+    { pathname: "/news", out: "news.html" },
+    { pathname: "/publications", out: "publications.html" },
+    ...slugs.map((slug) => ({ pathname: `/news/${slug}`, out: `news/${slug}.html` })),
   ];
   for (const route of htmlRoutes) {
     writeFile(outDir, route.out, render(route.pathname));
@@ -247,7 +255,7 @@ function buildStatic({ outDir = DEFAULT_OUT } = {}) {
   writeFile(outDir, "404.html", render(NOT_FOUND_ROUTE));
 
   // --- 2. Feeds (same builders the server uses) ----------------------------
-  writeFile(outDir, "sitemap.xml", buildSitemap({ articles: ARTICLES, siteCfg: SITE_CFG }));
+  writeFile(outDir, "sitemap.xml", buildSitemap({ articles: ARTICLES, siteCfg: SITE_CFG, publicationYears: PUBLICATION_YEARS }));
   writeFile(outDir, "rss.xml", buildRss({ articles: ARTICLES, siteCfg: SITE_CFG }));
   writeFile(outDir, "feed.json", buildFeed({ articles: ARTICLES, siteCfg: SITE_CFG }));
 

@@ -37,12 +37,13 @@ before(async () => {
 });
 after(async () => { await stop(); });
 
-// Every HTML route → its directory-index file in the build.
+// Every HTML route → its flat build file (foo.html, so Cloudflare Pages serves
+// it at the slash-less /foo that the canonical/sitemap/feed URLs use).
 const HTML_ROUTES = [
   ["/", "index.html"],
-  ["/news", "news/index.html"],
-  ["/publications", "publications/index.html"],
-  ...SLUGS.map((s) => [`/news/${s}`, `news/${s}/index.html`]),
+  ["/news", "news.html"],
+  ["/publications", "publications.html"],
+  ...SLUGS.map((s) => [`/news/${s}`, `news/${s}.html`]),
 ];
 
 for (const [routePath, buildRel] of HTML_ROUTES) {

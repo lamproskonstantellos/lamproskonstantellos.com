@@ -196,6 +196,27 @@ function loadArticleMeta(slug) {
   }
 }
 
+// Publications live in data.js as a browser global (PROFILE.publications). The
+// sitemap needs their newest year so /publications' lastmod tracks that page's
+// own content instead of the news archive. Same plain-Function shim — and the
+// same repository trust boundary — as loadArticleMeta above; a broken data.js
+// degrades to an empty list (the sitemap falls back to the article dates)
+// rather than crashing the server.
+function loadPublicationYears() {
+  try {
+    const code = fs.readFileSync(path.join(PUBLIC_DIR, "data.js"), "utf8");
+    const fakeWindow = { SITE: SITE_CFG };
+    new Function("window", code)(fakeWindow);
+    const pubs = fakeWindow.PROFILE && Array.isArray(fakeWindow.PROFILE.publications)
+      ? fakeWindow.PROFILE.publications
+      : [];
+    return pubs.map((p) => Number(p.year)).filter(Number.isFinite);
+  } catch (e) {
+    console.error(`Could not load publications from data.js — ${e.message}`);
+    return [];
+  }
+}
+
 // Serialize JSON-LD for embedding inside <script type="application/ld+json">.
 // Escaping "<" keeps a stray "</script>" in article text from closing the tag;
 // U+2028/U+2029 are valid in JSON but are line terminators in a <script>, so
@@ -248,6 +269,7 @@ for (const slug of ARTICLE_SLUGS) {
 // sitemap/rss/feed bytes are produced, so the live server and the build cannot
 // diverge).
 const ARTICLES = ARTICLE_SLUGS.map((slug) => ARTICLE_META[slug]).filter(Boolean);
+const PUBLICATION_YEARS = loadPublicationYears();
 const ARTICLE_SCRIPTS = ARTICLE_SLUGS
   .map((slug) => `<script src="/news/${slug}/article.js"></script>`)
   .join("\n");
@@ -430,6 +452,13 @@ function computePageMeta(pathname) {
           "@context": "https://schema.org",
           "@graph": [breadcrumbs, articleSchema],
         },
+        // The cover is the article page's LCP element, and with an empty #root
+        // (client-side render) the browser cannot discover it until the whole
+        // script chain has run — preload the AVIF sibling the <Picture> source
+        // list resolves to, exactly like the home hero.
+        preloadImage: article.cover
+          ? `/${article.cover.replace(/\.(jpe?g|png)$/i, ".avif")}`
+          : undefined,
       };
     }
   }
@@ -915,7 +944,7 @@ const server = http.createServer((req, res) => {
     }
 
   if (urlPathname === "/sitemap.xml") {
-    const xml = buildSitemap({ articles: ARTICLES, siteCfg: SITE_CFG });
+    const xml = buildSitemap({ articles: ARTICLES, siteCfg: SITE_CFG, publicationYears: PUBLICATION_YEARS });
     // Compressed like every other text response (the body is deterministic per
     // process, so it is keyed by a stable name and compressed at most once).
     writeCompressed(req, res, {
@@ -1012,6 +1041,7 @@ module.exports = {
   // exact bytes the server serves by reusing this already-loaded state.
   DEPLOY_VERSION,
   ARTICLES,
+  PUBLICATION_YEARS,
   ARTICLE_SCRIPTS,
   ASSET_MAP,
   SITE_CFG,
