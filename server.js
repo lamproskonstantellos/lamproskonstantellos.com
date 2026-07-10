@@ -833,11 +833,15 @@ const SECURITY_HEADERS = {
   "Cross-Origin-Opener-Policy": "same-origin",
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self' https://plausible.io",
+    // Analytics origins: the Plausible script tag in index.html, plus the
+    // Cloudflare Web Analytics beacon (script from static.cloudflareinsights
+    // .com, RUM posts to cloudflareinsights.com) so enabling it from the
+    // Cloudflare Pages dashboard is not silently blocked by this CSP.
+    "script-src 'self' https://plausible.io https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     "img-src 'self' data:",
-    "connect-src 'self' https://plausible.io",
+    "connect-src 'self' https://plausible.io https://cloudflareinsights.com",
     "object-src 'none'",
     "base-uri 'self'",
     "frame-ancestors 'none'",

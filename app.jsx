@@ -1,6 +1,6 @@
 /* global React, ReactDOM, SITE, PROFILE, Icon, SectionHeader, Picture,
    parseRoute, routeToPath, pageTitle, getArticle, handleAnchorClick,
-   pickActiveSection, headlineJoiner,
+   pickActiveSection, headlineJoiner, copyTextToClipboard,
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
 
@@ -173,6 +173,11 @@ function Hero({ navigate }) {
           >
             View publications <Icon.arrowUR className="arrow" style={{ width: 14, height: 14 }} />
           </a>
+          {/* Plain browser navigation (no SPA handler): the PDF opens in the
+              tab like any document link. */}
+          <a className="btn btn-ghost" href={SITE.cvPath} target="_blank" rel="noopener noreferrer">
+            Download CV <Icon.download style={{ width: 14, height: 14 }} />
+          </a>
           <a
             className="btn btn-ghost"
             href="/#news"
@@ -207,6 +212,49 @@ function Hero({ navigate }) {
    CONTACT
    ============================================================ */
 
+// The email card carries a second action — copy the address — for the many
+// visitors without a configured mailto handler. The button cannot nest inside
+// the anchor (interactive-inside-interactive), so a wrapper positions it where
+// the other cards show their external-link mark.
+function EmailContactCard({ contact, BrandIcon, tint }) {
+  const [copied, setCopied] = React.useState(false);
+  const copyTimer = React.useRef(null);
+  React.useEffect(() => () => clearTimeout(copyTimer.current), []);
+
+  const copyEmail = () => {
+    copyTextToClipboard(contact.href.replace(/^mailto:/, "")).then((ok) => {
+      if (!ok) return;
+      setCopied(true);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 1800);
+    });
+  };
+
+  return (
+    <div className="contact-card-wrap">
+      <a className="contact-card" href={contact.href}>
+        <span className="ico-badge" style={{ background: tint }}>
+          <BrandIcon style={{ width: 22, height: 22 }} />
+        </span>
+        <span className="label">{contact.label}</span>
+      </a>
+      <button
+        type="button"
+        className={"contact-copy" + (copied ? " copied" : "")}
+        aria-label="Copy email address"
+        onClick={copyEmail}
+      >
+        {copied
+          ? <Icon.check style={{ width: 15, height: 15 }} />
+          : <Icon.copy style={{ width: 15, height: 15 }} />}
+      </button>
+      <span className="sr-only" aria-live="polite">
+        {copied ? "Email address copied to clipboard" : ""}
+      </span>
+    </div>
+  );
+}
+
 function Contact() {
   const map = {
     linkedin:     { I: Icon.brandLinkedin,     tint: "rgba(10,102,194,0.10)" },
@@ -224,12 +272,15 @@ function Contact() {
       <div className="contact-grid">
         {PROFILE.contact.map((c) => {
           const { I, tint } = map[c.id];
+          if (c.id === "email") {
+            return <EmailContactCard key={c.id} contact={c} BrandIcon={I} tint={tint} />;
+          }
           return (
             <a
               className="contact-card"
               key={c.id}
               href={c.href}
-              target={c.href.startsWith("mailto") ? undefined : "_blank"}
+              target="_blank"
               rel="noopener noreferrer"
             >
               <span className="ico-badge" style={{ background: tint }}>
@@ -311,6 +362,9 @@ function Footer({ navigate }) {
                 {c.label}
               </a>
             ))}
+            {/* The feeds exist since day one but were only discoverable via
+                <link rel=alternate>; this makes them a visible destination. */}
+            <a href="/rss.xml">RSS</a>
           </nav>
         </div>
 

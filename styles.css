@@ -245,6 +245,10 @@ main {
   border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 500;
+  /* A button label never wraps: on narrow screens the flexed hero buttons
+     would otherwise break "Download CV" onto two lines and sit taller than
+     their row siblings. */
+  white-space: nowrap;
   /* Explicit property list (not `all`): `all` also animated the 2px
      :focus-visible outline in from 0, so rapid keyboard tabbing never showed
      a focus ring. Same reasoning on every former `transition: all` below. */
@@ -634,6 +638,24 @@ section.block {
   transition: color var(--transition);
 }
 .pub-links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+/* "Cite" sits at the end of the links row and copies an APA-style line; it
+   dresses exactly like the text links around it, flipping to a check +
+   "Copied!" for a moment after the copy. */
+.pub-cite {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  transition: color var(--transition);
+}
+.pub-cite:hover {
+  color: var(--accent-hover);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -1185,6 +1207,33 @@ section.block {
 }
 .contact-card:hover .ext { opacity: 1; transform: translate(2px, -2px); color: var(--accent); }
 
+/* The email card carries a copy-address button that cannot nest inside the
+   mailto anchor (interactive-inside-interactive), so a wrapper positions it
+   over the card's right edge — the spot the other cards use for their
+   external-link mark. The card gets right padding so its label never runs
+   under the button. */
+.contact-card-wrap { position: relative; }
+.contact-card-wrap .contact-card { padding-right: 56px; }
+.contact-copy {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  color: var(--muted-2);
+  transition: color var(--transition), background var(--transition);
+}
+.contact-copy:hover {
+  color: var(--accent);
+  background: rgba(31, 58, 138, 0.06);
+}
+.contact-copy.copied { color: var(--accent); }
+
 @media (max-width: 720px) {
   .contact-grid { grid-template-columns: repeat(2, 1fr); }
 }
@@ -1398,9 +1447,15 @@ section.block {
   .view-all,
   .back-link,
   .pub-links a,
+  .pub-cite,
   .pub-filter,
   .article-share a,
   .article-share button {
     min-height: 44px;
+  }
+  .contact-copy {
+    width: 44px;
+    height: 44px;
+    right: 8px;
   }
 }

@@ -1,5 +1,5 @@
 /* global React, Icon, Picture, SITE, getRecentNews, getArticle, LIMITS,
-   asset, routeToPath, handleAnchorClick, shareLinks,
+   asset, routeToPath, handleAnchorClick, shareLinks, copyTextToClipboard,
    renderInline, SectionHeader, ViewAllLink */
 
 /* ============================================================
@@ -261,28 +261,10 @@ function ArticleShare({ article }) {
     copyTimer.current = setTimeout(() => setCopied(false), 1800);
   };
 
-  // Legacy path for browsers without the async clipboard API (or where it is
-  // blocked): execCommand("copy") needs a selected element in the document.
-  const fallbackCopy = () => {
-    const ta = document.createElement("textarea");
-    ta.value = url;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    let ok = false;
-    try { ok = document.execCommand("copy"); } catch { ok = false; }
-    document.body.removeChild(ta);
-    if (ok) markCopied();
-  };
-
+  // Clipboard write (async API + execCommand fallback) lives in shared.jsx —
+  // the same helper the publication Cite button and the contact email use.
   const copyUrl = () => {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(markCopied, fallbackCopy);
-    } else {
-      fallbackCopy();
-    }
+    copyTextToClipboard(url).then((ok) => { if (ok) markCopied(); });
   };
 
   const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;

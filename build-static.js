@@ -57,6 +57,8 @@ const ROOT_PLAIN_FILES = [
   "robots.txt",
   "favicon.ico",
   "favicon.svg",
+  // The hero's "Download CV" target (site.config.js cvPath).
+  "lampros-konstantellos-cv.pdf",
 ];
 
 const ROOT_IMAGE_BASES = [

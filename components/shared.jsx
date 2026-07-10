@@ -6,6 +6,9 @@
                     so they resolve from site root regardless of
                     the current SPA URL (e.g. /news/<slug>)
    - renderInline:  inline **bold** parser for body paragraphs
+   - copyTextToClipboard: one clipboard write for every copy
+                    control (article share, publication cite,
+                    contact email)
    - SectionHeader: <h2> + optional right-aligned action
    - ViewAllLink:   "View all" pill CTA
    (routeToPath now lives in routes.js, shared with the server.)
@@ -26,6 +29,30 @@ function handleAnchorClick(e, navigate, route, opts) {
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   e.preventDefault();
   navigate(route, opts);
+}
+
+// Write `text` to the clipboard, resolving true on success: the async
+// clipboard API first, then the legacy execCommand("copy") textarea path for
+// browsers where the API is missing or blocked (it needs a selected element
+// in the document).
+function copyTextToClipboard(text) {
+  const fallback = () => {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).then(() => true, () => fallback());
+  }
+  return Promise.resolve(fallback());
 }
 
 function renderInline(text) {
@@ -56,6 +83,6 @@ function ViewAllLink({ href, onClick }) {
 }
 
 Object.assign(window, {
-  asset, handleAnchorClick, renderInline,
+  asset, handleAnchorClick, renderInline, copyTextToClipboard,
   SectionHeader, ViewAllLink,
 });
