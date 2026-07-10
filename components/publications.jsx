@@ -118,6 +118,7 @@ function PublicationsListPage({ navigate }) {
       <a
         className="back-link"
         href={routeToPath(backRoute)}
+        aria-label="Back to home"
         onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
       >
         Back

@@ -20,8 +20,10 @@ function NewsCard({ article, navigate, from, headingLevel = "h3" }) {
       onClick={(e) => handleAnchorClick(e, navigate, route, { from })}
     >
       <div className={"cover" + (article.coverAlign === "top" ? " cover-align-top" : "")}>
+        {/* alt="" — the card is ONE link whose accessible name is the visible
+            title below; a title-alt here would announce it twice. */}
         {article.cover
-          ? <Picture src={asset(article.cover)} alt={article.title} width="640" height="400" />
+          ? <Picture src={asset(article.cover)} alt="" width="640" height="400" />
           : <div className="ph">[ news/{article.slug}/cover.jpg ]</div>}
       </div>
       <div className="body">
@@ -74,6 +76,7 @@ function NewsListPage({ navigate }) {
       <a
         className="back-link"
         href={routeToPath(backRoute)}
+        aria-label="Back to home"
         onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
       >
         Back
@@ -231,6 +234,14 @@ function Lightbox({ photos, index, onIndex, onClose }) {
       {multi && (
         <div className="lightbox-counter" aria-hidden="true">{index + 1} / {count}</div>
       )}
+      {/* Paging keeps focus on the Prev/Next button, so nothing re-announces on
+          its own: this live region speaks each photo change. (The visible
+          counter above is aria-hidden — this is its accessible counterpart.) */}
+      {multi && (
+        <span className="sr-only" aria-live="polite">
+          {`Photo ${index + 1} of ${count}${current.alt ? `: ${current.alt}` : ""}`}
+        </span>
+      )}
     </div>
   );
 }
@@ -320,8 +331,10 @@ function Article({ slug, navigate }) {
   // (push/link only), so Back/Forward keeps the browser's native scroll
   // restoration instead of being yanked to the top on every popstate remount.
 
-  // The label is always "Back"; the destination still depends on where the
-  // reader came from (home News section vs the /news list).
+  // The visible label is always "Back"; the destination still depends on where
+  // the reader came from (home News section vs the /news list), so the
+  // aria-label names it — identically-labelled links with different targets
+  // are ambiguous in a screen reader's link list.
   const from = window.history.state?.from;
   const backRoute = from === "home"
     ? { page: "home", section: "news" }
@@ -330,6 +343,7 @@ function Article({ slug, navigate }) {
     <a
       className="back-link"
       href={routeToPath(backRoute)}
+      aria-label={from === "home" ? "Back to home" : "Back to news"}
       onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
     >
       Back

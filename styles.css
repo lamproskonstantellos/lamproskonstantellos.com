@@ -373,7 +373,8 @@ section.block {
 .view-all {
   display: inline-flex;
   align-items: center;
-  font-size: 13px;
+  /* 13.5px matches .back-link exactly — the two pills share one look. */
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--accent);
   background: var(--surface);
@@ -763,8 +764,8 @@ section.block {
   flex: 1;
 }
 /* "Read article" is a plain underlined label: a soft accent-tinted rule that
-   lifts to full ink when the card is hovered. align-self keeps the box hugging
-   the text inside the card's column layout. */
+   lifts to the full accent color when the card is hovered. align-self keeps
+   the box hugging the text inside the card's column layout. */
 .news-card .read {
   margin-top: 14px;
   align-self: flex-start;
@@ -1301,6 +1302,10 @@ section.block {
   transition: color var(--transition), transform var(--transition);
 }
 .footer-col a:hover { color: #fff; transform: translateX(2px); }
+/* The global accent-colored focus outline is invisible against the solid navy
+   footer (#1f3a8a on #0a1f44 ≈ 1.6:1), so footer links focus in white
+   (16.3:1) — the same override the lightbox controls carry. */
+.site-footer a:focus-visible { outline-color: #fff; }
 .footer-bottom {
   display: flex;
   flex-wrap: wrap;
@@ -1382,8 +1387,14 @@ section.block {
 /* Touch devices: give the smaller inline controls a comfortable >=44px tap
    target. Scoped to coarse pointers so the desktop (mouse) layout is unchanged. */
 @media (pointer: coarse) {
-  .nav a { padding-top: 11px; padding-bottom: 11px; }
-  .footer-col a { padding-top: 10px; padding-bottom: 10px; }
+  /* min-height (not padding alone) so the boxes truly reach 44px: the old
+     padding-based values landed at 42-43px with these font sizes. */
+  .nav a,
+  .footer-col a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
   .view-all,
   .back-link,
   .pub-links a,

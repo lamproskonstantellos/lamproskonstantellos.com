@@ -525,16 +525,26 @@ function App() {
 
   // On first load, honor a #section hash (e.g. /#publications shared as a link).
   // parseRoute ignores the hash, so this is the only place it gets handled.
+  // The jump is INSTANT, not smooth: a smooth scroll here races the images
+  // still loading above the target, which shift the layout mid-animation and
+  // strand the heading under the sticky header. Like restoreScroll above, the
+  // target offset is re-measured across a few frames so late image loads can't
+  // leave the section misaligned.
   useEffect(() => {
     const id = window.location.hash.replace(/^#/, "");
     if (!id) return;
-    requestAnimationFrame(() => {
+    let tries = 0;
+    let raf = 0;
+    const attempt = () => {
       const el = document.getElementById(id);
-      if (el) {
-        const y = el.getBoundingClientRect().top + window.scrollY - headerOffset();
-        window.scrollTo({ top: y, behavior: scrollBehavior() });
-      }
-    });
+      if (!el) return;
+      const y = Math.round(el.getBoundingClientRect().top + window.scrollY - headerOffset());
+      if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y);
+      tries += 1;
+      if (tries < 30) raf = requestAnimationFrame(attempt);
+    };
+    raf = requestAnimationFrame(attempt);
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   // Expose the live header height to CSS as --header-offset so native fragment
