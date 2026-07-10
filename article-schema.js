@@ -108,6 +108,8 @@
     module.exports = api;
   }
   if (typeof window !== "undefined") {
-    Object.assign(window, { ArticleSchema: api, validateArticle, compareByDateDesc, plainBody });
+    // The same three names module.exports carries — every browser consumer
+    // (data.js, the components) uses these bare globals.
+    Object.assign(window, { validateArticle, compareByDateDesc, plainBody });
   }
 })();

@@ -1,5 +1,5 @@
 /* global React, Icon, Picture, SITE, getRecentNews, getArticle, LIMITS,
-   asset, routeToPath, handleAnchorClick, shareLinks,
+   asset, routeToPath, handleAnchorClick, shareLinks, copyTextToClipboard,
    renderInline, SectionHeader, ViewAllLink */
 
 /* ============================================================
@@ -20,8 +20,10 @@ function NewsCard({ article, navigate, from, headingLevel = "h3" }) {
       onClick={(e) => handleAnchorClick(e, navigate, route, { from })}
     >
       <div className={"cover" + (article.coverAlign === "top" ? " cover-align-top" : "")}>
+        {/* alt="" — the card is ONE link whose accessible name is the visible
+            title below; a title-alt here would announce it twice. */}
         {article.cover
-          ? <Picture src={asset(article.cover)} alt={article.title} width="640" height="400" />
+          ? <Picture src={asset(article.cover)} alt="" width="640" height="400" />
           : <div className="ph">[ news/{article.slug}/cover.jpg ]</div>}
       </div>
       <div className="body">
@@ -74,6 +76,7 @@ function NewsListPage({ navigate }) {
       <a
         className="back-link"
         href={routeToPath(backRoute)}
+        aria-label="Back to home"
         onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
       >
         Back
@@ -231,6 +234,14 @@ function Lightbox({ photos, index, onIndex, onClose }) {
       {multi && (
         <div className="lightbox-counter" aria-hidden="true">{index + 1} / {count}</div>
       )}
+      {/* Paging keeps focus on the Prev/Next button, so nothing re-announces on
+          its own: this live region speaks each photo change. (The visible
+          counter above is aria-hidden — this is its accessible counterpart.) */}
+      {multi && (
+        <span className="sr-only" aria-live="polite">
+          {`Photo ${index + 1} of ${count}${current.alt ? `: ${current.alt}` : ""}`}
+        </span>
+      )}
     </div>
   );
 }
@@ -250,28 +261,10 @@ function ArticleShare({ article }) {
     copyTimer.current = setTimeout(() => setCopied(false), 1800);
   };
 
-  // Legacy path for browsers without the async clipboard API (or where it is
-  // blocked): execCommand("copy") needs a selected element in the document.
-  const fallbackCopy = () => {
-    const ta = document.createElement("textarea");
-    ta.value = url;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    let ok = false;
-    try { ok = document.execCommand("copy"); } catch { ok = false; }
-    document.body.removeChild(ta);
-    if (ok) markCopied();
-  };
-
+  // Clipboard write (async API + execCommand fallback) lives in shared.jsx —
+  // the same helper the publication Cite button and the contact email use.
   const copyUrl = () => {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(markCopied, fallbackCopy);
-    } else {
-      fallbackCopy();
-    }
+    copyTextToClipboard(url).then((ok) => { if (ok) markCopied(); });
   };
 
   const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
@@ -320,8 +313,10 @@ function Article({ slug, navigate }) {
   // (push/link only), so Back/Forward keeps the browser's native scroll
   // restoration instead of being yanked to the top on every popstate remount.
 
-  // The label is always "Back"; the destination still depends on where the
-  // reader came from (home News section vs the /news list).
+  // The visible label is always "Back"; the destination still depends on where
+  // the reader came from (home News section vs the /news list), so the
+  // aria-label names it — identically-labelled links with different targets
+  // are ambiguous in a screen reader's link list.
   const from = window.history.state?.from;
   const backRoute = from === "home"
     ? { page: "home", section: "news" }
@@ -330,6 +325,7 @@ function Article({ slug, navigate }) {
     <a
       className="back-link"
       href={routeToPath(backRoute)}
+      aria-label={from === "home" ? "Back to home" : "Back to news"}
       onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
     >
       Back
@@ -438,12 +434,15 @@ function Article({ slug, navigate }) {
       <h1>{article.title}</h1>
       {article.cover && (
         <div className={"article-cover" + (article.coverAlign === "top" ? " cover-align-top" : "")}>
+          {/* Eager + high priority: the cover is the page's LCP element and the
+              server preloads its AVIF sibling — the two must stay in step. */}
           <Picture
             src={asset(article.cover)}
             alt={article.title}
             width="1280"
             height="720"
             loading="eager"
+            fetchPriority="high"
           />
         </div>
       )}

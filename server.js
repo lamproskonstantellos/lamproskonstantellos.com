@@ -196,6 +196,27 @@ function loadArticleMeta(slug) {
   }
 }
 
+// Publications live in data.js as a browser global (PROFILE.publications). The
+// sitemap needs their newest year so /publications' lastmod tracks that page's
+// own content instead of the news archive. Same plain-Function shim — and the
+// same repository trust boundary — as loadArticleMeta above; a broken data.js
+// degrades to an empty list (the sitemap falls back to the article dates)
+// rather than crashing the server.
+function loadPublicationYears() {
+  try {
+    const code = fs.readFileSync(path.join(PUBLIC_DIR, "data.js"), "utf8");
+    const fakeWindow = { SITE: SITE_CFG };
+    new Function("window", code)(fakeWindow);
+    const pubs = fakeWindow.PROFILE && Array.isArray(fakeWindow.PROFILE.publications)
+      ? fakeWindow.PROFILE.publications
+      : [];
+    return pubs.map((p) => Number(p.year)).filter(Number.isFinite);
+  } catch (e) {
+    console.error(`Could not load publications from data.js — ${e.message}`);
+    return [];
+  }
+}
+
 // Serialize JSON-LD for embedding inside <script type="application/ld+json">.
 // Escaping "<" keeps a stray "</script>" in article text from closing the tag;
 // U+2028/U+2029 are valid in JSON but are line terminators in a <script>, so
@@ -248,10 +269,38 @@ for (const slug of ARTICLE_SLUGS) {
 // sitemap/rss/feed bytes are produced, so the live server and the build cannot
 // diverge).
 const ARTICLES = ARTICLE_SLUGS.map((slug) => ARTICLE_META[slug]).filter(Boolean);
+const PUBLICATION_YEARS = loadPublicationYears();
 const ARTICLE_SCRIPTS = ARTICLE_SLUGS
   .map((slug) => `<script src="/news/${slug}/article.js"></script>`)
   .join("\n");
 const ASSET_MAP = loadAssetMap();
+
+// Live view of the asset map for the REQUEST path: re-read whenever
+// dist/manifest.json changes, so the local `npm run watch` workflow serves
+// fresh bundles on the next refresh without a server restart (README promises
+// exactly that). The rendered-HTML compression cache is dropped on a change —
+// the cached bytes embed the old hashed names. In production every deploy is
+// a fresh process and the mtime never changes, so this costs one fs.stat per
+// HTML render. The exported ASSET_MAP snapshot (used by build-static.js, one
+// fresh process per build) is unaffected.
+let liveAssetMap = ASSET_MAP;
+let liveAssetMapMtime = assetManifestMtime();
+function assetManifestMtime() {
+  try {
+    return fs.statSync(path.join(PUBLIC_DIR, "dist", "manifest.json")).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+function currentAssetMap() {
+  const mtime = assetManifestMtime();
+  if (mtime !== liveAssetMapMtime) {
+    liveAssetMapMtime = mtime;
+    liveAssetMap = loadAssetMap();
+    COMPRESSION_CACHE.clear();
+  }
+  return liveAssetMap;
+}
 
 function escapeHtml(s) {
   return String(s)
@@ -430,6 +479,13 @@ function computePageMeta(pathname) {
           "@context": "https://schema.org",
           "@graph": [breadcrumbs, articleSchema],
         },
+        // The cover is the article page's LCP element, and with an empty #root
+        // (client-side render) the browser cannot discover it until the whole
+        // script chain has run — preload the AVIF sibling the <Picture> source
+        // list resolves to, exactly like the home hero.
+        preloadImage: article.cover
+          ? `/${article.cover.replace(/\.(jpe?g|png)$/i, ".avif")}`
+          : undefined,
       };
     }
   }
@@ -664,7 +720,7 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
     const versioned = renderHtml(html, pathname, {
       deployVersion: DEPLOY_VERSION,
       articleScripts: ARTICLE_SCRIPTS,
-      assetMap: ASSET_MAP,
+      assetMap: currentAssetMap(),
     });
     const contentType = "text/html; charset=utf-8";
     // The rendered HTML for a given path is deterministic within a process, so
@@ -777,11 +833,15 @@ const SECURITY_HEADERS = {
   "Cross-Origin-Opener-Policy": "same-origin",
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self' https://plausible.io",
+    // Analytics origins: the Plausible script tag in index.html, plus the
+    // Cloudflare Web Analytics beacon (script from static.cloudflareinsights
+    // .com, RUM posts to cloudflareinsights.com) so enabling it from the
+    // Cloudflare Pages dashboard is not silently blocked by this CSP.
+    "script-src 'self' https://plausible.io https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     "img-src 'self' data:",
-    "connect-src 'self' https://plausible.io",
+    "connect-src 'self' https://plausible.io https://cloudflareinsights.com",
     "object-src 'none'",
     "base-uri 'self'",
     "frame-ancestors 'none'",
@@ -915,7 +975,7 @@ const server = http.createServer((req, res) => {
     }
 
   if (urlPathname === "/sitemap.xml") {
-    const xml = buildSitemap({ articles: ARTICLES, siteCfg: SITE_CFG });
+    const xml = buildSitemap({ articles: ARTICLES, siteCfg: SITE_CFG, publicationYears: PUBLICATION_YEARS });
     // Compressed like every other text response (the body is deterministic per
     // process, so it is keyed by a stable name and compressed at most once).
     writeCompressed(req, res, {
@@ -1012,6 +1072,7 @@ module.exports = {
   // exact bytes the server serves by reusing this already-loaded state.
   DEPLOY_VERSION,
   ARTICLES,
+  PUBLICATION_YEARS,
   ARTICLE_SCRIPTS,
   ASSET_MAP,
   SITE_CFG,

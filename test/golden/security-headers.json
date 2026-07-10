@@ -5,5 +5,5 @@
   "strict-transport-security": "max-age=31536000; includeSubDomains",
   "permissions-policy": "camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=()",
   "cross-origin-opener-policy": "same-origin",
-  "content-security-policy": "default-src 'self'; script-src 'self' https://plausible.io; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://plausible.io; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'"
+  "content-security-policy": "default-src 'self'; script-src 'self' https://plausible.io https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://plausible.io https://cloudflareinsights.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'"
 }

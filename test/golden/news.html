@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/site.webmanifest" />
 <meta name="theme-color" content="#0a1f44" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1424" />
 <meta property="og:site_name" content="Lampros Konstantellos" />
 <meta name="application-name" content="Lampros Konstantellos" />
 
@@ -55,17 +56,13 @@
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <!-- Fallback for clients that do not run JavaScript: the visible page is
      rendered client-side, so without this a JS-off visitor sees a blank body.
-     Kept identity-free (the name lives only in site.config.js) - links onward
-     to the server-rendered routes and feeds. -->
+     Kept identity-free (the name lives only in site.config.js). Only the
+     feeds are promised — the HTML routes render empty without JavaScript. -->
 <noscript>
   <div class="noscript-note">
-    <p>This site needs JavaScript for the interactive experience. You can still browse:</p>
-    <p>
-      <a href="/news">News</a> &middot;
-      <a href="/publications">Publications</a> &middot;
-      <a href="/rss.xml">RSS feed</a> &middot;
-      <a href="/feed.json">JSON feed</a>
-    </p>
+    <p>This site needs JavaScript to display its pages. Without it, the news
+    articles are still available through the
+    <a href="/rss.xml">RSS feed</a> or the <a href="/feed.json">JSON feed</a>.</p>
   </div>
 </noscript>
 <div id="root"></div>

@@ -48,9 +48,11 @@ license, which governs that material and is not superseded by this notice:
     License. The original license headers are retained in those files and
     govern their use.
 
-Fonts (Inter, JetBrains Mono) are loaded at runtime from the Google Fonts
-CDN under the SIL Open Font License and are not redistributed in this
-repository.
+The Inter typeface, Copyright (c) The Inter Project Authors, is
+redistributed in this repository as self-hosted, subsetted woff2 files
+(vendor/fonts/inter-latin.woff2 and vendor/fonts/inter-latin-ext.woff2)
+under the SIL Open Font License 1.1 (https://openfontlicense.org/), which
+governs that material.
 
 Third-party brand names, logos, and trademarks reproduced as SVG icons in
 icons.jsx (including LinkedIn, Google Scholar, IEEE, ORCID, Zenodo,

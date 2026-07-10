@@ -1,6 +1,6 @@
 /* global React, Icon, getRecentPublications, LIMITS,
    routeToPath, handleAnchorClick, PUB_FILTERS, groupPublicationsByYear,
-   SectionHeader, ViewAllLink, renderInline */
+   SectionHeader, ViewAllLink, renderInline, copyTextToClipboard */
 
 /* ============================================================
    PUBLICATIONS
@@ -34,7 +34,49 @@ function PubMetaRow({ pub, showYear = true }) {
   );
 }
 
-function PubLinks({ links }) {
+// "Cite" copies an APA-style line assembled from the same fields the entry
+// renders: the authors string already carries the "(YYYY)" suffix, so
+// appending title and venue/location completes the reference. The ** emphasis
+// markers are stripped for plain text.
+function CiteButton({ pub }) {
+  const [copied, setCopied] = React.useState(false);
+  const copyTimer = React.useRef(null);
+  React.useEffect(() => () => clearTimeout(copyTimer.current), []);
+
+  const citation =
+    `${pub.authors.replace(/\*\*/g, "")}. ${pub.title}. ` +
+    `${pub.venue}${pub.location ? `, ${pub.location}` : ""}.`;
+
+  const copyCitation = () => {
+    copyTextToClipboard(citation).then((ok) => {
+      if (!ok) return;
+      setCopied(true);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 1800);
+    });
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className={"pub-cite" + (copied ? " copied" : "")}
+        onClick={copyCitation}
+      >
+        {copied
+          ? <Icon.check style={{ width: 12, height: 12 }} />
+          : <Icon.copy style={{ width: 12, height: 12 }} />}
+        {copied ? "Copied!" : "Cite"}
+      </button>
+      <span className="sr-only" aria-live="polite">
+        {copied ? "Citation copied to clipboard" : ""}
+      </span>
+    </>
+  );
+}
+
+function PubLinks({ pub }) {
+  const links = pub.links;
   if (!links || links.length === 0) return null;
   return (
     <div className="pub-links">
@@ -44,6 +86,7 @@ function PubLinks({ links }) {
           <Icon.external style={{ width: 12, height: 12 }} />
         </a>
       ))}
+      <CiteButton pub={pub} />
     </div>
   );
 }
@@ -55,7 +98,7 @@ function PublicationCard({ pub }) {
       <h3 className="pub-title">{pub.title}</h3>
       <p className="pub-authors">{renderInline(pub.authors)}</p>
       {pub.description && <p className="pub-description">{pub.description}</p>}
-      <PubLinks links={pub.links} />
+      <PubLinks pub={pub} />
     </article>
   );
 }
@@ -95,7 +138,7 @@ function PublicationRow({ pub }) {
       <h3 className="pub-title">{pub.title}</h3>
       <p className="pub-authors">{renderInline(pub.authors)}</p>
       {pub.description && <p className="pub-description">{pub.description}</p>}
-      <PubLinks links={pub.links} />
+      <PubLinks pub={pub} />
     </article>
   );
 }
@@ -118,6 +161,7 @@ function PublicationsListPage({ navigate }) {
       <a
         className="back-link"
         href={routeToPath(backRoute)}
+        aria-label="Back to home"
         onClick={(e) => handleAnchorClick(e, navigate, backRoute)}
       >
         Back

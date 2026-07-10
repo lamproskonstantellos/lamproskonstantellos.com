@@ -16,6 +16,9 @@ const SITE = {
   // especially) skip oversized preview images — the JPEG is ~35 KB vs 733 KB.
   defaultImage: "/og-image.jpg",
   heroImage: "/lampros-konstantellos-picture.jpg",
+  // The CV PDF the hero's "Download CV" button opens; the static build copies
+  // the file because it is listed in build-static.js ROOT_PLAIN_FILES.
+  cvPath: "/lampros-konstantellos-cv.pdf",
   defaultDescription:
     "Exploring renewable energy, battery storage, grid flexibility, and electricity markets through engineering, modelling, and applied research.",
   socialLinks: [

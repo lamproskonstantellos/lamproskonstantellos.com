@@ -79,12 +79,46 @@ test("footer text (rgba on navy) meets WCAG AA", () => {
 });
 
 test("award badge text meets WCAG AA on its badge background", () => {
-  const block = CSS.match(/\.pub-award\s*\{[^}]*\}/s)[0];
-  const color = block.match(/color:\s*(#[0-9a-fA-F]{6})/)[1];
-  // The badge now carries a soft warm-cream fill; check the text against it.
-  const bg = block.match(/background:\s*(#[0-9a-fA-F]{6})/)[1];
-  const r = ratio(color, bg);
-  assert.ok(r >= 4.5, `award text is ${r.toFixed(2)}:1 on ${bg} (needs 4.5:1)`);
+  // The badge colors are theme tokens now; check the light pair here (the
+  // dark pair is covered by the dark-palette test below).
+  const r = ratio(cssVar("--award-ink"), cssVar("--award-bg"));
+  assert.ok(r >= 4.5, `award text is ${r.toFixed(2)}:1 (needs 4.5:1)`);
+});
+
+// ---- Dark theme: the token overrides must hold the same AA ratios ----------
+
+function darkVar(name) {
+  // The dark palette lives in the prefers-color-scheme block at the end of
+  // the stylesheet; scope the lookup there so the light :root values (which
+  // appear first) don't shadow it.
+  const block = CSS.match(/@media \(prefers-color-scheme: dark\)\s*\{[\s\S]*$/)[0];
+  const m = block.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`));
+  assert.ok(m, `dark theme does not redefine ${name}`);
+  return m[1];
+}
+
+test("dark palette meets WCAG AA on its backgrounds", () => {
+  const DARK_BG = darkVar("--bg");
+  const DARK_SURFACE = darkVar("--surface");
+  const pairs = [
+    [darkVar("--ink"), DARK_BG],
+    [darkVar("--ink-soft"), DARK_BG],
+    [darkVar("--muted"), DARK_BG],
+    [darkVar("--muted"), DARK_SURFACE],
+    [darkVar("--muted-2"), DARK_BG],
+    [darkVar("--muted-2"), DARK_SURFACE],
+    [darkVar("--accent"), DARK_BG],
+    [darkVar("--accent"), DARK_SURFACE],
+    [darkVar("--award-ink"), darkVar("--award-bg")],
+    [darkVar("--solid-ink"), darkVar("--solid-bg")],
+  ];
+  for (const [fg, bg] of pairs) {
+    const r = ratio(fg, bg);
+    assert.ok(r >= 4.5, `dark ${fg} on ${bg} is ${r.toFixed(2)}:1 (needs 4.5:1)`);
+  }
+  // The /publications year label renders at 42px/700 — large-scale text (3:1).
+  const year = ratio(darkVar("--year-ink"), DARK_BG);
+  assert.ok(year >= 3, `dark year label is ${year.toFixed(2)}:1 (needs 3:1)`);
 });
 
 test("structural a11y guarantees", () => {

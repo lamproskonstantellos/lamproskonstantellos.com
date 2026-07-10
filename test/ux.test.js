@@ -144,20 +144,26 @@ test("Article wires the share row above the sources block, URL from config", () 
   assert.ok(sourcesAt !== -1 && shareAt < sourcesAt, "share row must sit above the sources block");
 });
 
-test("copy-link uses the clipboard API with an execCommand fallback and a live announcement", () => {
+test("copy controls share one clipboard helper (async API + execCommand fallback) with a live announcement", () => {
+  // The clipboard plumbing lives ONCE in shared.jsx; every copy control
+  // (article share, publication cite, contact email) goes through it.
+  const shared = fs.readFileSync(path.join(ROOT, "components/shared.jsx"), "utf8");
+  assert.ok(shared.includes("navigator.clipboard.writeText(text)"), "missing clipboard copy");
+  assert.ok(shared.includes('document.execCommand("copy")'), "missing legacy clipboard fallback");
   const src = fs.readFileSync(path.join(ROOT, "components/news.jsx"), "utf8");
-  assert.ok(src.includes("navigator.clipboard.writeText(url)"), "missing clipboard copy");
-  assert.ok(src.includes('document.execCommand("copy")'), "missing legacy clipboard fallback");
+  assert.ok(src.includes("copyTextToClipboard(url)"), "share row must use the shared clipboard helper");
   assert.match(src, /aria-live="polite"/, "copied state must be announced");
   assert.ok(src.includes("clearTimeout(copyTimer.current)"), "copied-state timer must be cleared on unmount");
 });
 
-test("compiled news bundle carries the share row + copy handler", () => {
+test("compiled bundles carry the share row + clipboard helper", () => {
+  const shared = compiledBundle("components/shared.jsx");
+  assert.ok(shared.includes("writeText"), "shared bundle missing clipboard copy");
+  assert.ok(shared.includes("execCommand"), "shared bundle missing clipboard fallback");
   const code = compiledBundle("components/news.jsx");
   assert.ok(code.includes("article-share"), "share row class missing from bundle");
   assert.ok(code.includes("shareLinks"), "bundle must call the shared shareLinks helper");
-  assert.ok(code.includes("writeText"), "bundle missing clipboard copy");
-  assert.ok(code.includes("execCommand"), "bundle missing clipboard fallback");
+  assert.ok(code.includes("copyTextToClipboard"), "bundle must call the shared clipboard helper");
   assert.ok(code.includes("aria-live"), "bundle missing the copied announcement");
 });
 

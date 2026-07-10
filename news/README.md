@@ -126,11 +126,12 @@ still works if you ever need it.
 ## Publishing checklist
 
 1. **Build:** `npm run build` — compiles the JSX and generates the `.webp`/`.avif`
-   siblings plus the article's `cover-og.jpg` social crop. Watch the log for an
-   error naming your slug: an invalid article is **skipped with a message**, not
-   shipped broken.
+   siblings plus the article's `cover-og.jpg` social crop.
 2. **Test:** `npm test` — the suite must stay green (it validates every
-   discovered article, the feeds, and the sitemap).
+   discovered article, the feeds, and the sitemap). Watch the log for a
+   `Skipping article "<slug>"` error naming your slug: an invalid article is
+   **skipped with a message**, not shipped broken (`npm start` prints the same
+   error on boot).
 3. **Preview:** `npm start` → open `http://localhost:3000/news/<slug>` and the
    homepage. Check the card, the cover crop, inline photos/captions, the
    gallery, the video (if any), and the share row.
