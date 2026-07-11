@@ -83,12 +83,45 @@
     return ", ";
   }
 
+  // ---- Responsive image variants --------------------------------------------
+  // scripts/optimize-images.js emits, per raster image, `<base>-<w>.webp/.avif`
+  // for each width here plus a full-size `<base>.webp/.avif` capped at
+  // IMAGE_MAX_WIDTH. imageSrcset() describes exactly that set, so the
+  // <Picture> sources, the server's preload imagesrcset, and the generated
+  // files can never drift. (The full variant's real width is
+  // min(original, IMAGE_MAX_WIDTH); using the cap as its descriptor only ever
+  // overstates the LARGEST candidate — at worst the browser picks the biggest
+  // file, which is what it fell back to before the variants existed.)
+  const IMAGE_WIDTH_VARIANTS = [480, 960];
+  const IMAGE_MAX_WIDTH = 2200;
+  function imageSrcset(src, ext) {
+    const base = String(src).replace(/\.(jpe?g|png)$/i, "");
+    if (base === src) return null; // not a raster the pipeline optimizes
+    return IMAGE_WIDTH_VARIANTS.map((w) => `${base}-${w}.${ext} ${w}w`)
+      .concat(`${base}.${ext} ${IMAGE_MAX_WIDTH}w`)
+      .join(", ");
+  }
+
+  // sizes attributes shared between the components and the server-side
+  // preloads (they MUST match, or the browser preloads one candidate and
+  // renders another — a double download).
+  // Hero portrait: the 96px mobile intro card below 820px, ~44vw of the
+  // desktop hero grid above it. Article cover: the full column width up to
+  // the 720px article measure.
+  const HERO_IMG_SIZES = "(max-width: 820px) 96px, 44vw";
+  const ARTICLE_COVER_SIZES = "(max-width: 776px) 100vw, 720px";
+
   const api = {
     shareLinks,
     pickActiveSection,
     PUB_FILTERS,
     groupPublicationsByYear,
     headlineJoiner,
+    imageSrcset,
+    IMAGE_WIDTH_VARIANTS,
+    IMAGE_MAX_WIDTH,
+    HERO_IMG_SIZES,
+    ARTICLE_COVER_SIZES,
   };
 
   if (typeof module !== "undefined" && module.exports) {

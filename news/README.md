@@ -25,13 +25,16 @@ defineArticle({
   cover: "news/my-article-slug/cover.jpg",   // optional: card + article cover
   coverAlign: "top",                         // optional: crop the cover + thumbnail from the top instead of centre
   photos: [                                  // optional: article photos — see "Photos" below
-    // Inline, right after body paragraph index 1, with a caption:
-    { src: "news/my-article-slug/photo-01.jpg", after: 1, caption: "What the photo shows." },
+    // Inline, right after body paragraph index 1, with a caption; width/height
+    // are the image's pixels so its space is reserved before it loads:
+    { src: "news/my-article-slug/photo-01.jpg", after: 1, width: 4032, height: 3024, caption: "What the photo shows." },
     // No `after` → end-of-article gallery. `align: "top"` crops a gallery photo from the top:
     { src: "news/my-article-slug/photo-02.jpg", align: "top" },
     "news/my-article-slug/photo-03.jpg",     // a bare string also works (end gallery, no caption)
   ],
   video: "news/my-article-slug/video.mp4",         // optional: self-hosted <video>
+  videoWidth: 1080,                                // optional (set both): the video's intrinsic
+  videoHeight: 1920,                               // pixels — reserves its frame while loading
   videoWebm: "news/my-article-slug/video.webm",    // optional: VP9/AV1 open-codec fallback source
   poster: "news/my-article-slug/video-cover.jpg",  // optional: still shown before the video plays
   captions: "news/my-article-slug/video.vtt",      // optional: WebVTT captions track for the video
@@ -68,12 +71,13 @@ defineArticle({
 | `location` | optional | string | Shown after the date |
 | `cover` | optional | path | Card thumbnail + article cover (`og:image` for the article) |
 | `coverAlign` | optional | `"top"` | Crop the cover + card thumbnail from the top instead of the centre |
-| `photos` | optional | (string \| `{ src, align?, after?, caption? }`)[] | Article photos — see [Photos](#photos) below |
+| `photos` | optional | (string \| `{ src, align?, after?, caption?, width?, height? }`)[] | Article photos — see [Photos](#photos) below |
 | `video` | optional | path | Self-hosted `<video>` embed (e.g. `news/<slug>/video.mp4`) |
 | `videoWebm` | optional | path | VP9/AV1 WebM fallback `<source>` for browsers without the H.264 decoder |
 | `poster` | optional | path | Still image shown before the video plays (no poster is shown if omitted) |
 | `captions` | optional | path | WebVTT (`.vtt`) captions track for the video; renders as a default `<track kind="captions">` (English) |
 | `videoAfter` | optional | number | Render the video inline right after this body paragraph index (default: after the body) |
+| `videoWidth` / `videoHeight` | optional | number | The video's intrinsic pixels (set both) — reserves its frame before the poster loads, so the page doesn't shift |
 | `keywords` | optional | string[] | JSON-LD `keywords` + JSON Feed `tags` |
 | `articleSection` | optional | string | JSON-LD `articleSection` |
 | `topics` | optional | `{ name, sameAs }`[] | JSON-LD `about` |
@@ -86,6 +90,7 @@ Each entry in `photos` is either a bare path string or an object `{ src, align?,
 - **`after`** (number) — render the photo **inline**, right after the `body` paragraph at that (0-based) index, instead of in the end gallery. Inline photos show whole, at their natural aspect ratio (portrait or landscape), capped in size.
 - **`caption`** (string) — a short caption shown beneath an inline photo (also used as its alt text).
 - **`align: "top"`** — for a **gallery** photo (one without `after`), crop from the top instead of the centre when the subject sits high in the frame. Gallery photos are shown in a 4:3 grid.
+- **`width` / `height`** (numbers, set both) — the photo's intrinsic pixel size. Worth adding on **inline** photos: the browser then reserves the figure's space before the image loads, so the article doesn't jump mid-read. (Gallery tiles are fixed 4:3 and don't need it.)
 - A **bare string** is shorthand for `{ src }` — an uncaptioned gallery photo.
 
 Photos without `after` collect into a gallery grid at the end of the article. Both inline and gallery photos open in a full-screen lightbox on click (or Enter/Space when focused).

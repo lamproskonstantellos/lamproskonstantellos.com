@@ -207,6 +207,21 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
   background: var(--accent);
   border-radius: 2px;
 }
+/* The CV chip: the one filled action among the nav's text links — solid navy
+   with light lettering (the same tokens as the primary button, so dark mode
+   flips it correctly), compact on purpose. */
+.nav .nav-cv {
+  color: var(--solid-ink);
+  background: var(--solid-bg);
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background var(--transition);
+}
+.nav .nav-cv:hover {
+  color: var(--solid-ink);
+  background: var(--solid-hover-bg);
+}
 
 /* ===== Layout shell ===== */
 main {
@@ -286,8 +301,6 @@ main {
 .btn-primary:hover { background: var(--solid-hover-bg); color: var(--solid-ink); transform: translateY(-1px); }
 .btn-ghost { border-color: var(--line); color: var(--ink); background: var(--surface); }
 .btn-ghost:hover { border-color: var(--ink); color: var(--ink); transform: translateY(-1px); }
-.btn .arrow { transition: transform var(--transition); }
-.btn:hover .arrow { transform: translate(3px, -3px); }
 
 .hero-photo {
   position: relative;
@@ -1436,12 +1449,15 @@ section.block {
   .brand-text { display: none; }
 }
 /* At ultra-narrow widths a classic scrollbar (or the reserved gutter) leaves
-   only ~305px of layout width at a 320px viewport, and the badge + four nav
-   links at 16px gaps overran it by 2px. Tighter gaps keep the header inside
-   the viewport with a few px to spare. */
+   only ~305px of layout width at a 320px viewport, and the logo + four nav
+   links + the CV chip overran it. Tighter gaps, slightly smaller nav type,
+   and a slimmer chip keep the header inside the viewport (measured at 320px
+   with zero horizontal overflow). */
 @media (max-width: 360px) {
   .site-header-inner { gap: 8px; }
-  .nav { gap: 10px; }
+  .nav { gap: 8px; }
+  .nav a { font-size: 12.5px; }
+  .nav .nav-cv { padding: 6px 9px; }
 }
 
 /* ===== Accessibility: respect user motion preferences ===== */
@@ -1467,14 +1483,25 @@ section.block {
     align-items: center;
     min-height: 44px;
   }
-  .view-all,
-  .back-link,
   .pub-links a,
   .pub-cite,
   .pub-filter,
   .article-share a,
   .article-share button {
     min-height: 44px;
+  }
+  /* The Back / View all pills keep their desktop height everywhere; the tap
+     target grows invisibly to >=44px through an absolute overlay instead
+     (the ~39px painted pill + 4px each side). */
+  .view-all,
+  .back-link {
+    position: relative;
+  }
+  .view-all::after,
+  .back-link::after {
+    content: "";
+    position: absolute;
+    inset: -4px 0;
   }
   .contact-copy {
     width: 44px;

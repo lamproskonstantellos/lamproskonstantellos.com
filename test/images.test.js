@@ -31,17 +31,47 @@ function pictureSources() {
   return srcs;
 }
 
-test("every Picture-referenced JPG/PNG has built .avif and .webp siblings", () => {
+test("every Picture-referenced JPG/PNG has built .avif and .webp siblings (full + width variants)", () => {
+  const { IMAGE_WIDTH_VARIANTS } = require("../ui-helpers.js");
   const missing = [];
   for (const src of pictureSources()) {
     if (!/\.(jpe?g|png)$/i.test(src)) continue;
     const base = src.replace(/\.(jpe?g|png)$/i, "");
     for (const ext of [".avif", ".webp"]) {
-      const p = path.join(ROOT, base + ext);
-      if (!fs.existsSync(p)) missing.push(base + ext);
+      // The full-size variant plus every width the srcset descriptors promise.
+      const suffixes = [""].concat(IMAGE_WIDTH_VARIANTS.map((w) => `-${w}`));
+      for (const suffix of suffixes) {
+        const p = path.join(ROOT, base + suffix + ext);
+        if (!fs.existsSync(p)) missing.push(base + suffix + ext);
+      }
     }
   }
   assert.deepEqual(missing, [], `missing optimized siblings: ${missing.join(", ")}`);
+});
+
+test("width variants are real files at their promised widths", () => {
+  const { IMAGE_WIDTH_VARIANTS } = require("../ui-helpers.js");
+  // Spot-check the hero portrait: each -<w> AVIF must decode to exactly w wide
+  // (the srcset descriptor is a promise, not a hint).
+  const base = SITE.heroImage.replace(/^\//, "").replace(/\.(jpe?g|png)$/i, "");
+  for (const w of IMAGE_WIDTH_VARIANTS) {
+    const p = path.join(ROOT, `${base}-${w}.avif`);
+    const buf = fs.readFileSync(p);
+    assert.equal(buf.slice(4, 12).toString("latin1"), "ftypavif", `${p} is not a valid AVIF`);
+    // ispe box: width/height as 32-bit BE right after the 4-byte version/flags.
+    const i = buf.indexOf(Buffer.from("ispe"));
+    assert.ok(i > 0, `${p} has no ispe box`);
+    assert.equal(buf.readUInt32BE(i + 8), w, `${p} is not ${w}px wide`);
+  }
+});
+
+test("the home preload's imagesrcset matches the shared imageSrcset helper", async () => {
+  const { imageSrcset, HERO_IMG_SIZES } = require("../ui-helpers.js");
+  const html = (await request(base, "/")).body.toString("utf8");
+  const m = html.match(/<link rel="preload" as="image"[^>]*imagesrcset="([^"]+)"[^>]*imagesizes="([^"]+)"/);
+  assert.ok(m, "home preload missing imagesrcset/imagesizes");
+  assert.equal(m[1], imageSrcset(SITE.heroImage, "avif"), "preload srcset drifted from imageSrcset()");
+  assert.equal(m[2], HERO_IMG_SIZES, "preload sizes drifted from HERO_IMG_SIZES");
 });
 
 test("preloaded hero is a real, smaller AVIF (LCP win)", () => {

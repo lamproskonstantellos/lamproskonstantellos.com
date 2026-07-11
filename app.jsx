@@ -1,6 +1,6 @@
 /* global React, ReactDOM, SITE, PROFILE, Icon, SectionHeader, Picture,
    parseRoute, routeToPath, pageTitle, getArticle, handleAnchorClick,
-   pickActiveSection, headlineJoiner, copyTextToClipboard,
+   pickActiveSection, headlineJoiner, copyTextToClipboard, HERO_IMG_SIZES,
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
 
@@ -122,6 +122,17 @@ function Header({ route, navigate, activeSection }) {
               </a>
             );
           })}
+          {/* The CV chip: the one filled action among the text links. Plain
+              browser navigation — the PDF opens like any document link. */}
+          <a
+            className="nav-cv"
+            href={SITE.cvPath}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Download CV (PDF)"
+          >
+            CV
+          </a>
         </nav>
       </div>
     </header>
@@ -145,7 +156,7 @@ function Hero({ navigate }) {
           <div className="hero-intro-photo">
             {/* Same (preloaded) asset as the big portrait, so this costs no
                 extra download; eager because it is the mobile LCP image. */}
-            <Picture src={SITE.heroImage} alt="" width="220" height="220" loading="eager" fetchPriority="high" />
+            <Picture src={SITE.heroImage} alt="" width="220" height="220" sizes={HERO_IMG_SIZES} loading="eager" fetchPriority="high" />
           </div>
           <div className="hero-intro-text">
             <span className="hero-intro-name">{PROFILE.name}</span>
@@ -171,12 +182,7 @@ function Hero({ navigate }) {
             href="/#publications"
             onClick={(e) => handleAnchorClick(e, navigate, { page: "home", section: "publications" })}
           >
-            View publications <Icon.arrowUR className="arrow" style={{ width: 14, height: 14 }} />
-          </a>
-          {/* Plain browser navigation (no SPA handler): the PDF opens in the
-              tab like any document link. */}
-          <a className="btn btn-ghost" href={SITE.cvPath} target="_blank" rel="noopener noreferrer">
-            Download CV <Icon.download style={{ width: 14, height: 14 }} />
+            View publications
           </a>
           <a
             className="btn btn-ghost"
@@ -195,11 +201,15 @@ function Hero({ navigate }) {
         </div>
       </div>
       <div className="hero-photo">
+        {/* sizes matches the server's preload imagesizes exactly (both come
+            from ui-helpers.HERO_IMG_SIZES) so the preloaded candidate is the
+            rendered one. */}
         <Picture
           src={SITE.heroImage}
           alt={PROFILE.name}
           width="720"
           height="900"
+          sizes={HERO_IMG_SIZES}
           loading="eager"
           fetchPriority="high"
         />

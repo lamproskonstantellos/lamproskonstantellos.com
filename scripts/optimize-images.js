@@ -12,6 +12,10 @@
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
+// Width variants + cap are shared with the browser's <Picture> srcset and the
+// server's preload (ui-helpers.imageSrcset) so the descriptors always match
+// the files this script writes.
+const { IMAGE_WIDTH_VARIANTS, IMAGE_MAX_WIDTH } = require("../ui-helpers.js");
 
 // Walking "." already covers news/ recursively.
 const SOURCE_DIRS = ["."];
@@ -26,8 +30,10 @@ const AVIF_QUALITY = 65;
 // to that cap turns multi-thousand-pixel phone-camera originals into a
 // fraction of the bytes with no visible loss anywhere they render (cards,
 // article covers, the lightbox). The raw original is untouched — it stays the
-// <img> fallback and the source of og:image dimensions.
-const MAX_VARIANT_SIZE = 2200;
+// <img> fallback and the source of og:image dimensions. On top of the full
+// variant, the IMAGE_WIDTH_VARIANTS widths give small slots (news cards,
+// phones) candidates a fraction of even that size.
+const MAX_VARIANT_SIZE = IMAGE_MAX_WIDTH;
 
 // Per-article social share crop. og:image wants a landscape ~1.91:1 card; the
 // raw covers are full-res and sometimes portrait/4:3, which social platforms
@@ -54,24 +60,34 @@ function* walk(dir) {
 async function optimize(srcPath) {
   const dir = path.dirname(srcPath);
   const base = path.basename(srcPath, path.extname(srcPath));
-  const webp = path.join(dir, base + ".webp");
-  const avif = path.join(dir, base + ".avif");
+  const out = (suffix, ext) => path.join(dir, base + suffix + ext);
+  const outputs = [["", ".webp"], ["", ".avif"]];
+  for (const w of IMAGE_WIDTH_VARIANTS) outputs.push([`-${w}`, ".webp"], [`-${w}`, ".avif"]);
 
   const srcMtime = fs.statSync(srcPath).mtimeMs;
   const fresh = (p) => fs.existsSync(p) && fs.statSync(p).mtimeMs >= srcMtime;
 
-  if (fresh(webp) && fresh(avif)) return false;
+  if (outputs.every(([suffix, ext]) => fresh(out(suffix, ext)))) return false;
 
   console.log(`Optimizing ${srcPath}`);
-  const resized = () =>
+  // Full-size variant: capped, never enlarged (its srcset descriptor may
+  // overstate a small original — see ui-helpers.imageSrcset).
+  const full = () =>
     sharp(srcPath).resize({
       width: MAX_VARIANT_SIZE,
       height: MAX_VARIANT_SIZE,
       fit: "inside",
       withoutEnlargement: true,
     });
-  await resized().webp({ quality: WEBP_QUALITY }).toFile(webp);
-  await resized().avif({ quality: AVIF_QUALITY }).toFile(avif);
+  await full().webp({ quality: WEBP_QUALITY }).toFile(out("", ".webp"));
+  await full().avif({ quality: AVIF_QUALITY }).toFile(out("", ".avif"));
+  // Width variants: exactly the promised width (a rare smaller-than-480px
+  // original is gently upscaled rather than shipping a lying descriptor).
+  for (const w of IMAGE_WIDTH_VARIANTS) {
+    const sized = () => sharp(srcPath).resize({ width: w });
+    await sized().webp({ quality: WEBP_QUALITY }).toFile(out(`-${w}`, ".webp"));
+    await sized().avif({ quality: AVIF_QUALITY }).toFile(out(`-${w}`, ".avif"));
+  }
   return true;
 }
 

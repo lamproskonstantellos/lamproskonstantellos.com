@@ -6,8 +6,10 @@
    page, sorted newest-first.
 
    Publications fields (full guide: PUBLICATIONS.md):
-     - venue, year, title, authors, links   (required)
-     - location, description, award, type   (optional)
+     - venue, year, title, authors, links       (required)
+     - location, description, award, type,
+       citation (IEEE reference for the Cite
+       button; auto-assembled when omitted)      (optional)
 
    News articles live in their own folders under news/<slug>/ as
    self-contained article.js files — see news/README.md.
@@ -21,10 +23,10 @@ const PROFILE = {
     // Each phrase is emphasized (accent color + highlight underline) on its
     // own; the joining commas / "and" / final period stay plain ink.
     headlineHighlights: ["renewable energy", "grid flexibility", "battery storage"],
-    sub: "Focused on applied energy system modelling, techno-economic assessment, and industry-driven research for PV, wind, storage, and flexible electricity systems.",
+    sub: "Applied energy system modelling, techno-economic assessment, and industry-driven research for PV, wind, storage, and flexible electricity systems.",
   },
   about: [
-    "Electrical & Computer Engineer working at the intersection of renewable energy, grid flexibility, battery storage, and energy markets. Focused on techno-economic assessment, feasibility studies, and investment-oriented analysis for PV, wind, BESS, and flexible electricity systems.",
+    "Electrical & Computer Engineer working at the intersection of renewable energy, grid flexibility, battery storage, and energy markets. The work centres on techno-economic assessment, feasibility studies, and investment-oriented analysis for PV, wind, BESS, and flexible electricity systems.",
     "Currently working as a Renewable Energy Consultant, supporting technical due diligence and feasibility work for energy projects across public- and private-sector contexts. Research experience includes real-time Hardware-in-the-Loop grid simulation at **TUM**, BiGRU-based EV charging modelling at **Fraunhofer ISE**, and peer-reviewed work on EV charging behaviour and Vehicle-to-Grid integration, including a **3rd Best Paper Award at IEEE PESS 2025**.",
   ],
   publications: [
@@ -35,6 +37,7 @@ const PROFILE = {
       title: "Integration of PV and V2G Technology in an Island Grid: A Real-Time Simulation Study of Kastellorizo",
       authors: "**Konstantellos, L.**, Mohapatra, A., Kavvathas, T., Konstantopoulos, G., & Hamacher, T. (2025)",
       award: "3rd Best Paper Award",
+      citation: 'L. Konstantellos, A. Mohapatra, T. Kavvathas, G. Konstantopoulos and T. Hamacher, "Integration of PV and V2G Technology in an Island Grid: A Real-Time Simulation Study of Kastellorizo," PESS 2025; IEEE Power and Energy Student Summit, Munich, Germany, 2025, pp. 31-36, doi: 10.30420/566656006.',
       links: [
         { label: "IEEE Xplore", href: "https://ieeexplore.ieee.org/document/11443073" },
         { label: "VDE Verlag",  href: "https://www.vde-verlag.de/proceedings-en/566656006.html" },
@@ -46,6 +49,7 @@ const PROFILE = {
       year: "2025",
       title: "Financial Impact Analysis of Electric Vehicle Charging Behavior with RNN Model and Validation Against Real-World Data",
       authors: "**Konstantellos, L.**, Kamacı, Z., Pekmezci, D., & Köpfer, B. (2025)",
+      citation: 'L. Konstantellos, Z. Kamacı, D. Pekmezci and B. Köpfer, "Financial Impact Analysis of Electric Vehicle Charging Behavior with RNN Model and Validation Against Real-World Data", presented at the 38th International Electric Vehicle Symposium and Exhibition (EVS38), Zenodo, Jun. 2025. doi: 10.5281/zenodo.15882802.',
       links: [
         { label: "Proceedings", href: "https://evs38-program.org/images/Proceedings/D%20Charging%20Infrastructure%20and%20grid%20integration/448_Financial_Impact_Analysis_of_Electric_Vehicle_Charging_Behavior_with_RNN_Model_and_Validation_Against_Real_World_Data.pdf" },
         { label: "Zenodo",      href: "https://zenodo.org/records/15882802" },
@@ -60,6 +64,7 @@ const PROFILE = {
       year: "2025",
       title: "Integration of Photovoltaic Power and Vehicle-to-Grid Technology in Electric Power Systems of Non-Interconnected Islands: A Case Study of Kastellorizo",
       authors: "**Konstantellos, L.** (2025)",
+      citation: 'L. Konstantellos, G. Konstantopoulos and T. Hamacher, "Integration of Photovoltaic Power and Vehicle-to-Grid Technology in Electric Power Systems of Non-Interconnected Islands: A Case Study of Kastellorizo", Feb. 12, 2025, Zenodo. doi: 10.5281/zenodo.14871102.',
       links: [
         { label: "Nemertes", href: "https://hdl.handle.net/10889/28931" },
         { label: "Zenodo",   href: "https://zenodo.org/records/14871102" },
@@ -72,6 +77,7 @@ const PROFILE = {
       year: "2023",
       title: "Novel Optimization Model Applied for Decarbonization Scenarios of Non-Interconnected Mediterranean Islands – A Kastellorizo Case Study",
       authors: "**Konstantellos, L.** (2023)",
+      citation: 'L. Konstantellos, "Novel Optimization Model Applied for Decarbonization Scenarios of Non-Interconnected Mediterranean Islands – A Kastellorizo Case Study", Technical University of Munich, Munich, Germany, 2023. doi: 10.5281/zenodo.13936256.',
       links: [
         { label: "Zenodo", href: "https://zenodo.org/records/13936256" },
       ],

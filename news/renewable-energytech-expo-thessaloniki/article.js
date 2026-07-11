@@ -24,6 +24,8 @@ defineArticle({
   cover: "news/renewable-energytech-expo-thessaloniki/cover.jpg",
   coverAlign: "top",
   video: "news/renewable-energytech-expo-thessaloniki/video.mp4",
+  videoWidth: 1390,   // intrinsic pixels — reserve the frame before the poster loads
+  videoHeight: 2084,
   videoWebm: "news/renewable-energytech-expo-thessaloniki/video.webm",
   poster: "news/renewable-energytech-expo-thessaloniki/video-cover.jpg",
   videoAfter: 8, // inline, next to the paragraph about the conversation with Enri Skourti

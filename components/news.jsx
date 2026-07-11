@@ -1,6 +1,6 @@
 /* global React, Icon, Picture, SITE, getRecentNews, getArticle, LIMITS,
    asset, routeToPath, handleAnchorClick, shareLinks, copyTextToClipboard,
-   renderInline, SectionHeader, ViewAllLink */
+   renderInline, SectionHeader, ViewAllLink, ARTICLE_COVER_SIZES */
 
 /* ============================================================
    NEWS / ARTICLES
@@ -23,7 +23,13 @@ function NewsCard({ article, navigate, from, headingLevel = "h3" }) {
         {/* alt="" — the card is ONE link whose accessible name is the visible
             title below; a title-alt here would announce it twice. */}
         {article.cover
-          ? <Picture src={asset(article.cover)} alt="" width="640" height="400" />
+          ? <Picture
+              src={asset(article.cover)}
+              alt=""
+              width="640"
+              height="400"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            />
           : <div className="ph">[ news/{article.slug}/cover.jpg ]</div>}
       </div>
       <div className="body">
@@ -389,7 +395,16 @@ function Article({ slug, navigate }) {
             if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(e); }
           }}
         >
-          <Picture src={asset(photo.src)} alt={alt} />
+          {/* width/height (when the article provides them) let the browser
+              reserve the figure's box from the intrinsic ratio before the
+              image decodes — no layout shift mid-article. */}
+          <Picture
+            src={asset(photo.src)}
+            alt={alt}
+            width={photo.width}
+            height={photo.height}
+            sizes={ARTICLE_COVER_SIZES}
+          />
         </div>
         {photo.caption && <figcaption>{photo.caption}</figcaption>}
       </figure>
@@ -401,11 +416,15 @@ function Article({ slug, navigate }) {
   const videoAfter = Number.isInteger(article.videoAfter) ? article.videoAfter : null;
   const renderVideo = () => (
     <div className="article-video">
+      {/* videoWidth/videoHeight (when the article provides them) reserve the
+          frame before the poster loads, like width/height on an <img>. */}
       <video
         controls
         preload="metadata"
         aria-label={`Video: ${article.title}`}
         poster={article.poster ? asset(article.poster) : undefined}
+        width={article.videoWidth}
+        height={article.videoHeight}
       >
         <source src={asset(article.video)} type="video/mp4" />
         {/* Open-codec fallback: browsers built without the proprietary H.264
@@ -441,6 +460,7 @@ function Article({ slug, navigate }) {
             alt={article.title}
             width="1280"
             height="720"
+            sizes={ARTICLE_COVER_SIZES}
             loading="eager"
             fetchPriority="high"
           />
@@ -478,7 +498,13 @@ function Article({ slug, navigate }) {
                   }
                 }}
               >
-                <Picture src={asset(photo.src)} alt={alt} width="800" height="600" />
+                <Picture
+                  src={asset(photo.src)}
+                  alt={alt}
+                  width="800"
+                  height="600"
+                  sizes="(max-width: 520px) 100vw, (max-width: 776px) 50vw, 230px"
+                />
               </div>
             );
           })}

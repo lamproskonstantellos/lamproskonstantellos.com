@@ -18,11 +18,6 @@ const Icon = {
       <path d="M5 9L9 5" /><path d="M6 5h3v3" />
     </svg>
   ),
-  download: (p) => (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" {...p}>
-      <path d="M8 2.5V10" /><path d="M4.5 7L8 10.5 11.5 7" /><path d="M3 13.5h10" />
-    </svg>
-  ),
   copy: (p) => (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" {...p}>
       <rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5" />
