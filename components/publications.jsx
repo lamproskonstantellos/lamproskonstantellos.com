@@ -34,16 +34,17 @@ function PubMetaRow({ pub, showYear = true }) {
   );
 }
 
-// "Cite" copies an APA-style line assembled from the same fields the entry
-// renders: the authors string already carries the "(YYYY)" suffix, so
-// appending title and venue/location completes the reference. The ** emphasis
-// markers are stripped for plain text.
+// "Cite" copies the entry's IEEE-style reference — the hand-checked `citation`
+// string from data.js (exact pages/DOI as published). An entry without one
+// falls back to a line assembled from the fields the card renders, so a new
+// publication still gets a usable Cite before its citation is written.
 function CiteButton({ pub }) {
   const [copied, setCopied] = React.useState(false);
   const copyTimer = React.useRef(null);
   React.useEffect(() => () => clearTimeout(copyTimer.current), []);
 
   const citation =
+    pub.citation ||
     `${pub.authors.replace(/\*\*/g, "")}. ${pub.title}. ` +
     `${pub.venue}${pub.location ? `, ${pub.location}` : ""}.`;
 

@@ -61,6 +61,11 @@ One optional field drives everything: **`type`**.
   award: "3rd Best Paper Award",     // optional — gold badge (peer-reviewed only)
   description: "Optional one-line summary shown under the authors.",
 
+  // optional — the EXACT IEEE-style reference the Cite button copies
+  // (pages, DOI, venue as published). When omitted, the button falls back
+  // to a line assembled from the fields above:
+  citation: 'L. Konstantellos and A. Coauthor, "Full publication title," Venue, City, Country, 2025, pp. 1-6, doi: 10.xxxx/xxxxxx.',
+
   links: [                           // REQUIRED — at least one, https only
     { label: "IEEE Xplore", href: "https://ieeexplore.ieee.org/document/…" },
     { label: "Zenodo",      href: "https://zenodo.org/records/…" },
@@ -83,6 +88,7 @@ One optional field drives everything: **`type`**.
 | `location` | optional | string | Second token of the meta line (`City, Country`) |
 | `type` | optional | string | Navy badge text **and** the peer-reviewed / theses-reports split (see above) |
 | `award` | optional | string | Gold badge text (e.g. an award); use instead of `type`, never together |
+| `citation` | optional | string | The exact IEEE-style reference the **Cite** button copies (pages, DOI, venue as published); when omitted the button falls back to a line assembled from the fields above |
 | `description` | optional | string | One-line summary under the authors |
 
 ## Where and how entries render
