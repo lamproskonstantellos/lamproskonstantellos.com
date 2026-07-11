@@ -122,6 +122,17 @@ function Header({ route, navigate, activeSection }) {
               </a>
             );
           })}
+          {/* The CV chip: the one filled action among the text links. Plain
+              browser navigation — the PDF opens like any document link. */}
+          <a
+            className="nav-cv"
+            href={SITE.cvPath}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Download CV (PDF)"
+          >
+            CV
+          </a>
         </nav>
       </div>
     </header>
@@ -171,12 +182,7 @@ function Hero({ navigate }) {
             href="/#publications"
             onClick={(e) => handleAnchorClick(e, navigate, { page: "home", section: "publications" })}
           >
-            View publications <Icon.arrowUR className="arrow" style={{ width: 14, height: 14 }} />
-          </a>
-          {/* Plain browser navigation (no SPA handler): the PDF opens in the
-              tab like any document link. */}
-          <a className="btn btn-ghost" href={SITE.cvPath} target="_blank" rel="noopener noreferrer">
-            Download CV <Icon.download style={{ width: 14, height: 14 }} />
+            View publications
           </a>
           <a
             className="btn btn-ghost"
