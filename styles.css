@@ -1243,17 +1243,26 @@ section.block {
 }
 .contact-card:hover .ext { opacity: 1; transform: translate(2px, -2px); color: var(--accent); }
 
-/* The email card carries a copy-address button that cannot nest inside the
-   mailto anchor (interactive-inside-interactive), so a wrapper positions it
-   over the card's right edge — the spot the other cards use for their
-   external-link mark. The card gets right padding so its label never runs
-   under the button. */
+/* The email card behaves like every other card on hover — the ↗ arrow fades
+   in at the far right — while its copy-address button stays permanently
+   visible immediately to the arrow's left. The button cannot nest inside the
+   mailto anchor (interactive-inside-interactive), so both are positioned
+   absolutely against the wrapper and the card pads right so the label never
+   runs under them. */
 .contact-card-wrap { position: relative; }
-.contact-card-wrap .contact-card { padding-right: 56px; }
+.contact-card-wrap .contact-card { padding-right: 84px; }
+.contact-card-wrap .contact-card .ext {
+  position: absolute;
+  right: 18px;           /* the exact spot .ext holds on the other cards */
+  top: 50%;
+  margin-top: -6.5px;    /* half the 13px icon — centering without transform,
+                            which the hover translate needs for itself */
+  margin-left: 0;
+}
 .contact-copy {
   position: absolute;
   top: 50%;
-  right: 12px;
+  right: 37px;           /* arrow right edge 18px + icon 13px + 6px gap */
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
@@ -1506,7 +1515,7 @@ section.block {
   .contact-copy {
     width: 44px;
     height: 44px;
-    right: 8px;
+    right: 33px; /* the wider tap box keeps clear of the arrow's 18px spot */
   }
 }
 

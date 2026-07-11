@@ -247,6 +247,10 @@ function EmailContactCard({ contact, BrandIcon, tint }) {
           <BrandIcon style={{ width: 22, height: 22 }} />
         </span>
         <span className="label">{contact.label}</span>
+        {/* Same hover arrow as every other card — here it reads "opens your
+            mail app". Positioned absolutely (styles.css) so the copy button
+            outside the anchor can sit immediately to its left. */}
+        <Icon.external className="ext" style={{ width: 13, height: 13 }} />
       </a>
       <button
         type="button"
