@@ -820,10 +820,10 @@ function sendFile(req, res, filePath) {
   });
 }
 
-// Applied to every response. CSP is tuned to this site: self-hosted scripts
-// plus the Plausible analytics script, self-hosted fonts (vendor/fonts), and
-// inline style attributes emitted by React's style prop. No third-party font
-// or style origins — the webfonts are served from this origin.
+// Applied to every response. CSP is tuned to this site: self-hosted scripts,
+// self-hosted fonts (vendor/fonts), and inline style attributes emitted by
+// React's style prop. No third-party font or style origins — the webfonts are
+// served from this origin.
 const SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -833,15 +833,15 @@ const SECURITY_HEADERS = {
   "Cross-Origin-Opener-Policy": "same-origin",
   "Content-Security-Policy": [
     "default-src 'self'",
-    // Analytics origins: the Plausible script tag in index.html, plus the
-    // Cloudflare Web Analytics beacon (script from static.cloudflareinsights
-    // .com, RUM posts to cloudflareinsights.com) so enabling it from the
-    // Cloudflare Pages dashboard is not silently blocked by this CSP.
-    "script-src 'self' https://plausible.io https://static.cloudflareinsights.com",
+    // Analytics origins: the Cloudflare Web Analytics beacon (script from
+    // static.cloudflareinsights.com, RUM posts to cloudflareinsights.com) so
+    // enabling it from the Cloudflare Pages dashboard is not silently blocked
+    // by this CSP.
+    "script-src 'self' https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     "img-src 'self' data:",
-    "connect-src 'self' https://plausible.io https://cloudflareinsights.com",
+    "connect-src 'self' https://cloudflareinsights.com",
     "object-src 'none'",
     "base-uri 'self'",
     "frame-ancestors 'none'",
