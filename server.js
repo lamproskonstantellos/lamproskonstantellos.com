@@ -8,6 +8,9 @@ const SITE_CFG = require("./site.config.js");
 const { parseRoute, isValidSpaRoute: routeIsValidSpa, pageTitle } = require("./routes.js");
 const { validateArticle, plainBody } = require("./article-schema.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
+// Shared responsive-image vocabulary (same module the browser loads), so the
+// preload's imagesrcset/imagesizes can never drift from what <Picture> renders.
+const { imageSrcset, HERO_IMG_SIZES, ARTICLE_COVER_SIZES } = require("./ui-helpers.js");
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
@@ -336,6 +339,8 @@ function computePageMeta(pathname) {
       ogType: "website",
       jsonLd: PROFILE_JSONLD,
       preloadImage: HERO_PRELOAD_IMAGE,
+      preloadImageSrcset: imageSrcset(SITE_CFG.heroImage, "avif"),
+      preloadImageSizes: HERO_IMG_SIZES,
     };
   }
 
@@ -486,6 +491,8 @@ function computePageMeta(pathname) {
         preloadImage: article.cover
           ? `/${article.cover.replace(/\.(jpe?g|png)$/i, ".avif")}`
           : undefined,
+        preloadImageSrcset: article.cover ? imageSrcset(`/${article.cover}`, "avif") : undefined,
+        preloadImageSizes: article.cover ? ARTICLE_COVER_SIZES : undefined,
       };
     }
   }
@@ -667,8 +674,12 @@ function injectMeta(html, meta) {
       meta.jsonLd
         ? `<script type="application/ld+json">${jsonLdScript(meta.jsonLd)}</script>`
         : "")
+    // imagesrcset/imagesizes mirror the <Picture> AVIF source exactly (both
+    // built by ui-helpers.imageSrcset), so the browser preloads the SAME
+    // candidate it will render; href stays as the fallback for browsers
+    // without imagesrcset support.
     .replace(/__META_PRELOAD__/g, () => meta.preloadImage
-      ? `<link rel="preload" as="image" href="${escapeHtml(meta.preloadImage)}" type="image/avif" fetchpriority="high" />`
+      ? `<link rel="preload" as="image" href="${escapeHtml(meta.preloadImage)}"${meta.preloadImageSrcset ? ` imagesrcset="${escapeHtml(meta.preloadImageSrcset)}" imagesizes="${escapeHtml(meta.preloadImageSizes || "")}"` : ""} type="image/avif" fetchpriority="high" />`
       : "");
 }
 

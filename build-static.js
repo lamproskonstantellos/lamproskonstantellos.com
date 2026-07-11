@@ -36,6 +36,7 @@ const {
   DEPLOY_VERSION,
 } = require("./server.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
+const { IMAGE_WIDTH_VARIANTS } = require("./ui-helpers.js");
 
 const ROOT = __dirname;
 const DEFAULT_OUT = path.join(ROOT, "build");
@@ -124,14 +125,18 @@ function copyFile(outDir, relPath) {
   return true;
 }
 
-// Copy an image plus its optimize-images siblings (.webp/.avif). The <picture>
-// component and the home hero preload reference those variants, so they must
-// ship for the rendered output to match the server byte-for-byte in the browser.
+// Copy an image plus its optimize-images siblings (.webp/.avif, including the
+// -480/-960 width variants). The <picture> component and the home hero preload
+// reference those variants, so they must ship for the rendered output to match
+// the server byte-for-byte in the browser.
 function copyImage(outDir, relPath) {
   copyFile(outDir, relPath);
   const noExt = relPath.replace(/\.[^.]+$/, "");
   for (const ext of [".webp", ".avif"]) {
     copyFile(outDir, noExt + ext);
+    for (const w of IMAGE_WIDTH_VARIANTS) {
+      copyFile(outDir, `${noExt}-${w}${ext}`);
+    }
   }
 }
 

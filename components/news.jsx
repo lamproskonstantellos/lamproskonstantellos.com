@@ -1,6 +1,6 @@
 /* global React, Icon, Picture, SITE, getRecentNews, getArticle, LIMITS,
    asset, routeToPath, handleAnchorClick, shareLinks, copyTextToClipboard,
-   renderInline, SectionHeader, ViewAllLink */
+   renderInline, SectionHeader, ViewAllLink, ARTICLE_COVER_SIZES */
 
 /* ============================================================
    NEWS / ARTICLES
@@ -23,7 +23,13 @@ function NewsCard({ article, navigate, from, headingLevel = "h3" }) {
         {/* alt="" — the card is ONE link whose accessible name is the visible
             title below; a title-alt here would announce it twice. */}
         {article.cover
-          ? <Picture src={asset(article.cover)} alt="" width="640" height="400" />
+          ? <Picture
+              src={asset(article.cover)}
+              alt=""
+              width="640"
+              height="400"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            />
           : <div className="ph">[ news/{article.slug}/cover.jpg ]</div>}
       </div>
       <div className="body">
@@ -389,7 +395,7 @@ function Article({ slug, navigate }) {
             if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(e); }
           }}
         >
-          <Picture src={asset(photo.src)} alt={alt} />
+          <Picture src={asset(photo.src)} alt={alt} sizes={ARTICLE_COVER_SIZES} />
         </div>
         {photo.caption && <figcaption>{photo.caption}</figcaption>}
       </figure>
@@ -441,6 +447,7 @@ function Article({ slug, navigate }) {
             alt={article.title}
             width="1280"
             height="720"
+            sizes={ARTICLE_COVER_SIZES}
             loading="eager"
             fetchPriority="high"
           />
@@ -478,7 +485,13 @@ function Article({ slug, navigate }) {
                   }
                 }}
               >
-                <Picture src={asset(photo.src)} alt={alt} width="800" height="600" />
+                <Picture
+                  src={asset(photo.src)}
+                  alt={alt}
+                  width="800"
+                  height="600"
+                  sizes="(max-width: 520px) 100vw, (max-width: 776px) 50vw, 230px"
+                />
               </div>
             );
           })}

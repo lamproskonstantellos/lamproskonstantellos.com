@@ -1,6 +1,6 @@
 /* global React, ReactDOM, SITE, PROFILE, Icon, SectionHeader, Picture,
    parseRoute, routeToPath, pageTitle, getArticle, handleAnchorClick,
-   pickActiveSection, headlineJoiner, copyTextToClipboard,
+   pickActiveSection, headlineJoiner, copyTextToClipboard, HERO_IMG_SIZES,
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
 
@@ -145,7 +145,7 @@ function Hero({ navigate }) {
           <div className="hero-intro-photo">
             {/* Same (preloaded) asset as the big portrait, so this costs no
                 extra download; eager because it is the mobile LCP image. */}
-            <Picture src={SITE.heroImage} alt="" width="220" height="220" loading="eager" fetchPriority="high" />
+            <Picture src={SITE.heroImage} alt="" width="220" height="220" sizes={HERO_IMG_SIZES} loading="eager" fetchPriority="high" />
           </div>
           <div className="hero-intro-text">
             <span className="hero-intro-name">{PROFILE.name}</span>
@@ -195,11 +195,15 @@ function Hero({ navigate }) {
         </div>
       </div>
       <div className="hero-photo">
+        {/* sizes matches the server's preload imagesizes exactly (both come
+            from ui-helpers.HERO_IMG_SIZES) so the preloaded candidate is the
+            rendered one. */}
         <Picture
           src={SITE.heroImage}
           alt={PROFILE.name}
           width="720"
           height="900"
+          sizes={HERO_IMG_SIZES}
           loading="eager"
           fetchPriority="high"
         />
