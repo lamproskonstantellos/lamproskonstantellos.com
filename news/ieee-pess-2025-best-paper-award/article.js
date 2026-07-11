@@ -24,6 +24,8 @@ defineArticle({
   photos: [
     {
       src: "news/ieee-pess-2025-best-paper-award/photo-01.jpg",
+      width: 3024,
+      height: 4032,
       align: "top",
       after: 1, // inline, right after the award-announcement paragraph
       caption:

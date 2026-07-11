@@ -24,17 +24,23 @@ defineArticle({
   photos: [
     {
       src: "news/ai-hub-mayor-western-achaia/photo-01.jpg",
+      width: 1024,
+      height: 577,
       after: 2, // after the intro, before "Application presented"
       caption: "The AI-Hub team meeting with the Municipality of Western Achaia.",
     },
     {
       src: "news/ai-hub-mayor-western-achaia/photo-02.jpg",
+      width: 4032,
+      height: 3024,
       after: 5, // next to the pH / temperature / chlorine monitoring detail
       caption:
         "The Nireas prototype, an Arduino-based unit that senses pH, temperature, and chlorine.",
     },
     {
       src: "news/ai-hub-mayor-western-achaia/photo-03.jpg",
+      width: 5151,
+      height: 3863,
       after: 6, // next to the analytics / early-warning goal
       caption:
         "Live pH and temperature readings from the prototype during the demonstration.",

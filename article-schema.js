@@ -72,7 +72,21 @@
     if (article.captions !== undefined && typeof article.captions !== "string") {
       throw new Error(`[article] "${article.slug}" has non-string captions`);
     }
-    // A photos entry is either a path string or { src, align? }.
+    // Optional intrinsic pixel dimensions of the video, used to reserve its
+    // layout box before the poster/metadata load (no layout shift). Set both
+    // or neither.
+    for (const key of ["videoWidth", "videoHeight"]) {
+      if (article[key] !== undefined && (!Number.isFinite(article[key]) || article[key] <= 0)) {
+        throw new Error(`[article] "${article.slug}" has invalid ${key} (expected a positive number)`);
+      }
+    }
+    if ((article.videoWidth === undefined) !== (article.videoHeight === undefined)) {
+      throw new Error(`[article] "${article.slug}" must set videoWidth and videoHeight together`);
+    }
+    // A photos entry is either a path string or { src, align?, after?,
+    // caption?, width?, height? } — width/height (set both or neither) are the
+    // image's intrinsic pixels, reserving an inline figure's box before it
+    // loads.
     if (Array.isArray(article.photos)) {
       for (const p of article.photos) {
         const ok =
@@ -81,6 +95,18 @@
           throw new Error(
             `[article] "${article.slug}" has an invalid photos entry (expected a path string or { src })`
           );
+        }
+        if (p && typeof p === "object") {
+          for (const key of ["width", "height"]) {
+            if (p[key] !== undefined && (!Number.isFinite(p[key]) || p[key] <= 0)) {
+              throw new Error(`[article] "${article.slug}" has a photos entry with invalid ${key}`);
+            }
+          }
+          if ((p.width === undefined) !== (p.height === undefined)) {
+            throw new Error(
+              `[article] "${article.slug}" has a photos entry that must set width and height together`
+            );
+          }
         }
       }
     }

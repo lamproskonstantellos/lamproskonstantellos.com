@@ -395,7 +395,16 @@ function Article({ slug, navigate }) {
             if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(e); }
           }}
         >
-          <Picture src={asset(photo.src)} alt={alt} sizes={ARTICLE_COVER_SIZES} />
+          {/* width/height (when the article provides them) let the browser
+              reserve the figure's box from the intrinsic ratio before the
+              image decodes — no layout shift mid-article. */}
+          <Picture
+            src={asset(photo.src)}
+            alt={alt}
+            width={photo.width}
+            height={photo.height}
+            sizes={ARTICLE_COVER_SIZES}
+          />
         </div>
         {photo.caption && <figcaption>{photo.caption}</figcaption>}
       </figure>
@@ -407,11 +416,15 @@ function Article({ slug, navigate }) {
   const videoAfter = Number.isInteger(article.videoAfter) ? article.videoAfter : null;
   const renderVideo = () => (
     <div className="article-video">
+      {/* videoWidth/videoHeight (when the article provides them) reserve the
+          frame before the poster loads, like width/height on an <img>. */}
       <video
         controls
         preload="metadata"
         aria-label={`Video: ${article.title}`}
         poster={article.poster ? asset(article.poster) : undefined}
+        width={article.videoWidth}
+        height={article.videoHeight}
       >
         <source src={asset(article.video)} type="video/mp4" />
         {/* Open-codec fallback: browsers built without the proprietary H.264
