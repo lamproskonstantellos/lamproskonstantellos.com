@@ -31,6 +31,17 @@ const PROFILE = {
   ],
   publications: [
     {
+      venue: "Electric Power Systems Research",
+      year: "2027",
+      title: "Regulation-aware BESS dispatch for PV systems under virtual net-billing in Greece",
+      authors: "**Konstantellos, L.**, Vazakas, A., Koumkoudis, K., & Papadopoulos, N.-A. (2027)",
+      citation: 'L. Konstantellos, A. Vazakas, K. Koumkoudis and N.-A. Papadopoulos, "Regulation-aware BESS dispatch for PV systems under virtual net-billing in Greece," Electric Power Systems Research, vol. 265, pt. A, Art. no. 113914, Apr. 2027, doi: 10.1016/j.epsr.2026.113914.',
+      links: [
+        { label: "ScienceDirect", href: "https://www.sciencedirect.com/science/article/pii/S0378779626012034" },
+        { label: "DOI", href: "https://doi.org/10.1016/j.epsr.2026.113914" },
+      ],
+    },
+    {
       venue: "IEEE PESS",
       location: "Munich, Germany",
       year: "2025",
