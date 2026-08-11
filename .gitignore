@@ -4,6 +4,10 @@ build/
 scratch/
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.log
 *.webp
 *.avif
 # Generated per-article social share crop (og:image), built by optimize-images.

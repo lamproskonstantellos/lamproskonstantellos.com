@@ -12,7 +12,7 @@ The personal website of **Lampros Konstantellos**, Electrical & Computer Enginee
 - **Frontend:** React 18 loaded via self-hosted UMD builds (`vendor/`). JSX is compiled to plain JavaScript at build time with [esbuild](https://esbuild.github.io/); no in-browser Babel. Plain CSS. Inter is self-hosted as subsetted woff2 (`vendor/fonts/`, preloaded, `font-display: swap`); monospace falls back to the system stack — no third-party font requests.
 - **Build / pre-render:** A dependency-free Node build step (`build-static.js`) pre-renders every route to a static `build/` directory: per-route `<title>` / meta / Open Graph / Twitter / canonical / JSON-LD, the auto-discovered per-article scripts, `sitemap.xml` / `rss.xml` / `feed.json`, a route-independent `404.html`, and the security-header + cache rules as Cloudflare `_headers` / `_redirects`. It reuses the same `renderHtml` and `feeds.js` builders as the local preview server, so the static output is byte-identical to what `server.js` serves (proven by `test/parity.test.js`). A per-deploy version query string on local CSS/JS busts browser caches on every deploy.
 - **Local preview:** The original dependency-free Node.js HTTP server (`server.js`, `npm start`) is retained for local preview. It serves the same per-route meta and feeds at request time, with cached brotli/gzip compression, security headers + CSP, class-appropriate `Cache-Control`, and malformed-request guards (no request can crash the process).
-- **Hosting:** [Cloudflare Pages](https://pages.cloudflare.com/). Builds and deploys the static `build/` output on every git push: build command `npm run build && npm run build:static`, output directory `build`, `NODE_VERSION=20`.
+- **Hosting:** [Cloudflare Pages](https://pages.cloudflare.com/). Builds and deploys the static `build/` output on every git push: build command `npm run build && npm run build:static`, output directory `build`, `NODE_VERSION=22`.
 
 ## Local development
 
@@ -47,7 +47,7 @@ tooling and config never are.
 |---------|-------|
 | Build command | `npm run build && npm run build:static` |
 | Build output directory | `build` |
-| Environment variable | `NODE_VERSION=20` |
+| Environment variable | `NODE_VERSION=22` |
 
 ## Project structure
 
