@@ -61,7 +61,7 @@ tooling and config never are.
 ├── article-schema.js      Article validation + newest-first comparator (dual)
 ├── ui-helpers.js          Share links, scroll-spy, publication filters/grouping, hero joiner (dual)
 ├── data.js                Profile, hero, about, publications, contact, selectors
-├── PUBLICATIONS.md        Guide: adding publications (peer-reviewed / theses / reports)
+├── PUBLICATIONS.md        Guide: adding publications (journal / conference / theses & reports)
 ├── styles.css             Global stylesheet
 ├── index.html             Single HTML entry with __META_*__ placeholders
 ├── feeds.js               sitemap.xml / rss.xml / feed.json builders (shared by server + build)
@@ -110,11 +110,12 @@ See [`news/README.md`](./news/README.md) for the complete guide — folder layou
 ### New publication
 
 See [`PUBLICATIONS.md`](./PUBLICATIONS.md) for the complete guide — the entry
-template with every field explained, how peer-reviewed papers are split from
-theses/reports (the `type` field drives the badge and the filter), where and
-how entries render, a publishing checklist, and common mistakes. In short: add
-one object to the `publications` array in [`data.js`](./data.js), newest first
-— nothing else changes.
+template with every field explained, how entries are filed under journal
+articles / conference papers / theses & reports (`kind` splits the
+peer-reviewed pills, `type` drives the thesis/report badge and filter), where
+and how entries render, a publishing checklist, and common mistakes. In short:
+add one object to the `publications` array in [`data.js`](./data.js), newest
+first — nothing else changes.
 
 ### SEO checklist for new content
 
