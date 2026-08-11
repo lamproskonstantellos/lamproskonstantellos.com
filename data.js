@@ -8,6 +8,8 @@
    Publications fields (full guide: PUBLICATIONS.md):
      - venue, year, title, authors, links       (required)
      - location, description, award, type,
+       kind ("journal" / "conference" — the
+       peer-reviewed filter split),
        citation (IEEE reference for the Cite
        button; auto-assembled when omitted)      (optional)
 
@@ -31,6 +33,23 @@ const PROFILE = {
   ],
   publications: [
     {
+      // `kind: "journal"` files a peer-reviewed entry under the
+      // "Journal articles" filter; without it, peer-reviewed entries
+      // count as conference papers.
+      kind: "journal",
+      venue: "Electric Power Systems Research",
+      // Listed under the year it went online (7 August 2026); vol. 265 is
+      // the April 2027 issue, which the Cite reference below carries.
+      year: "2026",
+      title: "Regulation-aware BESS dispatch for PV systems under virtual net-billing in Greece",
+      authors: "**Konstantellos, L.**, Vazakas, A., Koumkoudis, K., & Papadopoulos, N.-A. (2026)",
+      citation: 'L. Konstantellos, A. Vazakas, K. Koumkoudis and N.-A. Papadopoulos, "Regulation-aware BESS dispatch for PV systems under virtual net-billing in Greece," Electric Power Systems Research, vol. 265, pt. A, Art. no. 113914, Apr. 2027, doi: 10.1016/j.epsr.2026.113914.',
+      links: [
+        { label: "ScienceDirect", href: "https://www.sciencedirect.com/science/article/pii/S0378779626012034" },
+      ],
+    },
+    {
+      kind: "conference",
       venue: "IEEE PESS",
       location: "Munich, Germany",
       year: "2025",
@@ -44,6 +63,7 @@ const PROFILE = {
       ],
     },
     {
+      kind: "conference",
       venue: "EVS38",
       location: "Gothenburg, Sweden",
       year: "2025",

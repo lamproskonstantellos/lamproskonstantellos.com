@@ -7,24 +7,32 @@ Add one object there and it appears everywhere automatically:
 - the **homepage preview** (the 3 most recent, as equal-height white cards),
 - the **`/publications` page** (all entries, newest first, grouped under large
   year labels),
-- the **filter pills** on `/publications` (`All (…) / Peer-reviewed (…) /
-  Theses & reports (…)` — the counts update by themselves).
+- the **filter pills** on `/publications` (`All (…) / Journal articles (…) /
+  Conference papers (…) / Theses & reports (…)` — the counts update by
+  themselves).
 
 There is no per-publication page or URL — entries render inside those two
 views — so adding one never touches routes, HTML, or the build setup.
 
-## Peer-reviewed vs theses & reports — how the split works
+## Journal articles vs conference papers vs theses & reports — how the split works
 
-One optional field drives everything: **`type`**.
+Two optional fields drive everything: **`type`** and **`kind`**.
 
 | You set | The entry is treated as | What renders |
 |---------|------------------------|--------------|
-| *(no `type` field)* | **Peer-reviewed** publication | No badge (unless it has an `award`) |
+| `kind: "journal"` (no `type`) | Peer-reviewed **journal article** | No badge (unless it has an `award`) |
+| `kind: "conference"` or *(neither field)* | Peer-reviewed **conference paper** | No badge (unless it has an `award`) |
 | `type: "Master's Thesis"` (or `"Internship Report"`, `"PhD Thesis"`, …) | **Thesis / report** | A **navy outline badge** with that exact text |
 
-- The `/publications` filter **Peer-reviewed** shows entries *without* `type`;
-  **Theses & reports** shows entries *with* it. The counts in the pill labels
-  are computed from the data — never edit them by hand.
+- The `/publications` filters split every entry into exactly one of
+  **Journal articles** (`kind: "journal"`, no `type`), **Conference papers**
+  (the remaining entries without `type`), and **Theses & reports** (entries
+  *with* `type`). The counts in the pill labels are computed from the data —
+  never edit them by hand.
+- A peer-reviewed entry without `kind` counts as a **conference paper** (the
+  historical default). Set `kind: "conference"` anyway — the explicit value
+  is what keeps the split scannable in the data. `kind` is ignored on typed
+  (thesis / report) entries — don't set both.
 - **`award`** (e.g. `"3rd Best Paper Award"`) renders as a **gold badge**. Use
   `award` *or* `type` on an entry, not both — they occupy the same badge slot
   on the meta row, and an awarded paper is by definition peer-reviewed.
@@ -42,13 +50,18 @@ One optional field drives everything: **`type`**.
 
 ```js
 {
-  // OMIT `type` entirely for a peer-reviewed paper.
-  // SET it for a thesis/report — it becomes the navy badge and files the
-  // entry under the "Theses & reports" filter:
-  type: "Master's Thesis",
+  // Pick the entry's category:
+  //  - peer-reviewed journal article  → kind: "journal"      (no `type`)
+  //  - peer-reviewed conference paper → kind: "conference"   (no `type`)
+  //  - thesis / report → OMIT `kind` and SET `type` instead — it becomes
+  //    the navy badge and files the entry under "Theses & reports":
+  kind: "conference",
+  // type: "Master's Thesis",
 
   venue: "University of Patras",     // REQUIRED — first token of the meta line
+                                     // (conference, journal, or institution)
   location: "Patras, Greece",        // optional — second token of the meta line
+                                     // (omit for journals — they have no venue city)
   year: "2025",                      // REQUIRED — a STRING; drives sorting and
                                      // the big year label on /publications
 
@@ -85,8 +98,9 @@ One optional field drives everything: **`type`**.
 | `title` | ✅ | string | The entry heading |
 | `authors` | ✅ | string | Author line; `**…**` renders bold (use it on your own name); keep the `(YYYY)` suffix |
 | `links` | ✅ | `{ label, href }[]` | Quiet text links with the ↗ mark; each opens in a new tab |
-| `location` | optional | string | Second token of the meta line (`City, Country`) |
-| `type` | optional | string | Navy badge text **and** the peer-reviewed / theses-reports split (see above) |
+| `location` | optional | string | Second token of the meta line (`City, Country`); omit for journals |
+| `kind` | optional | `"journal"` / `"conference"` | Files a peer-reviewed entry under the **Journal articles** or **Conference papers** filter; without it a peer-reviewed entry counts as a conference paper. Ignored on typed entries |
+| `type` | optional | string | Navy badge text **and** what files the entry under **Theses & reports** (see above) |
 | `award` | optional | string | Gold badge text (e.g. an award); use instead of `type`, never together |
 | `citation` | optional | string | The exact IEEE-style reference the **Cite** button copies (pages, DOI, venue as published); when omitted the button falls back to a line assembled from the fields above |
 | `description` | optional | string | One-line summary under the authors |
@@ -133,6 +147,8 @@ One optional field drives everything: **`type`**.
 ## Common mistakes
 
 - **`year` as a number** — write `"2025"` (a string), like every existing entry.
+- **Forgetting `kind: "journal"` on a journal article** — the entry silently
+  files under **Conference papers** (the default for peer-reviewed entries).
 - **Both `award` and `type` on one entry** — pick one; they share the badge slot.
 - **Forgetting `**…**` around your name** in `authors` — the bold is what makes
   authorship scannable.

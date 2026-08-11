@@ -124,7 +124,7 @@ test("ui-helpers.js assigns its API to window in the browser", () => {
 
 // ---- PUB_FILTERS (publications filter pills) ----------------------------------
 
-test("PUB_FILTERS splits real publications into peer-reviewed vs theses/reports", () => {
+test("PUB_FILTERS splits real publications into journals / conferences / reports", () => {
   // Reproduce the component's predicates against the real data via the data.js
   // shim (the same technique the news preview cap test uses in ux.test.js).
   const SITE = require("../site.config.js");
@@ -139,16 +139,34 @@ test("PUB_FILTERS splits real publications into peer-reviewed vs theses/reports"
   const pubs = window.getRecentPublications();
 
   const byId = Object.fromEntries(PUB_FILTERS.map((f) => [f.id, f]));
-  assert.deepEqual(Object.keys(byId), ["all", "peer-reviewed", "reports"]);
+  assert.deepEqual(Object.keys(byId), ["all", "journals", "conferences", "reports"]);
 
   const all = pubs.filter(byId["all"].match);
-  const papers = pubs.filter(byId["peer-reviewed"].match);
+  const journals = pubs.filter(byId["journals"].match);
+  const conferences = pubs.filter(byId["conferences"].match);
   const reports = pubs.filter(byId["reports"].match);
   assert.equal(all.length, pubs.length, "All must match every entry");
-  // The two type filters partition the set: no overlap, nothing dropped.
-  assert.equal(papers.length + reports.length, pubs.length);
-  assert.ok(papers.every((p) => !p.type), "peer-reviewed must exclude typed entries");
+  // The three category filters partition the set: no overlap, nothing dropped.
+  assert.equal(journals.length + conferences.length + reports.length, pubs.length);
+  assert.ok(journals.length > 0, "at least one journal article expected");
+  assert.ok(conferences.length > 0, "at least one conference paper expected");
+  assert.ok(
+    journals.every((p) => !p.type && p.kind === "journal"),
+    "journals must be untyped entries with kind: \"journal\""
+  );
+  assert.ok(
+    conferences.every((p) => !p.type && p.kind !== "journal"),
+    "conferences must be the remaining untyped (peer-reviewed) entries"
+  );
   assert.ok(reports.every((p) => p.type), "reports must only include typed entries");
+  // Guard the PUBLICATIONS.md convention against typos in the real data: a
+  // misspelled kind (e.g. "Journal") would silently file a journal article
+  // under Conference papers, so every peer-reviewed entry must carry one of
+  // the two exact values.
+  assert.ok(
+    pubs.filter((p) => !p.type).every((p) => p.kind === "journal" || p.kind === "conference"),
+    'every peer-reviewed entry must set kind to exactly "journal" or "conference"'
+  );
 });
 
 // ---- groupPublicationsByYear ---------------------------------------------------

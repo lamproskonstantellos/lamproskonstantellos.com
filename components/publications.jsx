@@ -169,7 +169,7 @@ function PublicationsListPage({ navigate }) {
       </a>
       <header className="list-header">
         <h1>Publications</h1>
-        <p>Peer-reviewed papers, plus theses and reports, ordered from most recent.</p>
+        <p>Peer-reviewed journal and conference papers, plus theses and reports, ordered from most recent.</p>
       </header>
       <div className="pub-filters" role="group" aria-label="Filter publications">
         {PUB_FILTERS.map((f) => (
