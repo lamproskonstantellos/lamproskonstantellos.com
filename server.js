@@ -42,7 +42,10 @@ const mimeTypes = {
   ".webm": "video/webm",
   ".pdf": "application/pdf",
   ".txt": "text/plain; charset=utf-8",
-  ".xml": "application/xml; charset=utf-8"
+  ".xml": "application/xml; charset=utf-8",
+  // WebVTT captions for article videos (article-schema validates `captions`,
+  // <track> refuses the file under nosniff without the right type).
+  ".vtt": "text/vtt; charset=utf-8"
 };
 
 // Scan news/ for subfolders containing an article.js, returning sorted slugs.
@@ -273,7 +276,12 @@ for (const slug of ARTICLE_SLUGS) {
 // diverge).
 const ARTICLES = ARTICLE_SLUGS.map((slug) => ARTICLE_META[slug]).filter(Boolean);
 const PUBLICATION_YEARS = loadPublicationYears();
-const ARTICLE_SCRIPTS = ARTICLE_SLUGS
+// Only articles that PASSED validation ship to the client. A folder that
+// loadArticleMeta rejected must not have its script injected into every page
+// (the SPA would happily render the article the server refused to put in the
+// feeds) and must not count as a valid /news/<slug> route.
+const VALID_ARTICLE_SLUGS = ARTICLES.map((a) => a.slug);
+const ARTICLE_SCRIPTS = VALID_ARTICLE_SLUGS
   .map((slug) => `<script src="/news/${slug}/article.js"></script>`)
   .join("\n");
 const ASSET_MAP = loadAssetMap();
@@ -591,7 +599,12 @@ function writeCompressed(req, res, headers, data, cacheKey) {
   const status = headers.__status || 200;
   delete headers.__status;
   const isHead = req.method === "HEAD";
-  const accept = req.headers["accept-encoding"] || "";
+  // Codings the client explicitly refused with ";q=0" must not be chosen
+  // (RFC 9110 §12.5.3) — strip them before the \bbr\b / \bgzip\b tests below.
+  const accept = (req.headers["accept-encoding"] || "").replace(
+    /\b(?:br|gzip)\s*;\s*q=0(?:\.0{1,3})?\s*(?=,|$)/gi,
+    ""
+  );
   const ct = headers["Content-Type"] || "";
 
   // Normalize to a Buffer so Content-Length is the true byte count. A string's
@@ -624,15 +637,20 @@ function writeCompressed(req, res, headers, data, cacheKey) {
     }
   }
 
-  res.writeHead(status, { ...headers, "Content-Length": buf.length });
+  // Identity responses of compressible content still vary by Accept-Encoding:
+  // without the header, a shared cache that first stores the identity variant
+  // would serve it to gzip/brotli clients (and vice versa) without negotiating.
+  const vary = isCompressible(ct) ? { Vary: "Accept-Encoding" } : null;
+  res.writeHead(status, { ...headers, ...vary, "Content-Length": buf.length });
   res.end(isHead ? undefined : buf);
 }
 
 // True when pathname maps to a route the SPA can render. Delegates to the
 // shared route table; an article route is valid only if its slug was
-// discovered at startup.
+// discovered at startup AND passed validation (a rejected folder 404s like
+// any unknown slug — its script is not injected either, see ARTICLE_SCRIPTS).
 function isValidSpaRoute(pathname) {
-  return routeIsValidSpa(pathname, ARTICLE_SLUGS);
+  return routeIsValidSpa(pathname, VALID_ARTICLE_SLUGS);
 }
 
 // Replace the __META_*__ placeholders in index.html with per-route values.
@@ -641,21 +659,21 @@ function isValidSpaRoute(pathname) {
 // letting hostile article text (e.g. a title containing "$&") corrupt the
 // served HTML and JSON-LD. A function value is inserted verbatim.
 function injectMeta(html, meta) {
-  return html
-    .replace(/__META_SITE_NAME__/g, () => escapeHtml(SITE_CFG.name))
-    .replace(/__META_TITLE__/g, () => escapeHtml(meta.title))
-    .replace(/__META_DESCRIPTION__/g, () => escapeHtml(meta.description))
-    .replace(/__META_URL__/g, () => escapeHtml(meta.url))
-    .replace(/__META_IMAGE__/g, () => escapeHtml(meta.image))
-    .replace(/__META_IMAGE_DIMS__/g, () =>
+  const producers = {
+    __META_SITE_NAME__: () => escapeHtml(SITE_CFG.name),
+    __META_TITLE__: () => escapeHtml(meta.title),
+    __META_DESCRIPTION__: () => escapeHtml(meta.description),
+    __META_URL__: () => escapeHtml(meta.url),
+    __META_IMAGE__: () => escapeHtml(meta.image),
+    __META_IMAGE_DIMS__: () =>
       meta.imageWidth && meta.imageHeight
         ? `<meta property="og:image:width" content="${meta.imageWidth}" />\n` +
           `<meta property="og:image:height" content="${meta.imageHeight}" />`
-        : "")
-    .replace(/__META_IMAGE_ALT__/g, () => escapeHtml(meta.imageAlt || meta.title))
-    .replace(/__META_OG_TYPE__/g, () => escapeHtml(meta.ogType))
+        : "",
+    __META_IMAGE_ALT__: () => escapeHtml(meta.imageAlt || meta.title),
+    __META_OG_TYPE__: () => escapeHtml(meta.ogType),
     // article:* OG properties, emitted only on article pages (meta.articleMeta).
-    .replace(/__META_ARTICLE_OG__/g, () => {
+    __META_ARTICLE_OG__: () => {
       const a = meta.articleMeta;
       if (!a) return "";
       const lines = [];
@@ -665,22 +683,32 @@ function injectMeta(html, meta) {
       if (a.section) lines.push(`<meta property="article:section" content="${escapeHtml(a.section)}" />`);
       for (const tag of a.tags || []) lines.push(`<meta property="article:tag" content="${escapeHtml(tag)}" />`);
       return lines.join("\n");
-    })
-    .replace(/__META_ROBOTS__/g, () => escapeHtml(meta.robots || ROBOTS_INDEX))
+    },
+    __META_ROBOTS__: () => escapeHtml(meta.robots || ROBOTS_INDEX),
     // Emit the whole <script type="application/ld+json"> block only when there
     // is schema to put in it; a route with no JSON-LD (the 404 page) gets no
     // tag at all rather than an empty, invalid one.
-    .replace(/__META_JSONLD__/g, () =>
+    __META_JSONLD__: () =>
       meta.jsonLd
         ? `<script type="application/ld+json">${jsonLdScript(meta.jsonLd)}</script>`
-        : "")
+        : "",
     // imagesrcset/imagesizes mirror the <Picture> AVIF source exactly (both
     // built by ui-helpers.imageSrcset), so the browser preloads the SAME
     // candidate it will render; href stays as the fallback for browsers
     // without imagesrcset support.
-    .replace(/__META_PRELOAD__/g, () => meta.preloadImage
+    __META_PRELOAD__: () => meta.preloadImage
       ? `<link rel="preload" as="image" href="${escapeHtml(meta.preloadImage)}"${meta.preloadImageSrcset ? ` imagesrcset="${escapeHtml(meta.preloadImageSrcset)}" imagesizes="${escapeHtml(meta.preloadImageSizes || "")}"` : ""} type="image/avif" fetchpriority="high" />`
-      : "");
+      : "",
+  };
+  // ONE pass over the template, not a chain of sequential .replace calls: a
+  // produced value that happens to contain a later __META_*__ token (say, an
+  // article title quoting one) is inserted verbatim and never re-expanded —
+  // the sequential chain re-scanned earlier insertions and would inject the
+  // raw JSON-LD block inside a <title>. Unknown tokens pass through untouched,
+  // matching the old chain's behavior.
+  return html.replace(/__META_[A-Z_]+__/g, (token) =>
+    producers[token] ? producers[token]() : token
+  );
 }
 
 // Render the served HTML for a path from the index.html template. Pure given
@@ -734,13 +762,18 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
       assetMap: currentAssetMap(),
     });
     const contentType = "text/html; charset=utf-8";
-    // The rendered HTML for a given path is deterministic within a process, so
-    // cache its compressed variants by path.
+    // Cache compressed variants by CONTENT, not by path: a path key served
+    // stale compressed bytes after a template/data edit during `npm run watch`
+    // (identity clients got the fresh render, gzip/brotli clients the cached
+    // one), and gave every unknown 404 path its own entry although the
+    // rendered not-found page is identical for all of them. Hashing the
+    // rendered string keys equal bytes together and can never go stale.
+    const contentKey = crypto.createHash("sha1").update(versioned).digest("hex").slice(0, 16);
     writeCompressed(req, res, {
       "Content-Type": contentType,
       "Cache-Control": cacheHeaderFor(req, contentType),
       __status: statusCode,
-    }, versioned, `html:${pathname}`);
+    }, versioned, `html:${contentKey}`);
   });
 }
 
@@ -816,18 +849,22 @@ function sendFile(req, res, filePath) {
     return;
   }
 
-  // Static file bytes are immutable per deploy; key by path + size so the
-  // brotli/gzip result is computed once and reused.
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-      res.end("404 Not Found");
-      return;
-    }
-    writeCompressed(req, res, {
-      "Content-Type": contentType,
-      "Cache-Control": cacheHeaderFor(req, contentType),
-    }, data, `file:${filePath}:${data.length}`);
+  // Key the compressed variants by path + mtime, not path + size: a same-length
+  // edit during `npm run watch` kept serving the stale compressed bytes while
+  // identity clients saw the fresh file. The mtime changes on every write.
+  fs.stat(filePath, (statErr, stats) => {
+    const mtime = statErr ? 0 : stats.mtimeMs;
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("404 Not Found");
+        return;
+      }
+      writeCompressed(req, res, {
+        "Content-Type": contentType,
+        "Cache-Control": cacheHeaderFor(req, contentType),
+      }, data, `file:${filePath}:${mtime}`);
+    });
   });
 }
 
@@ -866,24 +903,34 @@ const SECURITY_HEADERS = {
 // favicons/og-image/manifest/robots, and news/<slug>/article.js + images.
 // Everything below is source, config, tooling or docs and is blocked. Keep this
 // in sync with build-static.js's MUST_BE_ABSENT list.
-const PRIVATE_PATHS = new Set([
-  "/server.js",
-  "/feeds.js",
-  "/build-static.js",
-  "/package.json",
-  "/package-lock.json",
-  "/.gitignore",
-  "/LICENSE",
-  "/dist/manifest.json",
-]);
+// Entries are lowercased to match isPrivatePath's case-normalized lookup
+// (the names below stay spelled like the real files for grepability).
+const PRIVATE_PATHS = new Set(
+  [
+    "/server.js",
+    "/feeds.js",
+    "/build-static.js",
+    "/package.json",
+    "/package-lock.json",
+    "/.gitignore",
+    "/LICENSE",
+    "/dist/manifest.json",
+  ].map((p) => p.toLowerCase())
+);
 
-function isPrivatePath(pathname) {
+function isPrivatePath(rawPathname) {
+  // Case-normalized: every public asset path is lowercase, and on a
+  // case-insensitive filesystem (a macOS dev machine) "/SERVER.JS" would
+  // otherwise bypass the byte-exact denylist and serve the source file.
+  const pathname = rawPathname.toLowerCase();
   if (PRIVATE_PATHS.has(pathname)) return true;
   if (pathname.startsWith("/scripts/")) return true; // build tooling
   if (pathname.startsWith("/test/")) return true; // test suite
   if (pathname.startsWith("/docs/")) return true; // internal docs
   if (pathname.startsWith("/node_modules/")) return true; // dependency tree
   if (pathname.startsWith("/components/")) return true; // uncompiled sources
+  if (pathname.startsWith("/build/")) return true; // generated static deploy tree
+  if (pathname.startsWith("/scratch/")) return true; // gitignored scratch space
   if (pathname.startsWith("/.")) return true; // dotfiles (.git, .github, ...)
   // No public asset is Markdown (covers README.md, news/README.md, and any
   // future notes) or raw JSX (the browser loads the compiled /dist/ bundles;
@@ -913,7 +960,8 @@ const server = http.createServer((req, res) => {
   try {
     // Method policy: this is a read-only static site.
     if (req.method === "OPTIONS") {
-      res.writeHead(204, { "Allow": ALLOWED_METHODS, "Content-Length": 0 });
+      // No Content-Length: RFC 9110 §8.6 forbids it on a 204.
+      res.writeHead(204, { "Allow": ALLOWED_METHODS });
       res.end();
       return;
     }

@@ -38,6 +38,19 @@
         `[article] "${article.slug}" has invalid date "${article.date}" — expected YYYY-MM-DD`
       );
     }
+    // The regex admits calendar-impossible dates ("2025-13-01"), which turn
+    // into Invalid Date downstream — buildFeed's .toISOString() then throws,
+    // 500ing /feed.json and failing the static build. Require the date to
+    // round-trip through UTC back to the same string.
+    const parsedDate = new Date(`${article.date}T00:00:00Z`);
+    if (
+      Number.isNaN(parsedDate.getTime()) ||
+      parsedDate.toISOString().slice(0, 10) !== article.date
+    ) {
+      throw new Error(
+        `[article] "${article.slug}" has impossible date "${article.date}" — not a real calendar day`
+      );
+    }
     if (!Array.isArray(article.body) || article.body.length === 0) {
       throw new Error(`[article] "${article.slug}" has empty or non-array body`);
     }
@@ -52,6 +65,12 @@
     }
     if (article.topics && !Array.isArray(article.topics)) {
       throw new Error(`[article] "${article.slug}" has non-array topics`);
+    }
+    // The cover path is joined with the article folder on the server, so a
+    // non-string value would throw in path.join at require time and kill the
+    // whole process instead of skipping the one bad article.
+    if (article.cover !== undefined && typeof article.cover !== "string") {
+      throw new Error(`[article] "${article.slug}" has non-string cover`);
     }
     if (article.video !== undefined && typeof article.video !== "string") {
       throw new Error(`[article] "${article.slug}" has non-string video`);

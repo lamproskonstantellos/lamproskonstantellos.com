@@ -147,9 +147,29 @@ test("gzip negotiation sets Content-Encoding + Vary", async () => {
   assert.equal(res.headers["vary"], "Accept-Encoding");
 });
 
-test("no Accept-Encoding → identity, no Vary surprise", async () => {
+test("no Accept-Encoding → identity, but Vary still declares the negotiation", async () => {
   const res = await request(base, "/styles.css", { headers: { "Accept-Encoding": "" } });
   assert.equal(res.headers["content-encoding"], undefined);
+  // Identity variants of compressible content must also carry Vary, or a
+  // shared cache that stores this response serves it to gzip/brotli clients.
+  assert.equal(res.headers["vary"], "Accept-Encoding");
+});
+
+test("a coding refused with ;q=0 is never chosen (RFC 9110)", async () => {
+  const br0 = await request(base, "/styles.css", { headers: { "Accept-Encoding": "br;q=0" } });
+  assert.equal(br0.headers["content-encoding"], undefined);
+  const gz0 = await request(base, "/styles.css", { headers: { "Accept-Encoding": "gzip;q=0, identity" } });
+  assert.equal(gz0.headers["content-encoding"], undefined);
+  // A refused coding must not mask an accepted one listed after it.
+  const mixed = await request(base, "/styles.css", { headers: { "Accept-Encoding": "br;q=0, gzip" } });
+  assert.equal(mixed.headers["content-encoding"], "gzip");
+});
+
+test("OPTIONS answers 204 without a Content-Length (RFC 9110)", async () => {
+  const res = await request(base, "/", { method: "OPTIONS" });
+  assert.equal(res.status, 204);
+  assert.equal(res.headers["content-length"], undefined);
+  assert.equal(res.headers["allow"], "GET, HEAD, OPTIONS");
 });
 
 // ---- Private paths return 404 ----------------------------------------------
@@ -175,6 +195,14 @@ test("private paths are not served", async () => {
     "/app.jsx",
     "/icons.jsx",
     "/components/about.jsx",
+    // Generated trees and case variants (a case-insensitive dev filesystem
+    // must not let /SERVER.JS bypass the lowercase denylist).
+    "/build/index.html",
+    "/build/_headers",
+    "/scratch/notes.txt",
+    "/SERVER.JS",
+    "/License",
+    "/Package.json",
   ]) {
     const res = await request(base, p);
     assert.equal(res.status, 404, `${p} should be 404, got ${res.status}`);
