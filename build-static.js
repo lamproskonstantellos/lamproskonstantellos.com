@@ -142,58 +142,81 @@ function copyImage(outDir, relPath) {
 
 // Recursively copy a directory (relative to ROOT) into the build. `skip` is an
 // optional predicate on the absolute source path that excludes matching files.
+// Dotfiles are always excluded: assertNoExcluded only sweeps the build ROOT,
+// so a nested .DS_Store inside an article folder would otherwise ship
+// silently into the deploy.
 function copyDir(outDir, relDir, skip) {
   const src = path.join(ROOT, relDir);
   if (!fs.existsSync(src)) return;
   fs.cpSync(src, path.join(outDir, relDir), {
     recursive: true,
-    filter: skip ? (s) => !skip(s) : undefined,
+    filter: (s) => !path.basename(s).startsWith(".") && !(skip && skip(s)),
   });
 }
 
 // The _headers file: reproduce SECURITY_HEADERS verbatim (so the CSP can never
 // drift from the server) plus all four of cacheHeaderFor's cache classes:
-//   HTML        → no-cache, no-store, must-revalidate
-//   /dist/*     → public, max-age=31536000, immutable
-//   feeds       → public, max-age=3600
-//   everything  → public, max-age=86400
+//   HTML (and anything unmatched)  → no-cache, no-store, must-revalidate
+//   /dist/*                        → public, max-age=31536000, immutable
+//   feeds                          → public, max-age=3600
+//   known asset extensions         → public, max-age=86400
 //
 // Cloudflare `_headers` matches the REQUEST path, not the resolved file, so the
 // clean SPA URLs (/news, /publications, /news/<slug>) are extensionless and a
 // `/*.html` rule alone would miss them — leaving the site's content pages
 // without the server's no-store header. We therefore list every HTML route
-// explicitly. Rules are ordered general → specific (the broad /* default first,
-// the exact paths last) so the intended value wins under BOTH of Cloudflare's
-// precedence models (most-specific-wins and last-declared-wins). Security
-// headers live on /* so they apply to every response, exactly as the server
-// sets them on every request.
+// explicitly. The `/*` DEFAULT is no-store, not the asset class: an UNKNOWN
+// extensionless path is answered by the 404 fallback page, and with an 86400
+// default a visitor who hit a not-yet-published article URL kept the cached
+// 404 for a day. Assets opt IN by extension instead (the server's whole
+// mimeTypes set), so a missed extension degrades to uncached — never to a
+// cached error page. Rules stay ordered general → specific (the broad /*
+// default first, the exact paths last) so the intended value wins under BOTH
+// of Cloudflare's precedence models (most-specific-wins and
+// last-declared-wins). Security headers live on /* so they apply to every
+// response, exactly as the server sets them on every request.
 //
 // Note: the server also serves ?v=-stamped non-dist assets as immutable, but
 // `_headers` cannot match on a query string. Those assets fall into the 86400
 // class here — they revalidate rather than serve stale bytes, and the ?v= token
 // still busts caches on deploy because the URL string changes. This is the one
 // intended, harmless gap.
+const ASSET_EXTENSIONS = [
+  "css", "js", "json", "webmanifest", "txt", "xml",
+  "png", "jpg", "jpeg", "svg", "ico", "webp", "avif",
+  "woff2", "woff", "mp4", "webm", "vtt", "pdf",
+];
 function buildHeadersFile(securityHeaders, htmlPathnames) {
   const NO_STORE = "Cache-Control: no-cache, no-store, must-revalidate";
   const lines = [];
 
-  // Global default: security headers on every response + the catch-all asset
-  // cache class. Overridden below for HTML routes, feeds and hashed bundles.
+  // Global default: security headers on every response; no-store for anything
+  // no later rule claims (above all, the 404 fallback for unknown paths).
   lines.push("/*");
   for (const [name, value] of Object.entries(securityHeaders)) {
     lines.push(`  ${name}: ${value}`);
   }
-  lines.push("  Cache-Control: public, max-age=86400");
+  lines.push(`  ${NO_STORE}`);
   lines.push("");
 
-  // Feeds: public, max-age=3600 (exact paths, no overlap with assets).
+  // Known asset extensions: the daily-revalidate class. Cloudflare's `*`
+  // crosses path segments, so /*.js also covers /news/<slug>/article.js.
+  for (const ext of ASSET_EXTENSIONS) {
+    lines.push(`/*.${ext}`);
+    lines.push("  Cache-Control: public, max-age=86400");
+    lines.push("");
+  }
+
+  // Feeds: public, max-age=3600 — exact paths declared AFTER /*.xml and
+  // /*.json so the feed value wins under both precedence models.
   for (const feed of ["/sitemap.xml", "/rss.xml", "/feed.json"]) {
     lines.push(feed);
     lines.push("  Cache-Control: public, max-age=3600");
     lines.push("");
   }
 
-  // Content-hashed bundles never change: immutable.
+  // Content-hashed bundles never change: immutable (declared after /*.js so
+  // the longer-lived value is the later, winning declaration).
   lines.push("/dist/*");
   lines.push("  Cache-Control: public, max-age=31536000, immutable");
   lines.push("");
