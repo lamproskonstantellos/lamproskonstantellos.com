@@ -52,11 +52,17 @@
     return crossing || passed;
   }
 
-  // /publications filter pills. The `type` field marks non-peer-reviewed work
-  // (thesis / report), so it also drives the filter split.
+  // /publications filter pills. Two data fields drive the split:
+  //   - `type` marks non-peer-reviewed work (thesis / report);
+  //   - `kind: "journal"` marks a peer-reviewed entry as a journal article.
+  // Peer-reviewed entries WITHOUT kind: "journal" count as conference papers
+  // (the safe default: a forgotten `kind` can only under-claim, never file a
+  // conference paper as a journal article). The four pills partition the set:
+  // journals + conferences + reports = all, with no overlap.
   const PUB_FILTERS = [
     { id: "all", label: "All", match: () => true },
-    { id: "peer-reviewed", label: "Peer-reviewed", match: (p) => !p.type },
+    { id: "journals", label: "Journal articles", match: (p) => !p.type && p.kind === "journal" },
+    { id: "conferences", label: "Conference papers", match: (p) => !p.type && p.kind !== "journal" },
     { id: "reports", label: "Theses & reports", match: (p) => Boolean(p.type) },
   ];
 

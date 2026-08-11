@@ -8,6 +8,8 @@
    Publications fields (full guide: PUBLICATIONS.md):
      - venue, year, title, authors, links       (required)
      - location, description, award, type,
+       kind ("journal" / "conference" — the
+       peer-reviewed filter split),
        citation (IEEE reference for the Cite
        button; auto-assembled when omitted)      (optional)
 
@@ -31,6 +33,10 @@ const PROFILE = {
   ],
   publications: [
     {
+      // `kind: "journal"` files a peer-reviewed entry under the
+      // "Journal articles" filter; without it, peer-reviewed entries
+      // count as conference papers.
+      kind: "journal",
       venue: "Electric Power Systems Research",
       year: "2027",
       title: "Regulation-aware BESS dispatch for PV systems under virtual net-billing in Greece",
@@ -42,6 +48,7 @@ const PROFILE = {
       ],
     },
     {
+      kind: "conference",
       venue: "IEEE PESS",
       location: "Munich, Germany",
       year: "2025",
@@ -55,6 +62,7 @@ const PROFILE = {
       ],
     },
     {
+      kind: "conference",
       venue: "EVS38",
       location: "Gothenburg, Sweden",
       year: "2025",

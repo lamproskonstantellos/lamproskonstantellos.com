@@ -374,7 +374,7 @@ function computePageMeta(pathname) {
     return {
       title: pageTitle(route, titleCtx),
       description:
-        "Peer-reviewed publications and conference papers on renewable energy, V2G integration, real-time grid simulation, and EV charging.",
+        "Peer-reviewed journal and conference papers on renewable energy, battery storage, PV systems, V2G integration, grid simulation, and EV charging.",
       url: `${SITE_CFG.url}/publications`,
       image: DEFAULT_IMAGE,
       imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
