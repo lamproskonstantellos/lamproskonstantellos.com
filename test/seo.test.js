@@ -189,8 +189,12 @@ test("sitemap.xml is well-formed with absolute locs and YYYY-MM-DD lastmod", asy
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
   assert.ok(locs.length >= 4);
   for (const loc of locs) assert.match(loc, /^https:\/\/lamproskonstantellos\.com\//);
+  const today = new Date().toISOString().slice(0, 10);
   for (const [, d] of xml.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)) {
     assert.match(d, /^\d{4}-\d{2}-\d{2}$/, `bad lastmod: ${d}`);
+    // A lastmod that hasn't happened yet (e.g. leaked from a future
+    // journal-issue year) would make search engines distrust the sitemap.
+    assert.ok(d <= today, `future lastmod: ${d}`);
   }
 });
 

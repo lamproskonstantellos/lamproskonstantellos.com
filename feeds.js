@@ -40,8 +40,9 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 // sitemap.xml — home, /news and /publications, then one <url> per article in
 // the order given. Each index page's lastmod tracks ITS OWN content: /news the
 // newest article, /publications the newest publication year (as YYYY-01-01 —
-// publications carry no finer date), and / the later of the two, so a value
-// only changes when that page's content actually changes.
+// publications carry no finer date — capped at the newest article date so a
+// future issue year never emits a future lastmod), and / the later of the
+// two, so a value only changes when that page's content actually changes.
 function buildSitemap({ articles, siteCfg, publicationYears }) {
   const list = Array.isArray(articles) ? articles : [];
 
@@ -54,10 +55,15 @@ function buildSitemap({ articles, siteCfg, publicationYears }) {
 
   const years = (Array.isArray(publicationYears) ? publicationYears : [])
     .filter(Number.isFinite);
-  const publicationsLastmod = years.length
-    ? `${Math.max(...years)}-01-01`
-    : latestContentDate;
-  // ISO dates compare correctly as strings.
+  // Year-derived, then capped at the newest real content date (ISO dates
+  // compare correctly as strings): an in-press article carrying a FUTURE
+  // journal-issue year must not advertise a lastmod that hasn't happened —
+  // search engines distrust future lastmod values. The cap can only ever
+  // under-state, and only while the publication year is still ahead of the
+  // newest dated content; a same-or-past year passes through unchanged.
+  const yearLastmod = years.length ? `${Math.max(...years)}-01-01` : latestContentDate;
+  const publicationsLastmod =
+    yearLastmod <= latestContentDate ? yearLastmod : latestContentDate;
   const homeLastmod =
     publicationsLastmod > latestContentDate ? publicationsLastmod : latestContentDate;
 
