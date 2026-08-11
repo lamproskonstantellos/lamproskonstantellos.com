@@ -153,7 +153,8 @@ function PublicationsListPage({ navigate }) {
   const groups = groupPublicationsByYear(all.filter(activeFilter.match));
 
   // Scroll-to-top on arrival is handled by App.navigate (fresh navigations
-  // only), so Back/Forward restores the prior scroll position natively.
+  // only); Back/Forward scroll comes from the app's own restoreScroll in the
+  // popstate handler (history.scrollRestoration is "manual").
 
   const backRoute = { page: "home", section: "publications" };
 
