@@ -38,13 +38,14 @@ const PROFILE = {
       // count as conference papers.
       kind: "journal",
       venue: "Electric Power Systems Research",
-      year: "2027",
+      // Listed under the year it went online (7 August 2026); vol. 265 is
+      // the April 2027 issue, which the Cite reference below carries.
+      year: "2026",
       title: "Regulation-aware BESS dispatch for PV systems under virtual net-billing in Greece",
-      authors: "**Konstantellos, L.**, Vazakas, A., Koumkoudis, K., & Papadopoulos, N.-A. (2027)",
+      authors: "**Konstantellos, L.**, Vazakas, A., Koumkoudis, K., & Papadopoulos, N.-A. (2026)",
       citation: 'L. Konstantellos, A. Vazakas, K. Koumkoudis and N.-A. Papadopoulos, "Regulation-aware BESS dispatch for PV systems under virtual net-billing in Greece," Electric Power Systems Research, vol. 265, pt. A, Art. no. 113914, Apr. 2027, doi: 10.1016/j.epsr.2026.113914.',
       links: [
         { label: "ScienceDirect", href: "https://www.sciencedirect.com/science/article/pii/S0378779626012034" },
-        { label: "DOI", href: "https://doi.org/10.1016/j.epsr.2026.113914" },
       ],
     },
     {
