@@ -2,7 +2,7 @@
 
 Each article is a self-contained package inside its own folder under `news/<slug>/`: the text, the cover image, and any in-article photos all live together. Articles are sorted automatically by `date` (newest first), both on the homepage News preview (capped at 3) and on the full `/news` list page.
 
-The static build (`build-static.js`) discovers `news/` at build time and injects a `<script>` tag for each `news/<slug>/article.js` it finds, and the local preview server (`server.js`) does the same on each request, so adding an article requires no edits to `data.js` or `index.html`.
+The static build (`build-static.js`) discovers `news/` at build time and injects a `<script>` tag for each `news/<slug>/article.js` it finds, and the local preview server (`server.js`) does the same once at startup — restart `npm start` after adding a folder. Adding an article requires no edits to `data.js` or `index.html`.
 
 ## Add a new article
 
