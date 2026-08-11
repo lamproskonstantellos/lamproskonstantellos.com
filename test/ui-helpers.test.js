@@ -159,6 +159,14 @@ test("PUB_FILTERS splits real publications into journals / conferences / reports
     "conferences must be the remaining untyped (peer-reviewed) entries"
   );
   assert.ok(reports.every((p) => p.type), "reports must only include typed entries");
+  // Guard the PUBLICATIONS.md convention against typos in the real data: a
+  // misspelled kind (e.g. "Journal") would silently file a journal article
+  // under Conference papers, so every peer-reviewed entry must carry one of
+  // the two exact values.
+  assert.ok(
+    pubs.filter((p) => !p.type).every((p) => p.kind === "journal" || p.kind === "conference"),
+    'every peer-reviewed entry must set kind to exactly "journal" or "conference"'
+  );
 });
 
 // ---- groupPublicationsByYear ---------------------------------------------------

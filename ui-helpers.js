@@ -57,8 +57,9 @@
   //   - `kind: "journal"` marks a peer-reviewed entry as a journal article.
   // Peer-reviewed entries WITHOUT kind: "journal" count as conference papers
   // (the safe default: a forgotten `kind` can only under-claim, never file a
-  // conference paper as a journal article). The four pills partition the set:
-  // journals + conferences + reports = all, with no overlap.
+  // conference paper as a journal article). The three category pills
+  // partition the set — journals + conferences + reports = every entry, with
+  // no overlap — and All spans it.
   const PUB_FILTERS = [
     { id: "all", label: "All", match: () => true },
     { id: "journals", label: "Journal articles", match: (p) => !p.type && p.kind === "journal" },
