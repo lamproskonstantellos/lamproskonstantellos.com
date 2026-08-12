@@ -73,7 +73,8 @@ function NewsListPage({ navigate }) {
   const items = getRecentNews();
 
   // Scroll-to-top on arrival is handled by App.navigate (fresh navigations
-  // only), so Back/Forward restores the prior scroll position natively.
+  // only); Back/Forward scroll comes from the app's own restoreScroll in the
+  // popstate handler (history.scrollRestoration is "manual").
 
   const backRoute = { page: "home", section: "news" };
 
@@ -316,8 +317,9 @@ function Article({ slug, navigate }) {
   const closeLightbox = React.useCallback(() => setLightboxIndex(null), []);
 
   // Scroll-to-top on a fresh navigation is handled centrally in App.navigate
-  // (push/link only), so Back/Forward keeps the browser's native scroll
-  // restoration instead of being yanked to the top on every popstate remount.
+  // (push/link only); Back/Forward scroll comes from the app's restoreScroll
+  // in the popstate handler (history.scrollRestoration is "manual"), so a
+  // popstate remount is not yanked to the top.
 
   // The visible label is always "Back"; the destination still depends on where
   // the reader came from (home News section vs the /news list), so the
@@ -339,10 +341,15 @@ function Article({ slug, navigate }) {
   );
 
   if (!article) {
+    // Every route renders exactly one h1; the unknown-slug view is no
+    // exception (the server already answers it with a 404 status).
     return (
       <div className="page article">
         {backLink}
-        <p style={{ color: "var(--muted)" }}>Article not found.</p>
+        <h1>Article not found</h1>
+        <p style={{ color: "var(--muted)" }}>
+          This article may have moved, or never existed.
+        </p>
       </div>
     );
   }

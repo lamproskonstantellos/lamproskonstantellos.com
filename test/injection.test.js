@@ -59,6 +59,20 @@ test("hostile title is HTML-escaped verbatim in <title>", () => {
   assert.ok(title.includes("&lt;/script&gt;"));
 });
 
+test("meta text containing __META_*__ tokens is inserted verbatim, never re-expanded", () => {
+  const meta = hostileMeta();
+  meta.title = "How __META_JSONLD__ and __META_ROBOTS__ tokens render";
+  const out = injectMeta(INDEX_HTML, meta);
+  const title = out.match(/<title>([\s\S]*?)<\/title>/)[1];
+  // The tokens survive as literal text inside the title...
+  assert.ok(title.includes("__META_JSONLD__"), "token must stay verbatim in the title");
+  assert.ok(title.includes("__META_ROBOTS__"), "token must stay verbatim in the title");
+  // ...and are NOT expanded a second time: exactly one ld+json block exists
+  // (the template's own), none of it inside <title>.
+  assert.equal((out.match(/application\/ld\+json/g) || []).length, 1);
+  assert.ok(!title.includes("<script"), "no script block may be injected into the title");
+});
+
 test("JSON-LD remains valid JSON and cannot break out of the script tag", () => {
   const out = injectMeta(INDEX_HTML, hostileMeta());
   const block = out.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);

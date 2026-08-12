@@ -150,8 +150,9 @@ function Hero({ navigate }) {
       <div className="hero-text">
         {/* Small profile card (photo + name + role), shown ONLY on small
             screens where the large portrait on the right is hidden — the
-            single mobile carrier of the photo. Decorative there (alt=""):
-            the adjacent text already names the person. */}
+            single mobile carrier of the photo. aria-hidden: assistive tech
+            already gets the name/role from the header brand link's
+            aria-label, so this visual duplicate would be read twice. */}
         <div className="hero-intro" aria-hidden="true">
           <div className="hero-intro-photo">
             {/* Same (preloaded) asset as the big portrait, so this costs no
@@ -285,7 +286,11 @@ function Contact() {
       <SectionHeader title="Contact" />
       <div className="contact-grid">
         {PROFILE.contact.map((c) => {
-          const { I, tint } = map[c.id];
+          // A data.js contact id with no icon here must degrade to "not
+          // shown", not crash the whole homepage render on a destructure.
+          const entry = map[c.id];
+          if (!entry) return null;
+          const { I, tint } = entry;
           if (c.id === "email") {
             return <EmailContactCard key={c.id} contact={c} BrandIcon={I} tint={tint} />;
           }
@@ -502,10 +507,24 @@ function App() {
 
   useEffect(() => {
     const onPop = () => {
-      const key = (window.history.state && window.history.state.key) || 0;
-      currentKey.current = key;
+      const state = window.history.state;
+      // An UNKEYED entry is not one of ours: the user edited a #hash in the
+      // address bar (same-document navigation fires popstate with fresh null
+      // state). Give it its own key — aliasing it to key 0 both clobbered
+      // entry 0's saved scroll and restored a stale position over the
+      // browser's native scroll-to-anchor. With a hash, defer to the native
+      // anchor scroll; without one, this is still a same-document jump the
+      // browser positions itself, so no restore either way.
+      if (!state || state.key === undefined) {
+        const key = ++keyCounter.current;
+        window.history.replaceState({ ...(state || {}), key }, "");
+        currentKey.current = key;
+        setRoute(parseRoute(window.location.pathname));
+        return;
+      }
+      currentKey.current = state.key;
       setRoute(parseRoute(window.location.pathname));
-      restoreScroll(scrollPositions.current.get(key) || 0, restoreCtl.current);
+      restoreScroll(scrollPositions.current.get(state.key) || 0, restoreCtl.current);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -603,6 +622,14 @@ function App() {
     if (!id) return;
     let tries = 0;
     let raf = 0;
+    // The re-assert loop must yield to the user: a wheel/touch/key scroll in
+    // the first ~half second would otherwise be snapped back to the section
+    // until the 30 frames run out.
+    const stop = () => cancelAnimationFrame(raf);
+    const cancelOpts = { passive: true, once: true };
+    window.addEventListener("wheel", stop, cancelOpts);
+    window.addEventListener("touchstart", stop, cancelOpts);
+    window.addEventListener("keydown", stop, cancelOpts);
     const attempt = () => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -612,7 +639,12 @@ function App() {
       if (tries < 30) raf = requestAnimationFrame(attempt);
     };
     raf = requestAnimationFrame(attempt);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      stop();
+      window.removeEventListener("wheel", stop);
+      window.removeEventListener("touchstart", stop);
+      window.removeEventListener("keydown", stop);
+    };
   }, []);
 
   // Expose the live header height to CSS as --header-offset so native fragment
@@ -665,8 +697,9 @@ function App() {
     } else {
       // List/article: a fresh (push/link) navigation lands at the top. This runs
       // ONLY from navigate() — i.e. on real navigations, never on popstate — so
-      // the browser's native scroll restoration still returns you to your prior
-      // position when you press Back/Forward into a page you had scrolled.
+      // the app's own restoreScroll (scrollRestoration is "manual", see the
+      // popstate handler) still returns you to your prior position when you
+      // press Back/Forward into a page you had scrolled.
       window.scrollTo({ top: 0 });
     }
   }, []);

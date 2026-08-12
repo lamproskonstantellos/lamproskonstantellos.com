@@ -176,6 +176,22 @@ test("validateArticle rejects the same invalid article in both worlds", () => {
   assert.throws(() => schema.validateArticle(bad), /invalid date/);
 });
 
+test("validateArticle rejects calendar-impossible dates (feed builders would throw)", () => {
+  const base = { slug: "x", dateLabel: "d", title: "t", excerpt: "e", body: ["b"] };
+  // Each matches the YYYY-MM-DD regex but is not a real day; unchecked, these
+  // reach buildFeed's .toISOString() and 500 /feed.json (and fail the build).
+  for (const bad of ["2025-13-01", "2025-02-30", "2025-00-10", "2026-04-31"]) {
+    assert.throws(() => schema.validateArticle({ ...base, date: bad }), /impossible date/, bad);
+  }
+  assert.doesNotThrow(() => schema.validateArticle({ ...base, date: "2024-02-29" })); // real leap day
+});
+
+test("validateArticle rejects a non-string cover (path.join would kill the boot)", () => {
+  const base = { slug: "x", date: "2026-01-01", dateLabel: "d", title: "t", excerpt: "e", body: ["b"] };
+  assert.throws(() => schema.validateArticle({ ...base, cover: 123 }), /non-string cover/);
+  assert.doesNotThrow(() => schema.validateArticle({ ...base, cover: "news/x/cover.jpg" }));
+});
+
 test("loadArticleMeta skips an invalid article (returns null, fails loudly)", () => {
   const slug = "__consistency_invalid__";
   const dir = path.join(ROOT, "news", slug);
