@@ -110,6 +110,7 @@ const PROFILE = {
     { id: "orcid",        label: "ORCID",          href: "https://orcid.org/0009-0006-9424-2087" },
     { id: "zenodo",       label: "Zenodo",         href: "https://zenodo.org/search?page=1&size=20&q=Lampros+Konstantellos" },
     { id: "researchgate", label: "ResearchGate",   href: "https://www.researchgate.net/profile/Lampros-Konstantellos" },
+    { id: "scopus",       label: "Scopus",         href: "https://www.scopus.com/authid/detail.uri?authorId=60778137200" },
     { id: "github",       label: "GitHub",         href: "https://github.com/lamproskonstantellos" },
     { id: "email",        label: "Email",          href: `mailto:${window.SITE.email}` },
   ],
