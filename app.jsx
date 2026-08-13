@@ -278,6 +278,7 @@ function Contact() {
     orcid:        { I: Icon.brandOrcid,        tint: "rgba(166,206,57,0.15)" },
     zenodo:       { I: Icon.brandZenodo,       tint: "rgba(31,71,152,0.10)"  },
     researchgate: { I: Icon.brandResearchgate, tint: "rgba(0,204,187,0.12)"  },
+    scopus:       { I: Icon.brandScopus,       tint: "rgba(233,113,28,0.10)" },
     github:       { I: Icon.brandGithub,       tint: "rgba(23,23,23,0.08)"   },
     email:        { I: Icon.brandEmail,        tint: "rgba(10,31,68,0.08)"   },
   };

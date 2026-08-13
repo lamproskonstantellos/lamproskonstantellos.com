@@ -28,6 +28,7 @@ const SITE = {
     "https://orcid.org/0009-0006-9424-2087",
     "https://zenodo.org/search?page=1&size=20&q=Lampros+Konstantellos",
     "https://www.researchgate.net/profile/Lampros-Konstantellos",
+    "https://www.scopus.com/authid/detail.uri?authorId=60778137200",
     "https://github.com/lamproskonstantellos",
   ],
 };

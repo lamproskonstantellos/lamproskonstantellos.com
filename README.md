@@ -145,4 +145,4 @@ See [`LICENSE`](./LICENSE) for the full terms, including how to request permissi
 
 - **React / ReactDOM** (`vendor/react.production.min.js`, `vendor/react-dom.production.min.js`): MIT License, © Facebook, Inc. and its affiliates. The react-dom build additionally bundles a custom Modernizr build (MIT). The original MIT headers are retained verbatim in those files.
 - **Inter** (`vendor/fonts/inter-latin.woff2`, `vendor/fonts/inter-latin-ext.woff2`): © The Inter Project Authors, redistributed as self-hosted woff2 subsets under the [SIL Open Font License 1.1](https://openfontlicense.org/).
-- **Brand icons** in `icons.jsx` (LinkedIn, Google Scholar, IEEE, ORCID, Zenodo, ResearchGate, GitHub) reference trademarks owned by their respective owners and are used only to link to the author's profiles.
+- **Brand icons** in `icons.jsx` (LinkedIn, Google Scholar, IEEE, ORCID, Zenodo, ResearchGate, Scopus, GitHub) reference trademarks owned by their respective owners and are used only to link to the author's profiles.
