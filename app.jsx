@@ -74,8 +74,12 @@ function Header({ route, navigate, activeSection }) {
   // On the homepage the highlight follows the scroll-spy (activeSection,
   // null while the hero is in view); list and article pages keep their
   // route-derived highlight. The two states carry different aria-current
-  // tokens: "location" for a scroll position within the homepage, "page" for
-  // the actual list/article route you are on.
+  // tokens: "location" for a scroll position within the homepage, "true"
+  // (current item of the set) on list/article pages. NOT "page": these links
+  // point at the home sections (/#news, /#publications), and aria-current=
+  // "page" asserts the link's TARGET is the page you are on — announcing
+  // "current page" on a link that navigates away misleads screen-reader
+  // users.
   const currentToken = (it) => {
     if (route.page === "home" && activeSection === it.id) return "location";
     if (
@@ -83,7 +87,7 @@ function Header({ route, navigate, activeSection }) {
       (route.page === "news-list" && it.id === "news") ||
       (route.page === "article" && it.id === "news")
     ) {
-      return "page";
+      return "true";
     }
     return undefined;
   };
@@ -488,6 +492,11 @@ function App() {
     const st = window.history.state || {};
     if (st.key === undefined) window.history.replaceState({ ...st, key: 0 }, "");
     currentKey.current = (window.history.state && window.history.state.key) || 0;
+    // Seed the mint counter past the restored key: after a reload deep in a
+    // session's history the entry might carry key 3 while the counter restarts
+    // at 0, so the next pushState would mint key 1 — a key an EARLIER entry
+    // still owns, cross-wiring the two entries' saved scroll positions.
+    keyCounter.current = Math.max(keyCounter.current, currentKey.current);
     return () => { if (supported) window.history.scrollRestoration = prev; };
   }, []);
 
@@ -632,12 +641,17 @@ function App() {
     let raf = 0;
     // The re-assert loop must yield to the user: a wheel/touch/key scroll in
     // the first ~half second would otherwise be snapped back to the section
-    // until the 30 frames run out.
+    // until the 30 frames run out. pointerdown covers a mouse CLICK inside
+    // that window — navigate()'s own smooth scroll was yanked back to the
+    // hash target every frame without it — and popstate covers an immediate
+    // Back/Forward whose restoreScroll would fight the same loop.
     const stop = () => cancelAnimationFrame(raf);
     const cancelOpts = { passive: true, once: true };
     window.addEventListener("wheel", stop, cancelOpts);
     window.addEventListener("touchstart", stop, cancelOpts);
     window.addEventListener("keydown", stop, cancelOpts);
+    window.addEventListener("pointerdown", stop, cancelOpts);
+    window.addEventListener("popstate", stop, cancelOpts);
     const attempt = () => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -652,6 +666,8 @@ function App() {
       window.removeEventListener("wheel", stop);
       window.removeEventListener("touchstart", stop);
       window.removeEventListener("keydown", stop);
+      window.removeEventListener("pointerdown", stop);
+      window.removeEventListener("popstate", stop);
     };
   }, []);
 

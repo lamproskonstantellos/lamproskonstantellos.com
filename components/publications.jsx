@@ -192,8 +192,13 @@ function PublicationsListPage({ navigate }) {
           <section className="pub-year-group" key={g.year}>
             <h2 className="pub-year">{g.year}</h2>
             <div className="pub-year-items">
-              {g.items.map((p, i) => (
-                <PublicationRow key={`${g.year}-${i}`} pub={p} />
+              {/* Identity key (titles are unique in data.js), not the list
+                  position: a filter click re-partitions the groups, and a
+                  positional key made React reuse a PublicationRow instance —
+                  its CiteButton's "Copied!" state and 1.8s timer — for a
+                  DIFFERENT publication that landed on the same index. */}
+              {g.items.map((p) => (
+                <PublicationRow key={p.title} pub={p} />
               ))}
             </div>
           </section>
