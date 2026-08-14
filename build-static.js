@@ -22,8 +22,13 @@ const path = require("path");
 
 const {
   renderHtml,
-  discoverArticleSlugs,
   ARTICLES,
+  // Slugs that PASSED validation — the same list the server routes on. The
+  // build previously used discoverArticleSlugs() (every folder containing an
+  // article.js), so a folder whose article the server REJECTED still got a
+  // news/<slug>.html page written — which Cloudflare served with HTTP 200
+  // where the dev server answered 404.
+  VALID_ARTICLE_SLUGS,
   PUBLICATION_YEARS,
   ARTICLE_SCRIPTS,
   ASSET_MAP,
@@ -34,6 +39,11 @@ const {
   // drift. The ?v= token is the one allowed difference vs server output; the
   // parity test normalizes it on both sides.
   DEPLOY_VERSION,
+  // The public root surface, declared once in server.js: the server's
+  // allowlist (isPrivatePath) and the deploy contents both derive from these,
+  // so publishing a new root file is a single edit that updates both.
+  ROOT_PLAIN_FILES,
+  ROOT_IMAGE_BASES,
 } = require("./server.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
 const { IMAGE_WIDTH_VARIANTS } = require("./ui-helpers.js");
@@ -44,38 +54,6 @@ const DEFAULT_OUT = path.join(ROOT, "build");
 // Any unknown path renders the same not-found page (computePageMeta's not-found
 // branch ignores the requested pathname), so 404.html is route-independent.
 const NOT_FOUND_ROUTE = "/this-route-does-not-exist";
-
-// Public root files copied verbatim. Image bases additionally pull their
-// optimize-images siblings (.webp/.avif) via copyImage below.
-const ROOT_PLAIN_FILES = [
-  "styles.css",
-  "site.config.js",
-  "routes.js",
-  "article-schema.js",
-  "ui-helpers.js",
-  "data.js",
-  "site.webmanifest",
-  "robots.txt",
-  "favicon.ico",
-  "favicon.svg",
-  // The hero's "Download CV" target (site.config.js cvPath).
-  "lampros-konstantellos-cv.pdf",
-];
-
-const ROOT_IMAGE_BASES = [
-  "favicon-16x16.png",
-  "favicon-32x32.png",
-  "favicon-48x48.png",
-  "favicon-64x64.png",
-  "favicon-96x96.png",
-  "favicon-128x128.png",
-  "icon-192.png",
-  "icon-256.png",
-  "icon-512.png",
-  "apple-touch-icon.png",
-  "og-image.jpg",
-  "lampros-konstantellos-picture.jpg",
-];
 
 // Excluded from the build entirely — source, tooling, config, docs and the
 // esbuild metafile. Asserted absent from build/ at the end. Keep this in sync
@@ -262,7 +240,7 @@ function buildStatic({ outDir = DEFAULT_OUT } = {}) {
   fs.rmSync(outDir, { recursive: true, force: true });
   ensureDir(outDir);
 
-  const slugs = discoverArticleSlugs();
+  const slugs = VALID_ARTICLE_SLUGS;
 
   // --- 1. Pre-render one HTML file per route -------------------------------
   // FLAT files (news.html), not directory indexes (news/index.html): Cloudflare

@@ -140,3 +140,95 @@ test("HEAD with brotli sets encoding but sends no body", async () => {
   assert.equal(res.headers["content-encoding"], "br");
   assert.equal(res.body.length, 0);
 });
+
+// ---- Object.prototype keys as slugs -----------------------------------------
+// ARTICLE_META & friends are looked up by the URL slug; on a plain object
+// literal ["__proto__"] / ["constructor"] return truthy INHERITED values, which
+// sent these URLs through the article meta branch: index-robots, a canonical of
+// /news/undefined, and a full Article JSON-LD block on a 404 response.
+test("Object.prototype keys are not article slugs", async () => {
+  for (const slug of ["__proto__", "constructor", "hasOwnProperty", "toString"]) {
+    const res = await request(base, `/news/${slug}`);
+    assert.equal(res.status, 404, `/news/${slug} must 404`);
+    const html = res.body.toString("utf8");
+    assert.match(html, /noindex/, `/news/${slug} must be noindex`);
+    assert.ok(!html.includes("/news/undefined"), `/news/${slug} leaked undefined into meta`);
+    assert.ok(!/"@type":\s*"(News)?Article"/.test(html), `/news/${slug} emitted Article JSON-LD`);
+  }
+});
+
+// ---- Request-target shapes ---------------------------------------------------
+
+// "//news" is a legal origin-form target, but new URL(target, base) parses the
+// second segment as an AUTHORITY (pathname "/"), so the server answered 200
+// with the home page for any //<x> URL — a request-line/content mismatch.
+test("scheme-relative // request target is rejected with 400", async () => {
+  for (const target of ["//news", "//evil.example/", "//x/styles.css"]) {
+    const raw = await rawRequest(port, `GET ${target} HTTP/1.1\r\nHost: h\r\nConnection: close\r\n\r\n`);
+    assert.match(raw, /^HTTP\/1\.1 400/, `${target} must be rejected`);
+  }
+});
+
+// An encoded backslash survives the WHATWG parser and only becomes "\" after
+// decodeURIComponent; the denylist compares POSIX-style while path.join uses
+// platform rules, so on win32 /news/..%5Cserver.js dodged isPrivatePath yet
+// resolved onto the source file. The whole class is rejected up front.
+test("encoded backslash (%5C) in the path is rejected with 400", async () => {
+  for (const p of ["/news/..%5Cserver.js", "/%5C%5Ch%5Cshare", "/a%5Cb.css"]) {
+    const res = await request(base, p);
+    assert.equal(res.status, 400, `${p} must be rejected`);
+  }
+});
+
+// ---- Deny-by-default document root ------------------------------------------
+// The repo root is the document root; the public surface is an explicit
+// allowlist, so a NEW root file (notes, scripts, configs dropped next to the
+// code) is 404 until deliberately published in ROOT_PLAIN_FILES/_IMAGE_BASES.
+test("an unlisted root file is not served", async () => {
+  const fs = require("fs");
+  const path = require("path");
+  const stray = path.join(__dirname, "..", "tmp-audit-stray.txt");
+  fs.writeFileSync(stray, "should never be public");
+  try {
+    const res = await request(base, "/tmp-audit-stray.txt");
+    assert.equal(res.status, 404, "unlisted root file must 404");
+  } finally {
+    fs.unlinkSync(stray);
+  }
+});
+
+// ---- Symlink containment -----------------------------------------------------
+// The lexical boundary check cannot see symlinks (fs follows them), so a link
+// under an allowed prefix whose target is outside the root must be refused by
+// the realpath re-check.
+test("symlink escaping the document root is not served", async (t) => {
+  const fs = require("fs");
+  const path = require("path");
+  const link = path.join(__dirname, "..", "vendor", "tmp-audit-link.css");
+  const target = "/etc/hostname";
+  if (!fs.existsSync(target)) return t.skip("no /etc/hostname on this system");
+  try {
+    fs.symlinkSync(target, link);
+  } catch {
+    return t.skip("cannot create symlinks here");
+  }
+  try {
+    const res = await request(base, "/vendor/tmp-audit-link.css");
+    assert.equal(res.status, 403, "symlink out of the root must be 403");
+  } finally {
+    fs.unlinkSync(link);
+  }
+});
+
+// ---- CSP invariant: no inline styles ----------------------------------------
+// style-src carries no 'unsafe-inline' (React's style prop writes through the
+// CSSOM, which CSP does not govern), so the RENDERED markup must stay free of
+// style attributes and <style> blocks — this test is what makes dropping the
+// token safe to keep.
+test("served HTML contains no inline style attribute or <style> block", async () => {
+  for (const p of ["/", "/news", "/publications", "/news/ieee-pess-2025-best-paper-award"]) {
+    const html = (await request(base, p)).body.toString("utf8");
+    assert.ok(!/<style[\s>]/i.test(html), `${p} has a <style> block`);
+    assert.ok(!/\sstyle="/i.test(html), `${p} has an inline style attribute`);
+  }
+});

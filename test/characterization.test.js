@@ -105,9 +105,12 @@ test("asset content types and cache classes", async () => {
   assert.equal(appJs.status, 200);
   assert.match(appJs.headers["cache-control"], /immutable/);
 
-  // ?v= versioned asset → immutable
+  // ?v= with a token that is not the current deploy token → the daily class,
+  // NOT immutable (any-?v= used to qualify, letting third parties pin
+  // arbitrary cache keys for a year).
   const vcss = await request(base, "/styles.css?v=abc123");
-  assert.match(vcss.headers["cache-control"], /immutable/);
+  assert.match(vcss.headers["cache-control"], /max-age=86400/);
+  assert.ok(!/immutable/.test(vcss.headers["cache-control"]));
 
   // HTML → no-store
   const home = await request(base, "/");

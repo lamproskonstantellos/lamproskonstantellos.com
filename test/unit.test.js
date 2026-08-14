@@ -16,6 +16,7 @@ const {
   cacheHeaderFor,
   isValidSpaRoute,
   computePageMeta,
+  DEPLOY_VERSION,
 } = require("../server.js");
 
 // ---- escapeHtml -------------------------------------------------------------
@@ -48,8 +49,17 @@ test("jsonLdScript escapes < to prevent </script> breakout", () => {
 test("cacheHeaderFor classes", () => {
   const req = (url) => ({ url, headers: { host: "example.com" } });
   assert.match(cacheHeaderFor(req("/"), "text/html; charset=utf-8"), /no-store/);
+  // Content-hashed bundle filenames: always immutable.
   assert.match(cacheHeaderFor(req("/dist/app-X.js"), "application/javascript"), /immutable/);
-  assert.match(cacheHeaderFor(req("/styles.css?v=1"), "text/css"), /immutable/);
+  // A ?v= token that does NOT match the current deploy token must not earn
+  // immutable — any-?v= qualified before, letting third parties pin arbitrary
+  // cache keys (…?v=anything) for a year.
+  assert.match(cacheHeaderFor(req("/styles.css?v=1"), "text/css"), /max-age=86400/);
+  // The token the current process stamps: immutable in production (fresh token
+  // per deploy), revalidate in dev — the token is fixed at boot there, so
+  // immutable froze edited CSS/JS for the whole watch session. Tests run
+  // without CF_PAGES_COMMIT_SHA, i.e. the dev branch.
+  assert.equal(cacheHeaderFor(req(`/styles.css?v=${DEPLOY_VERSION}`), "text/css"), "no-cache");
   assert.match(cacheHeaderFor(req("/styles.css"), "text/css"), /max-age=86400/);
 });
 
