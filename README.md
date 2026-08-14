@@ -11,7 +11,7 @@ The personal website of **Lampros Konstantellos**, Electrical & Computer Enginee
 
 - **Frontend:** React 18 loaded via self-hosted UMD builds (`vendor/`). JSX is compiled to plain JavaScript at build time with [esbuild](https://esbuild.github.io/); no in-browser Babel. Plain CSS. Inter is self-hosted as subsetted woff2 (`vendor/fonts/`, preloaded, `font-display: swap`); monospace falls back to the system stack — no third-party font requests.
 - **Build / pre-render:** A Node build step (`build-static.js`) pre-renders every route to a static `build/` directory — the **full page body included**: `ssr.js` renders the React app per route (`react-dom/server`, pinned to the vendored React version) and the markup is baked into `#root`, so search engines, AI crawlers, reader modes and JS-off visitors see the real content; the client bundle hydrates it and the site behaves as an SPA from there. Alongside the body: per-route `<title>` / meta / Open Graph / Twitter / canonical / JSON-LD, the auto-discovered per-article scripts, `sitemap.xml` / `rss.xml` / `feed.json`, a route-independent `404.html`, and the security-header + cache rules as Cloudflare `_headers` / `_redirects`. It reuses the same `renderHtml` and `feeds.js` builders as the local preview server, so the static output is byte-identical to what `server.js` serves (proven by `test/parity.test.js`). A per-deploy version query string on local CSS/JS busts browser caches on every deploy.
-- **Local preview:** The original dependency-free Node.js HTTP server (`server.js`, `npm start`) is retained for local preview. It serves the same per-route meta and feeds at request time, with cached brotli/gzip compression, security headers + CSP, class-appropriate `Cache-Control`, and malformed-request guards (no request can crash the process).
+- **Local preview:** The Node.js HTTP server (`server.js`, `npm start`) is retained for local preview — Node built-ins throughout, plus the pinned `react-dom/server` (the one npm runtime dependency, kept at exactly the vendored browser React's version) for the pre-render. It serves the same per-route meta and feeds at request time, with cached brotli/gzip compression, security headers + CSP, class-appropriate `Cache-Control`, and malformed-request guards (no request can crash the process).
 - **Hosting:** [Cloudflare Pages](https://pages.cloudflare.com/). Builds and deploys the static `build/` output on every git push: build command `npm run build && npm run build:static`, output directory `build`, `NODE_VERSION=22`.
 
 ## Local development
@@ -36,10 +36,13 @@ npm run build:static   # pre-render every route → build/
 ```
 
 `build-static.js` reuses the server's `renderHtml` and `feeds.js` builders, so
-every page, feed and header file in `build/` is byte-identical to what
-`server.js` serves (modulo the per-deploy `?v=` cache-buster), asserted by
-`test/parity.test.js`. Only public assets are copied into `build/`; source,
-tooling and config never are.
+every page and feed in `build/` is byte-identical to what `server.js` serves
+(modulo the per-deploy `?v=` cache-buster), asserted by `test/parity.test.js`.
+The `_headers` file is deploy config rather than a served body: it reproduces
+the server's security-header set verbatim and adds the per-class cache rules,
+and the parity suite asserts it carries every server security header and a
+rule block for every HTML route. Only public assets are copied into `build/`;
+source, tooling and config never are.
 
 **Cloudflare Pages settings**
 
@@ -48,6 +51,11 @@ tooling and config never are.
 | Build command | `npm run build && npm run build:static` |
 | Build output directory | `build` |
 | Environment variable | `NODE_VERSION=22` |
+
+The Node major lives in [`.nvmrc`](./.nvmrc) (`nvm use` locally; CI reads it
+via `setup-node`'s `node-version-file`). When bumping it, update the
+Cloudflare Pages `NODE_VERSION` variable to match — that one cannot be read
+from the repo.
 
 ## Project structure
 
@@ -69,11 +77,14 @@ tooling and config never are.
 ├── build-static.js        Pre-render every route (full body + meta) to build/ for Cloudflare Pages
 ├── build.config.js        esbuild entry list + options (shared by build, watch, and tests)
 ├── server.js              Local preview server: per-route meta, sitemap/rss/feed, compression, security
+├── public-files.js        Allowlists of the public root files/images (shared by server, static build, image pipeline)
 ├── scripts/               Build tooling (build.js, optimize-images.js)
 ├── vendor/                Self-hosted React 18 UMD builds + Inter woff2 subsets (+ license texts)
 ├── test/                  node:test suite + golden files (test/golden/) + browser e2e smoke
 ├── .github/workflows/     CI (npm ci → build → test) + IndexNow ping on deploy
+├── .nvmrc                 Node major for local dev + CI (mirror it in Cloudflare's NODE_VERSION)
 ├── robots.txt             Search-engine directives
+├── 4f9448…c2d.txt         IndexNow ownership key file (public by design; see the SEO section)
 ├── dist/                  Built JS (gitignored; produced by `npm run build`)
 ├── build/                 Static Cloudflare Pages output (gitignored; `npm run build:static`)
 └── news/                  Per-article folders, each with article.js + images
@@ -135,7 +146,7 @@ first — nothing else changes.
 - `sitemap.xml` is generated at build time and includes every static page plus every auto-discovered article; `lastmod` follows `dateUpdated` when an article is edited.
 - `robots.txt` allows all crawlers and points to the sitemap.
 - `rss.xml` and `feed.json` (JSON Feed 1.1) are generated at build time from the auto-discovered articles, newest first.
-- On every push to `main`, the IndexNow workflow (`.github/workflows/indexnow.yml`) submits the live sitemap's URLs to Bing/Yandex/etc. so new content is crawled immediately; the ownership key file is served from the site root.
+- On every push to `main`, the IndexNow workflow (`.github/workflows/indexnow.yml`) waits for the Cloudflare deploy to go live (it polls the live sitemap until it matches the pushed commit's articles), then submits the sitemap's URLs to Bing/Yandex/etc. so new content is crawled immediately. The ownership key file (`<key>.txt` at the site root, containing exactly the key) is **public by design** — that is how the protocol proves ownership; it is not a secret. To rotate the key: generate a new 32-hex key, rename and rewrite the key file, and update the filename in `public-files.js` (`ROOT_PLAIN_FILES`) and the `KEY` constant in `indexnow.yml` — `test/consistency.test.js` fails until all four copies agree.
 
 ## License
 
