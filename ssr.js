@@ -59,6 +59,14 @@ const BUNDLE_ORDER = [
 // that as "SSR unavailable" and serve an empty #root (the client bundle
 // falls back to a fresh render).
 function createSsrRenderer({ assetMap, articleSlugs }) {
+  // NOT a security sandbox. The vm context exists to give the browser
+  // bundles a `window`-shaped global object, not to isolate them: host
+  // objects (React, console) are handed straight in, so anything that runs
+  // here — data.js, an article.js, the compiled bundles — has full Node
+  // access by construction (e.g. via a host object's Function constructor).
+  // The trust boundary is the REPOSITORY, exactly as documented for
+  // loadArticleMeta's plain Function(): only committed first-party code is
+  // ever executed. Do not load third-party or user-supplied content here.
   const sandbox = {
     console,
     React,

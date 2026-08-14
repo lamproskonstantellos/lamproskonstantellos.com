@@ -86,7 +86,15 @@ const MUST_BE_ABSENT = [
   "app.jsx",
   "icons.jsx",
   "components",
+  // Node-only allowlist leaf (required by server/build/image tooling).
+  "public-files.js",
 ];
+
+// Extensions the server classes as private EVERYWHERE, not just at the root
+// (isPrivatePath: /\.(md|jsx)$/i) — the deep-copied folders (news/<slug>/,
+// vendor/) must apply the same rule, or a draft-notes.md dropped next to an
+// article would 404 on the dev server yet ship 200 on the deploy.
+const PRIVATE_EXTENSIONS = /\.(md|jsx)$/i;
 
 function log(msg) {
   console.log(msg);
@@ -137,7 +145,10 @@ function copyDir(outDir, relDir, skip) {
   if (!fs.existsSync(src)) return;
   fs.cpSync(src, path.join(outDir, relDir), {
     recursive: true,
-    filter: (s) => !path.basename(s).startsWith(".") && !(skip && skip(s)),
+    filter: (s) =>
+      !path.basename(s).startsWith(".") &&
+      !PRIVATE_EXTENSIONS.test(path.basename(s)) &&
+      !(skip && skip(s)),
   });
 }
 
@@ -195,10 +206,21 @@ function buildHeadersFile(securityHeaders, htmlPathnames) {
   }
 
   // Feeds: public, max-age=3600 — exact paths declared AFTER /*.xml and
-  // /*.json so the feed value wins under both precedence models.
-  for (const feed of ["/sitemap.xml", "/rss.xml", "/feed.json"]) {
+  // /*.json so the feed value wins under both precedence models. The
+  // Content-Type is pinned too: Cloudflare derives types from the extension
+  // (application/xml, application/json), while the server — and the
+  // <link rel="alternate" type=…> declarations in every page head — use the
+  // feeds' REGISTERED media types; without these rules the deploy served a
+  // type the pages themselves contradict.
+  const FEED_TYPES = {
+    "/sitemap.xml": "application/xml; charset=utf-8",
+    "/rss.xml": "application/rss+xml; charset=utf-8",
+    "/feed.json": "application/feed+json; charset=utf-8",
+  };
+  for (const [feed, type] of Object.entries(FEED_TYPES)) {
     lines.push(feed);
     lines.push("  Cache-Control: public, max-age=3600");
+    lines.push(`  Content-Type: ${type}`);
     lines.push("");
   }
 
@@ -241,8 +263,12 @@ function render(pathname) {
     renderApp: ssr.renderApp,
   });
   // Belt-and-braces: a page whose #root came back empty (a per-route render
-  // throw is swallowed into "" on the server path) must not ship.
-  if (!html.includes('<div id="root"><')) {
+  // throw is swallowed into "" on the server path) must not ship. The check
+  // is for the EMPTY marker's presence, not a "filled" prefix — the previous
+  // `!html.includes('<div id="root"><')` was inert, because that prefix is
+  // also a substring of the empty `<div id="root"></div>` (its closing tag
+  // starts with the same "<").
+  if (html.includes('<div id="root"></div>')) {
     throw new Error(`build: pre-rendered body missing for ${pathname}`);
   }
   return html;
@@ -304,10 +330,15 @@ function buildStatic({ outDir = DEFAULT_OUT } = {}) {
   // are never reachable under a second (.html) address — a direct hit on
   // /news.html used to serve a real page that the client router then tore
   // down as a 404 view. (Cloudflare already 308s /foo/ → /foo itself.)
+  // 404.html joins the same rule: Cloudflare serves it INTERNALLY for
+  // unmatched paths (no request to /404.html involved), so redirecting the
+  // direct address costs nothing and closes the one remaining second-address
+  // page. The dev server mirrors this whole map (FLAT_HTML_REDIRECTS).
   writeFile(
     outDir,
     "_redirects",
     "/index.html  /  301\n" +
+      "/404.html  /  301\n" +
       htmlRoutes
         .filter((r) => r.out !== "index.html")
         .map((r) => `/${r.out}  ${r.pathname}  301\n`)

@@ -126,16 +126,33 @@ async function optimize(srcPath, { force = false } = {}) {
       fit: "inside",
       withoutEnlargement: true,
     });
-  await full().webp({ quality: WEBP_QUALITY }).toFile(out("", ".webp"));
-  await full().avif({ quality: AVIF_QUALITY }).toFile(out("", ".avif"));
+  await encodeTo(full().webp({ quality: WEBP_QUALITY }), out("", ".webp"));
+  await encodeTo(full().avif({ quality: AVIF_QUALITY }), out("", ".avif"));
   // Width variants: exactly the promised width (a rare smaller-than-480px
   // original is gently upscaled rather than shipping a lying descriptor).
   for (const w of IMAGE_WIDTH_VARIANTS) {
     const sized = () => sharp(srcPath).resize({ width: w });
-    await sized().webp({ quality: WEBP_QUALITY }).toFile(out(`-${w}`, ".webp"));
-    await sized().avif({ quality: AVIF_QUALITY }).toFile(out(`-${w}`, ".avif"));
+    await encodeTo(sized().webp({ quality: WEBP_QUALITY }), out(`-${w}`, ".webp"));
+    await encodeTo(sized().avif({ quality: AVIF_QUALITY }), out(`-${w}`, ".avif"));
   }
   return true;
+}
+
+// Encode to a temp sibling, then rename into place. A direct toFile(dest)
+// killed mid-encode (CI cancellation, OOM, Ctrl-C) left a TRUNCATED file
+// whose mtime is newer than its source — which the freshness check above
+// reads as "up to date" forever, so the corrupt variant shipped on every
+// later build with exit 0. rename() on the same filesystem is atomic: the
+// destination either keeps its old bytes or gets the complete new ones.
+// (Same pattern scripts/build.js uses for the manifest.)
+async function encodeTo(pipeline, dest) {
+  const tmp = `${dest}.tmp-${process.pid}`;
+  try {
+    await pipeline.toFile(tmp);
+    fs.renameSync(tmp, dest);
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
 }
 
 // Generate the 1200x630 og:image crop for an article cover (news/<slug>/cover.*).
@@ -152,10 +169,12 @@ async function socialCrop(srcPath, { force = false } = {}) {
   if (!force && fs.existsSync(og) && fs.statSync(og).mtimeMs >= srcMtime) return false;
 
   console.log(`Social crop ${srcPath} -> ${og}`);
-  await sharp(srcPath)
-    .resize(OG_WIDTH, OG_HEIGHT, { fit: "cover", position: sharp.strategy.attention })
-    .jpeg({ quality: OG_QUALITY, mozjpeg: true })
-    .toFile(og);
+  await encodeTo(
+    sharp(srcPath)
+      .resize(OG_WIDTH, OG_HEIGHT, { fit: "cover", position: sharp.strategy.attention })
+      .jpeg({ quality: OG_QUALITY, mozjpeg: true }),
+    og
+  );
   return true;
 }
 
