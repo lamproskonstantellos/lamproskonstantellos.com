@@ -16,7 +16,7 @@ const {
 } = require("./routes.js");
 const { validateArticle, plainBody, escapeHtml } = require("./article-schema.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
-const { createSsrRenderer } = require("./ssr.js");
+const { createSsrRenderer, GLOBAL_SCRIPTS: SSR_GLOBAL_SCRIPTS } = require("./ssr.js");
 // Shared responsive-image vocabulary (same module the browser loads), so the
 // preload's imagesrcset/imagesizes can never drift from what <Picture> renders.
 const { imageSrcset, HERO_IMG_SIZES, ARTICLE_COVER_SIZES, IMAGE_WIDTH_VARIANTS } = require("./ui-helpers.js");
@@ -325,19 +325,23 @@ const PUBLICATION_YEARS = PUBLICATIONS.map((p) => Number(p.year)).filter(Number.
 // The display form is "**Konstantellos, L.**, Vazakas, A., & Papadopoulos,
 // N.-A. (2026)" — strip the bold markers and the year, then split into
 // "Surname, I." pairs. A plain split(",") would cut between each surname and
-// its own initials; the reliable boundary is a comma-space followed by a NEW
-// surname — an uppercase letter with at least one lowercase letter after it
-// (initials like "L." or "N.-A." have none). Unicode classes so Kamacı /
-// Köpfer split correctly.
+// its own initials. The boundary is structural, not morphological: a
+// comma-space where the NEXT comma-delimited token is itself followed by
+// ", <Uppercase>." — i.e. the start of a new "Surname, Initials" pair. That
+// keeps multi-word ("van der Berg, J."), apostrophe ("O'Brien, M.") and
+// unicode (Kamacı, Köpfer) surnames whole, where a guess at surname shape
+// (uppercase-then-lowercase-letters) silently glued them to their neighbour.
+// A trailing "et al." is dropped — it is not a Person.
 function parsePublicationAuthors(authorsField) {
   const plain = String(authorsField || "")
     .replace(/\*\*/g, "")
     .replace(/\s*\(\d{4}\)\s*$/, "")
+    .replace(/,?\s*et al\.?\s*$/i, "")
     .trim();
   if (!plain) return [];
   const parts = [];
   for (const chunk of plain.split(/\s*&\s*/)) {
-    const names = chunk.split(/,\s*(?=\p{Lu}\p{Ll}[\p{L}'’-]*,\s)/u);
+    const names = chunk.split(/,\s+(?=[^,]+,\s*\p{Lu}\.)/u);
     for (const n of names) {
       const name = n.trim().replace(/,\s*$/, "");
       if (name) parts.push(name);
@@ -366,8 +370,10 @@ const PUBLICATIONS_ITEMLIST = {
     // the rendered page and the Crossref/Zenodo record.
     const authors = parsePublicationAuthors(p.authors).map((name) => {
       const node = { "@type": "Person", "name": name };
-      // Only the site owner's entry links back to this site.
-      if (name.toLowerCase().startsWith("konstantellos")) node.url = HOME_URL;
+      // Only the site owner's entry links back to this site — matched on the
+      // EXACT surname token, not a prefix (a prefix would also claim an
+      // unrelated "Konstantellos, P." or a merged multi-author blob).
+      if (name.split(",")[0].trim().toLowerCase() === "konstantellos") node.url = HOME_URL;
       return node;
     });
     const item = {
@@ -438,12 +444,38 @@ function currentAssetMap() {
 }
 
 // Lazy SSR renderer over the current bundles. `undefined` = not built yet
-// (or invalidated by a watch rebuild); `null` = unavailable (no compiled
-// bundles — e.g. `npm start` before any build), in which case pages serve
-// with an empty #root and the client bundle renders fresh, exactly the
-// pre-SSR behavior.
+// (or invalidated); `null` = unavailable (no compiled bundles — e.g.
+// `npm start` before any build), in which case pages serve with an empty
+// #root and the client bundle renders fresh, exactly the pre-SSR behavior.
+//
+// Invalidation watches TWO input classes: the esbuild manifest (bundle
+// rebuilds, via currentAssetMap) and the pre-render's OWN source scripts —
+// data.js, the shared globals and every article.js. Without the latter,
+// editing an article's prose during `npm run watch` kept serving the stale
+// pre-rendered body while the browser loaded the fresh article.js — a
+// hydration mismatch and a flash of old content on every save.
 let ssrRenderer;
+let ssrInputsMtimeSeen = 0;
+function ssrInputsMtime() {
+  let max = 0;
+  const stat = (rel) => {
+    try {
+      const m = fs.statSync(path.join(PUBLIC_DIR, rel)).mtimeMs;
+      if (m > max) max = m;
+    } catch {
+      /* a vanished input reads as unchanged; the render itself will throw */
+    }
+  };
+  for (const rel of SSR_GLOBAL_SCRIPTS) stat(rel);
+  for (const slug of VALID_ARTICLE_SLUGS) stat(`news/${slug}/article.js`);
+  return max;
+}
 function ssrAppHtml(pathname) {
+  const inputsMtime = ssrInputsMtime();
+  if (inputsMtime !== ssrInputsMtimeSeen) {
+    ssrInputsMtimeSeen = inputsMtime;
+    ssrRenderer = undefined;
+  }
   if (ssrRenderer === undefined) {
     try {
       ssrRenderer = createSsrRenderer({
@@ -935,7 +967,8 @@ function injectMeta(html, meta) {
 // the auto-discovered article <script>s after the /data.js tag → rewrite
 // /dist/<name>.js to content-hashed names via the asset map → stamp
 // ?v=deployVersion on local non-dist css/js for cache busting.
-function renderHtml(templateHtml, pathname, { deployVersion, articleScripts, assetMap } = {}) {
+function renderHtml(templateHtml, pathname, opts = {}) {
+  const { deployVersion, articleScripts, assetMap } = opts;
   const map = assetMap || {};
   const meta = computePageMeta(pathname);
   const processedHtml = injectMeta(templateHtml, meta);
@@ -963,15 +996,23 @@ function renderHtml(templateHtml, pathname, { deployVersion, articleScripts, ass
     /((?:src|href)=")(\/(?!dist\/)[^"?]+\.(?:css|js))(")/g,
     `$1$2?v=${deployVersion}$3`
   );
-  // Full-body pre-render: <App /> for this pathname baked into #root (ssr.js)
-  // so non-JS consumers see the real page; the client hydrates it. Injected
-  // LAST — the app markup must not pass through the rewrites above — and via
-  // a function replacement (article prose can contain $-sequences). An empty
-  // string (SSR unavailable) leaves the shell exactly as before.
-  const appHtml = ssrAppHtml(pathname);
-  return appHtml
-    ? versioned.replace('<div id="root"></div>', () => `<div id="root">${appHtml}</div>`)
-    : versioned;
+  // Full-body pre-render: <App /> for this pathname baked into #root so
+  // non-JS consumers see the real page; the client hydrates it. The renderer
+  // comes through opts (the server passes its lazily-invalidated ssrAppHtml;
+  // build-static passes a renderer pinned to ITS asset-map snapshot, so the
+  // build's body always matches the script tags it ships even if a watch
+  // rebuild lands mid-build). Injected LAST — the app markup must not pass
+  // through the rewrites above — and via a function replacement (article
+  // prose can contain $-sequences). An empty string (SSR unavailable) leaves
+  // the shell exactly as before.
+  const appHtml = opts.renderApp ? opts.renderApp(pathname) : "";
+  if (!appHtml) return versioned;
+  const marker = '<div id="root"></div>';
+  if (!versioned.includes(marker)) {
+    // A reformatted template would silently drop SSR everywhere — fail loud.
+    throw new Error('renderHtml: template is missing the <div id="root"></div> marker');
+  }
+  return versioned.replace(marker, () => `<div id="root">${appHtml}</div>`);
 }
 
 function serveIndex(req, res, filePath, pathname, statusCode = 200) {
@@ -993,6 +1034,7 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
         deployVersion: DEPLOY_VERSION,
         articleScripts: ARTICLE_SCRIPTS,
         assetMap: currentAssetMap(),
+        renderApp: ssrAppHtml,
       });
       const contentType = "text/html; charset=utf-8";
       // Cache compressed variants by CONTENT, not by path: a path key served
@@ -1240,58 +1282,14 @@ const SECURITY_HEADERS = {
   ].join("; "),
 };
 
-// The repo root is the document root, so the PUBLIC surface is declared
-// explicitly and everything else is private BY DEFAULT. The two lists below
-// are the single source of truth shared with build-static.js (which copies
-// exactly these root files into the deploy), so a new root file is invisible
-// on both surfaces until it is deliberately published here.
-//
-// Root files served (and copied to the build) verbatim:
-const ROOT_PLAIN_FILES = [
-  "styles.css",
-  "site.config.js",
-  "routes.js",
-  "article-schema.js",
-  "ui-helpers.js",
-  "data.js",
-  "site.webmanifest",
-  "robots.txt",
-  "favicon.ico",
-  "favicon.svg",
-  // The header CV chip's target (site.config.js cvPath).
-  "lampros-konstantellos-cv.pdf",
-  // IndexNow ownership proof: the key file must be served at the site root
-  // (.github/workflows/indexnow.yml POSTs the sitemap URLs with this key on
-  // every push to main so Bing/Yandex/etc. re-crawl immediately). The key is
-  // public BY DESIGN — serving it is what proves domain ownership.
-  "4f944816acc54986697c161e20f28a2d.txt",
-];
-// Root images in two classes with different pipelines:
-// - BRAND images (favicons, app icons, the og:image card) render at fixed
-//   sizes via <link>/manifest/og tags — nothing references responsive
-//   variants for them, so optimize-images skips them and neither the server
-//   nor the build advertises variant paths.
-// - PICTURE images go through <Picture>/preload srcsets and ship with their
-//   optimize-images siblings (.webp/.avif plus the -480/-960 widths).
-const ROOT_BRAND_IMAGES = [
-  "favicon-16x16.png",
-  "favicon-32x32.png",
-  "favicon-48x48.png",
-  "favicon-64x64.png",
-  "favicon-96x96.png",
-  "favicon-128x128.png",
-  "icon-192.png",
-  "icon-256.png",
-  "icon-512.png",
-  // Maskable variant (safe-zone padding baked in) for Android/Chromium
-  // adaptive icons — an "any"-only set gets letterboxed on the home screen.
-  "icon-512-maskable.png",
-  "apple-touch-icon.png",
-  "og-image.jpg",
-];
-const ROOT_PICTURE_IMAGES = [
-  "lampros-konstantellos-picture.jpg",
-];
+// The repo root is the document root; the PUBLIC surface is declared in
+// public-files.js (a dependency-free leaf shared with build-static.js and
+// scripts/optimize-images.js) and everything else is private BY DEFAULT.
+const {
+  ROOT_PLAIN_FILES,
+  ROOT_BRAND_IMAGES,
+  ROOT_PICTURE_IMAGES,
+} = require("./public-files.js");
 
 // Every root-level pathname the server may answer: the plain files, the image
 // bases and their generated variants, the rendered pages/feeds (answered by
@@ -1390,7 +1388,14 @@ function checkRealPathContained(filePath, rootReal, cb) {
 }
 
 function sendStatus(res, code, message, extraHeaders) {
-  if (res.headersSent) return;
+  if (res.headersSent) {
+    // Too late for a status line — but returning silently would leave the
+    // socket open until the request timeout (the exact hang the try/catch
+    // callers exist to prevent). Drop the connection instead: the client
+    // sees a truncated response, which is the honest signal here.
+    res.destroy();
+    return;
+  }
   res.writeHead(code, {
     "Content-Type": "text/plain; charset=utf-8",
     // Error/status responses are heuristically cacheable per RFC 9110 §15.1
@@ -1507,15 +1512,34 @@ const server = http.createServer((req, res) => {
     // Pages (which 308s /foo/ → /foo for the flat foo.html layout). The dev
     // server used to answer /news/<slug>/ with a 200 of the full article — a
     // duplicate-content URL the deploy redirects, i.e. a status-code parity
-    // break between the two environments. Location is built from the
-    // still-ENCODED pathname (parsedUrl.pathname), never the decoded form:
-    // a header must not carry bytes that decoding surprises smuggled in (the
-    // control-character rejection above closes today's case; the encoded
-    // form removes the class).
-    if (urlPathname !== "/" && urlPathname.endsWith("/")) {
+    // break between the two environments.
+    //
+    // Location derivation: strip the slashes from the DECODED, normalized
+    // path, then re-encode per segment. Stripping the ENCODED pathname
+    // instead looked header-safe but self-looped on %2F: for GET /news%2F
+    // the decoded path "/news/" triggered the guard while the encoded
+    // "/news%2F" ends in "F" — nothing was stripped and the 301 pointed at
+    // its own request target, a permanently-cacheable redirect loop.
+    // Re-encoding keeps the header-injection property (encodeURIComponent
+    // never emits control bytes), and the control-character rejection above
+    // already closed the decoded-byte class.
+    const strippedPath = urlPathname.replace(/\/+$/, "") || "/";
+    if (strippedPath !== urlPathname) {
       res.writeHead(301, {
         "Location":
-          (parsedUrl.pathname.replace(/\/+$/, "") || "/") + (parsedUrl.search || ""),
+          (strippedPath.split("/").map(encodeURIComponent).join("/") || "/") +
+          (parsedUrl.search || ""),
+        "Content-Type": "text/plain; charset=utf-8",
+      });
+      res.end("Moved Permanently");
+      return;
+    }
+    // The same class from the other side: an encoded form that DECODES to the
+    // bare root (/%2F, /./) must not serve the home page as a duplicate 200
+    // under a second URL — send it to the one true "/".
+    if (urlPathname === "/" && parsedUrl.pathname !== "/") {
+      res.writeHead(301, {
+        "Location": "/" + (parsedUrl.search || ""),
         "Content-Type": "text/plain; charset=utf-8",
       });
       res.end("Moved Permanently");
@@ -1662,6 +1686,7 @@ module.exports = {
   SECURITY_HEADERS,
   isPrivatePath,
   checkRealPathContained,
+  parsePublicationAuthors,
   // Build-time reuse: the static build (build-static.js) renders and writes the
   // exact bytes the server serves by reusing this already-loaded state.
   DEPLOY_VERSION,

@@ -5,7 +5,7 @@ name: IndexNow
 # scheduled crawl. Google does not support IndexNow; it discovers changes via
 # the sitemap advertised in robots.txt (its ping endpoint was retired).
 #
-# The key file (<key>.txt at the site root, listed in server.js
+# The key file (<key>.txt at the site root, listed in public-files.js
 # ROOT_PLAIN_FILES) is the ownership proof; the key being public is by
 # design, so no repository secret is involved.
 
@@ -24,24 +24,88 @@ concurrency:
 jobs:
   ping:
     runs-on: ubuntu-latest
+    # The ping is a best-effort hint. A slow Cloudflare deploy or an IndexNow
+    # API hiccup must not paint the repository's default branch red — the
+    # engines crawl the sitemap on their own schedule regardless.
+    continue-on-error: true
+    timeout-minutes: 10
     steps:
-      # Cloudflare Pages builds and deploys on the same push; give it time to
-      # go live so the engines fetch the NEW sitemap and key file. (If the
-      # deploy is slower one day, the engines still crawl the pinged URLs
-      # later — IndexNow is a hint, not a transaction.)
-      - name: Wait for the Cloudflare Pages deploy
-        run: sleep 150
+      # The checkout is what makes the poll below meaningful: the news/
+      # folders in THIS commit define which article URLs the live sitemap
+      # must show before the ping fires.
+      - uses: actions/checkout@v4
 
-      - name: Submit the live sitemap URLs to IndexNow
+      # Cloudflare Pages builds and deploys on the same push, with no signal
+      # back to this workflow. A fixed sleep raced it: ping too early and the
+      # engines fetch the PREVIOUS deploy's sitemap and cache stale URLs.
+      # Instead, poll the live sitemap until its /news/ URL set exactly
+      # matches the article folders in this commit (additions AND deletions
+      # both flip the set, so either kind of change is detected). A push that
+      # changes no slugs matches immediately — the grace sleep before the
+      # first poll gives the typical deploy time to land in that case.
+      # On timeout: warn and skip the ping rather than fail — see the
+      # continue-on-error note above.
+      - name: Wait for the live sitemap to match this commit, then ping IndexNow
         run: |
           node --input-type=module -e '
+          import { readdirSync } from "node:fs";
+
           const HOST = "lamproskonstantellos.com";
           const KEY = "4f944816acc54986697c161e20f28a2d";
-          const sitemap = await fetch(`https://${HOST}/sitemap.xml`);
-          if (!sitemap.ok) throw new Error(`sitemap fetch failed: ${sitemap.status}`);
-          const xml = await sitemap.text();
-          const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-          if (urls.length === 0) throw new Error("no URLs found in the sitemap");
+          const GRACE_MS = 90_000;      // typical Pages build+deploy latency
+          const POLL_MS = 20_000;
+          const MAX_POLLS = 20;         // ~6.5 min of polling after the grace
+
+          const wantSlugs = new Set(
+            readdirSync("news", { withFileTypes: true })
+              .filter((e) => e.isDirectory() && !/^__.*__$/.test(e.name))
+              .map((e) => e.name)
+          );
+          const wantUrls = [...wantSlugs].map((s) => `https://${HOST}/news/${s}`);
+
+          const fetchSitemapUrls = async () => {
+            const res = await fetch(`https://${HOST}/sitemap.xml`, { cache: "no-store" });
+            if (!res.ok) throw new Error(`sitemap fetch failed: ${res.status}`);
+            const xml = await res.text();
+            return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+          };
+
+          const matchesCommit = (urls) => {
+            const liveSlugs = new Set(
+              urls
+                .map((u) => new URL(u).pathname)
+                .filter((p) => p.startsWith("/news/"))
+                .map((p) => p.slice("/news/".length).replace(/\/+$/, ""))
+                .filter(Boolean)
+            );
+            if (liveSlugs.size !== wantSlugs.size) return false;
+            return [...wantSlugs].every((s) => liveSlugs.has(s));
+          };
+
+          const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+          await sleep(GRACE_MS);
+          let urls = null;
+          for (let i = 1; i <= MAX_POLLS; i++) {
+            try {
+              const live = await fetchSitemapUrls();
+              if (matchesCommit(live)) { urls = live; break; }
+              console.log(`Poll ${i}/${MAX_POLLS}: live sitemap does not match this commit yet.`);
+            } catch (e) {
+              console.log(`Poll ${i}/${MAX_POLLS}: ${e.message}`);
+            }
+            if (i < MAX_POLLS) await sleep(POLL_MS);
+          }
+
+          if (!urls) {
+            console.warn(
+              "WARNING: live sitemap never matched this commit within the polling budget — " +
+              "skipping the IndexNow ping (the engines will pick the URLs up from the sitemap " +
+              `on their own). Expected ${wantUrls.length} article URL(s).`
+            );
+            process.exit(0);
+          }
+
           const res = await fetch("https://api.indexnow.org/indexnow", {
             method: "POST",
             headers: { "Content-Type": "application/json; charset=utf-8" },

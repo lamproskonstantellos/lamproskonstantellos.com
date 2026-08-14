@@ -31,12 +31,13 @@ const sharp = require("sharp");
 // the files this script writes.
 const { IMAGE_WIDTH_VARIANTS, IMAGE_MAX_WIDTH } = require("../ui-helpers.js");
 // The brand-image list (favicons/icons/og-image — rendered at fixed sizes,
-// no srcset consumer) comes from server.js, the single owner of the root
-// image classes, so this skip can never drift from what the server and the
-// build advertise. Scoped to ROOT files only — a hypothetical
-// news/<slug>/icon-something.jpg is a normal article image and keeps its
-// variants.
-const { ROOT_BRAND_IMAGES } = require("../server.js");
+// no srcset consumer) comes from the dependency-free public-files.js leaf —
+// the single owner of the root image classes — so this skip can never drift
+// from what the server and the build advertise, and the image step no longer
+// inherits server.js's startup work and article diagnostics. Scoped to ROOT
+// files only — a hypothetical news/<slug>/icon-something.jpg is a normal
+// article image and keeps its variants.
+const { ROOT_BRAND_IMAGES } = require("../public-files.js");
 const NO_VARIANT_ROOT_FILES = new Set(ROOT_BRAND_IMAGES);
 
 // Walking "." already covers news/ recursively.

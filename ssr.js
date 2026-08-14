@@ -117,4 +117,8 @@ function createSsrRenderer({ assetMap, articleSlugs }) {
   return { renderApp };
 }
 
-module.exports = { createSsrRenderer };
+// GLOBAL_SCRIPTS / BUNDLE_ORDER are exported for the server's SSR-input
+// freshness check and for the consistency test that locks them against
+// index.html's actual <script> order (a drifted copy here would leave a
+// component undefined in the sandbox and blank every page's #root).
+module.exports = { createSsrRenderer, GLOBAL_SCRIPTS, BUNDLE_ORDER };

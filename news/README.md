@@ -138,15 +138,22 @@ the browser (`defineArticle`, throwing a clear console error) and the server
 (`loadArticleMeta`, which logs and skips an invalid article so bad data never
 reaches the feeds). It enforces: the required fields; that `date` (and the
 optional `dateUpdated`) is a **real** `YYYY-MM-DD` calendar day; that `slug`
-is lowercase letters/digits/hyphens **and equals the folder name**; that
-`body` is a non-empty array and `photos`/`sources`/`keywords`/`topics` are
-arrays; that every asset path (`cover`, `video`, `videoWebm`, `poster`,
-`captions`, `photos[].src`) points inside the article's own `news/<slug>/`
-folder; that each `sources` entry is `{ href, label }` with an `http(s)`
-URL; that `title`/`excerpt`/`seoDescription`/`dateLabel` contain no control
-characters (they would break the XML feeds); that `videoWidth`/`videoHeight`
-(and a photo's `width`/`height`) are positive numbers set together; and that
-`videoAfter` is a non-negative integer. The legacy
+is lowercase letters/digits/hyphens only; that `body` is a non-empty array
+and `photos`/`sources`/`keywords`/`topics` are arrays; that every asset path
+(`cover`, `video`, `videoWebm`, `poster`, `captions`, `photos[].src`) points
+inside the article's own `news/<slug>/` folder; that each `sources` entry is
+`{ href, label }` with an `http(s)` URL; that
+`title`/`excerpt`/`seoDescription`/`dateLabel` contain no control characters
+(they would break the XML feeds); that `videoWidth`/`videoHeight` (and a
+photo's `width`/`height`) are positive numbers set together; and that
+`videoAfter` and each photo's `after` are integers that point at an existing
+`body` paragraph. The **slug = folder name** rule is enforced one level up,
+where the folder is actually known: `loadArticleMeta` (used by both the
+server and the static build) refuses an article whose `slug` field diverges
+from its folder — the generated `/news/<slug>` URLs would point nowhere. (The
+browser cannot see folders, so `defineArticle` alone cannot catch this one;
+the skip happens where the `<script>` tags are injected, so a divergent
+article simply never ships, with the error named in the build/server log.) The legacy
 `(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({ ... })` form
 still works if you ever need it.
 
@@ -175,6 +182,10 @@ still works if you ever need it.
   shown to readers. Articles sort by `date`, so a typo reorders the list.
 - **Paths without the folder prefix** — every `cover`/`photos`/`video` path
   starts with `news/<slug>/…`, not just the filename.
+- **Uppercase asset filenames** — asset paths allow lowercase letters, digits,
+  dot, dash and underscore only. Rename a camera original like `IMG_1234.JPG`
+  (e.g. to `photo-01.jpg`) before referencing it; validation rejects it with
+  exactly this hint.
 - **Committing generated files** — never commit `.webp`, `.avif`, or
   `cover-og.jpg`; the build regenerates them (they are gitignored anyway).
 - **Huge originals are fine** — the pipeline caps display variants at 2200px

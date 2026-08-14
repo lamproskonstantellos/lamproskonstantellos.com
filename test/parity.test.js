@@ -15,7 +15,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const { start, stop, request, matchGolden } = require("./helper");
-const { VALID_ARTICLE_SLUGS } = require("../server.js");
+const { VALID_ARTICLE_SLUGS, SECURITY_HEADERS } = require("../server.js");
 const { buildStatic, MUST_BE_ABSENT, assertNoExcluded } = require("../build-static.js");
 
 const BUILD = path.join(__dirname, "..", "build");
@@ -118,6 +118,47 @@ test("assertNoExcluded catches a planted private file in build/", () => {
     assert.throws(() => assertNoExcluded(BUILD), /\.env/, "planted dotfile not detected");
   } finally {
     fs.unlinkSync(dotfile);
+  }
+});
+
+// The _headers file is the static deploy's ONLY carrier of the security
+// headers the server sets in code — parity for headers, not just bodies.
+// Every SECURITY_HEADERS pair must appear verbatim, and every clean HTML
+// route must have its own rule block (Cloudflare matches the REQUEST path;
+// the extensionless SPA URLs match no /*.html pattern).
+test("_headers carries every security header and every HTML route", () => {
+  const headersFile = fs.readFileSync(path.join(BUILD, "_headers"), "utf8");
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    assert.ok(
+      headersFile.includes(`${name}: ${value}`),
+      `_headers is missing "${name}: ${value}" — static deploy would drop a server header`
+    );
+  }
+  for (const [routePath] of HTML_ROUTES) {
+    assert.ok(
+      new RegExp(`^${routePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m").test(headersFile),
+      `_headers has no rule block for HTML route ${routePath}`
+    );
+  }
+});
+
+// Every pre-rendered flat file must 301 to its clean URL so no page is ever
+// reachable under a second address (and /index.html joins the same rule set).
+test("_redirects maps every flat HTML file to its clean URL", () => {
+  const redirects = fs.readFileSync(path.join(BUILD, "_redirects"), "utf8");
+  const lines = redirects.split("\n").filter(Boolean);
+  const expect = (from, to) =>
+    assert.ok(
+      lines.some((l) => {
+        const [f, t, code] = l.trim().split(/\s+/);
+        return f === from && t === to && code === "301";
+      }),
+      `_redirects is missing "${from} ${to} 301"`
+    );
+  expect("/index.html", "/");
+  for (const [routePath, buildRel] of HTML_ROUTES) {
+    if (buildRel === "index.html") continue;
+    expect(`/${buildRel}`, routePath);
   }
 });
 

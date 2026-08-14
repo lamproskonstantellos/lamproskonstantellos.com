@@ -15,5 +15,8 @@ cover-og.jpg
 # Backstop for test fixtures: fixture articles live in OS temp dirs, but if a
 # crashed run ever leaves one under news/, it must not get committed.
 news/__*__/
+# Throwaway root-file fixtures planted by test/security.test.js — a crashed
+# run must not leave one committable.
+tmp-audit-*
 # optimize-images encoder-settings stamp (regeneration trigger, machine-local).
 .optimize-images-stamp.json

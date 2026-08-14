@@ -219,3 +219,79 @@ test("loadArticleMeta skips an invalid article (returns null, fails loudly)", ()
     fs.rmSync(base, { recursive: true, force: true });
   }
 });
+
+// ---- C11: the SSR premise — one React version in both worlds ----------------
+// Hydration only attaches cleanly when the browser bundle (vendored UMD) and
+// the server renderer (npm react-dom/server) are the SAME React: a version
+// bump on either side alone risks markup drift and a hooks-dispatcher
+// mismatch that no other test would attribute to the real cause.
+
+test("vendored React UMD builds match the npm react/react-dom versions", () => {
+  const reactVersion = require("react/package.json").version;
+  const domVersion = require("react-dom/package.json").version;
+  assert.equal(reactVersion, domVersion, "react and react-dom must be pinned to one version");
+  const umd = fs.readFileSync(path.join(ROOT, "vendor/react.production.min.js"), "utf8");
+  assert.ok(
+    umd.includes(`version="${reactVersion}"`),
+    `vendor/react.production.min.js is not version ${reactVersion} — update the vendored UMD ` +
+      "and the npm pin together"
+  );
+  const domUmd = fs.readFileSync(path.join(ROOT, "vendor/react-dom.production.min.js"), "utf8");
+  assert.ok(
+    domUmd.includes(`"${domVersion}"`),
+    `vendor/react-dom.production.min.js is not version ${domVersion} — update the vendored UMD ` +
+      "and the npm pin together"
+  );
+});
+
+// ---- C12: IndexNow key — file name, content, allowlist, workflow ------------
+// The protocol's ownership proof is `GET /<key>.txt` returning the key. Four
+// copies of the fact exist (file name, file content, ROOT_PLAIN_FILES entry,
+// workflow constant); any one drifting silently breaks the ping.
+
+test("IndexNow key file, content, allowlist and workflow agree", async () => {
+  const { ROOT_PLAIN_FILES } = require("../public-files.js");
+  const keyFiles = ROOT_PLAIN_FILES.filter((f) => /^[0-9a-f]{32}\.txt$/.test(f));
+  assert.equal(keyFiles.length, 1, "exactly one IndexNow key file must be allowlisted");
+  const key = keyFiles[0].replace(/\.txt$/, "");
+  assert.equal(
+    fs.readFileSync(path.join(ROOT, keyFiles[0]), "utf8").trim(),
+    key,
+    "the key file's content must be the key itself (its own basename)"
+  );
+  const wf = fs.readFileSync(path.join(ROOT, ".github", "workflows", "indexnow.yml"), "utf8");
+  assert.ok(wf.includes(`KEY = "${key}"`), "indexnow.yml KEY drifted from the key file");
+  // And the wiring end-to-end: the live server serves the proof.
+  const res = await request(base, `/${keyFiles[0]}`);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.toString("utf8").trim(), key);
+});
+
+// ---- C13: script loading order — ssr.js mirrors index.html ------------------
+// The SSR sandbox executes the same scripts in the same order the browser
+// does; a script added to index.html but not ssr.js (or re-ordered) renders
+// an SSR page from DIFFERENT code than the client hydrates.
+
+test("ssr.js GLOBAL_SCRIPTS + BUNDLE_ORDER mirror index.html and ENTRY_POINTS", () => {
+  const { GLOBAL_SCRIPTS, BUNDLE_ORDER } = require("../ssr.js");
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const srcs = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
+  assert.deepEqual(
+    srcs,
+    [
+      "/vendor/react.production.min.js",
+      "/vendor/react-dom.production.min.js",
+      ...GLOBAL_SCRIPTS.map((s) => `/${s}`),
+      ...BUNDLE_ORDER.map((b) => `/dist/${b}.js`),
+    ],
+    "index.html script tags diverged from ssr.js's execution order"
+  );
+  // Every SSR bundle is a real esbuild entry point and vice versa (order
+  // differs by design: esbuild builds app first, the page loads it last).
+  const { ENTRY_POINTS } = require("../build.config.js");
+  assert.deepEqual(
+    [...BUNDLE_ORDER].sort(),
+    ENTRY_POINTS.map((e) => e.replace(/\.jsx$/, "")).sort(),
+    "ssr.js BUNDLE_ORDER and build.config.js ENTRY_POINTS cover different bundles"
+  );
+});

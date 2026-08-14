@@ -19,6 +19,7 @@ const {
   computePageMeta,
   isPrivatePath,
   checkRealPathContained,
+  parsePublicationAuthors,
   DEPLOY_VERSION,
 } = require("../server.js");
 
@@ -83,6 +84,7 @@ test("isPrivatePath corpus: private stays private, public stays public", () => {
     "/news/some-slug/.DS_Store",            // nested dotfile
     "/README.md", "/news/README.md", "/app.jsx",
     "/unknown-root-file.txt", "/env.local", // deny-by-default root
+    "/favicon.svg",                         // removed asset — must stay denied
   ];
   for (const p of privates) {
     assert.equal(isPrivatePath(p), true, `${p} must be private`);
@@ -91,7 +93,7 @@ test("isPrivatePath corpus: private stays private, public stays public", () => {
     "/", "/index.html", "/styles.css", "/data.js", "/routes.js",
     "/site.config.js", "/article-schema.js", "/ui-helpers.js",
     "/robots.txt", "/site.webmanifest", "/sitemap.xml", "/rss.xml", "/feed.json",
-    "/favicon.ico", "/favicon.svg", "/favicon-32x32.png", "/icon-512.png",
+    "/favicon.ico", "/favicon-32x32.png", "/icon-512.png",
     "/apple-touch-icon.png", "/og-image.jpg",
     "/lampros-konstantellos-picture.jpg", "/lampros-konstantellos-picture.avif",
     "/lampros-konstantellos-picture-480.webp",
@@ -104,6 +106,32 @@ test("isPrivatePath corpus: private stays private, public stays public", () => {
   for (const p of publics) {
     assert.equal(isPrivatePath(p), false, `${p} must be public`);
   }
+});
+
+// ---- parsePublicationAuthors ------------------------------------------------
+// The display string is IEEE-flavoured "Surname, I." pairs; the parser must
+// split BETWEEN pairs, never between a surname and its own initials, and must
+// keep multi-word / apostrophe / non-ASCII surnames whole. Each shape below
+// broke (or would have broken) a candidate implementation.
+
+test("parsePublicationAuthors splits Surname-Initial pairs structurally", () => {
+  assert.deepEqual(
+    parsePublicationAuthors("**Konstantellos, L.**, van der Berg, J. & O'Brien, M. (2024)"),
+    ["Konstantellos, L.", "van der Berg, J.", "O'Brien, M."]
+  );
+  assert.deepEqual(
+    parsePublicationAuthors("Konstantellos, L., Kamacı, E. & Doe, J."),
+    ["Konstantellos, L.", "Kamacı, E.", "Doe, J."]
+  );
+  // Sole author, with and without markers/year.
+  assert.deepEqual(parsePublicationAuthors("**Konstantellos, L.** (2023)"), ["Konstantellos, L."]);
+  assert.deepEqual(parsePublicationAuthors("Konstantellos, L."), ["Konstantellos, L."]);
+  // "et al." is citation shorthand, not a Person node.
+  assert.deepEqual(parsePublicationAuthors("Konstantellos, L. et al."), ["Konstantellos, L."]);
+  assert.deepEqual(parsePublicationAuthors("Konstantellos, L., et al. (2025)"), ["Konstantellos, L."]);
+  // Degenerate inputs collapse to an empty list instead of throwing.
+  assert.deepEqual(parsePublicationAuthors(""), []);
+  assert.deepEqual(parsePublicationAuthors(undefined), []);
 });
 
 // ---- checkRealPathContained -------------------------------------------------

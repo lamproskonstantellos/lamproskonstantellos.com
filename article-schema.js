@@ -160,7 +160,7 @@
         !value.includes("..");
       if (!okPath) {
         throw new Error(
-          `[article] "${article.slug}" has an invalid ${field} path "${value}" — expected news/${article.slug}/<filename>`
+          `[article] "${article.slug}" has an invalid ${field} path "${value}" — expected news/${article.slug}/<filename> (lowercase letters, digits, dot, dash and underscore only; rename e.g. IMG_1234.JPG before committing)`
         );
       }
     };
@@ -203,10 +203,16 @@
     // failing loudly like every other bad field.
     if (
       article.videoAfter !== undefined &&
-      (!Number.isInteger(article.videoAfter) || article.videoAfter < 0)
+      (!Number.isInteger(article.videoAfter) ||
+        article.videoAfter < 0 ||
+        article.videoAfter >= article.body.length)
     ) {
+      // Out of range is worse than the type error: an index past the last
+      // paragraph matches no render slot, so the video (or an inline photo,
+      // below) VANISHES from the page — and with the pre-render, from the
+      // build and the crawler view too.
       throw new Error(
-        `[article] "${article.slug}" has invalid videoAfter (expected a non-negative integer)`
+        `[article] "${article.slug}" has invalid videoAfter (expected an integer between 0 and ${article.body.length - 1})`
       );
     }
     // A photos entry is either a path string or { src, align?, after?,
@@ -231,6 +237,17 @@
           if ((p.width === undefined) !== (p.height === undefined)) {
             throw new Error(
               `[article] "${article.slug}" has a photos entry that must set width and height together`
+            );
+          }
+          // Same range rule as videoAfter: an inline index past the last
+          // body paragraph renders NOWHERE (the photo is excluded from the
+          // gallery too), silently deleting it from page, build and feeds.
+          if (
+            p.after !== undefined &&
+            (!Number.isInteger(p.after) || p.after < 0 || p.after >= article.body.length)
+          ) {
+            throw new Error(
+              `[article] "${article.slug}" has a photos entry with invalid after (expected an integer between 0 and ${article.body.length - 1})`
             );
           }
         }
