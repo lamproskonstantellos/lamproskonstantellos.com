@@ -137,6 +137,11 @@ const DEFAULT_IMAGE_VERSION = imageVersion(DEFAULT_IMAGE_PATH);
 const DEFAULT_IMAGE = `${SITE_CFG.url}${SITE_CFG.defaultImage}${DEFAULT_IMAGE_VERSION ? `?v=${DEFAULT_IMAGE_VERSION}` : ""}`;
 const DEFAULT_IMAGE_DIMS = imageDims(DEFAULT_IMAGE_PATH);
 const DEFAULT_DESCRIPTION = SITE_CFG.defaultDescription;
+// The home page's one spelling, WITH the trailing slash — the same form the
+// canonical tag and the sitemap emit. Every machine-readable home reference
+// (JSON-LD WebSite/Person/author/publisher URLs, breadcrumb item 1) uses this
+// constant so the site cannot reference its own root under two spellings.
+const HOME_URL = `${SITE_CFG.url}/`;
 // The hero is the LCP image; preload the AVIF sibling the <picture> will pick.
 // Derived from the same SITE_CFG.heroImage the Hero component renders, so the
 // preload can never point at a renamed/missing file.
@@ -148,7 +153,7 @@ const PROFILE_JSONLD = {
     {
       "@type": "WebSite",
       "name": SITE_CFG.name,
-      "url": SITE_CFG.url
+      "url": HOME_URL
     },
     {
       "@type": "ProfilePage",
@@ -156,9 +161,14 @@ const PROFILE_JSONLD = {
         "@type": "Person",
         "name": SITE_CFG.name,
         "jobTitle": SITE_CFG.jobTitle,
-        "url": SITE_CFG.url,
+        "url": HOME_URL,
         "image": DEFAULT_IMAGE,
-        "sameAs": SITE_CFG.socialLinks
+        // sameAs must hold URLs that IDENTIFY the person (profile pages,
+        // authority records). The Zenodo entry in socialLinks is a paginated
+        // full-text SEARCH — useful on the contact row, but as an identity
+        // claim it matches anyone whose name appears in a record — so search
+        // URLs are excluded here. (ORCID already covers the Zenodo deposits.)
+        "sameAs": SITE_CFG.socialLinks.filter((u) => !u.includes("/search?"))
       }
     }
   ]
@@ -212,21 +222,21 @@ function loadArticleMeta(slug, baseDir = PUBLIC_DIR) {
   }
 }
 
-// Publications live in data.js as a browser global (PROFILE.publications). The
-// sitemap needs their newest year so /publications' lastmod tracks that page's
-// own content instead of the news archive. Same plain-Function shim — and the
-// same repository trust boundary — as loadArticleMeta above; a broken data.js
-// degrades to an empty list (the sitemap falls back to the article dates)
-// rather than crashing the server.
-function loadPublicationYears() {
+// Publications live in data.js as a browser global (PROFILE.publications).
+// Node needs them twice: the sitemap wants their newest year so
+// /publications' lastmod tracks that page's own content, and the
+// /publications JSON-LD wants the full entries for its ScholarlyArticle list.
+// Same plain-Function shim — and the same repository trust boundary — as
+// loadArticleMeta above; a broken data.js degrades to an empty list (the
+// sitemap falls back to the article dates) rather than crashing the server.
+function loadPublications() {
   try {
     const code = fs.readFileSync(path.join(PUBLIC_DIR, "data.js"), "utf8");
     const fakeWindow = { SITE: SITE_CFG };
     new Function("window", code)(fakeWindow);
-    const pubs = fakeWindow.PROFILE && Array.isArray(fakeWindow.PROFILE.publications)
+    return fakeWindow.PROFILE && Array.isArray(fakeWindow.PROFILE.publications)
       ? fakeWindow.PROFILE.publications
       : [];
-    return pubs.map((p) => Number(p.year)).filter(Number.isFinite);
   } catch (e) {
     console.error(`Could not load publications from data.js — ${e.message}`);
     return [];
@@ -285,12 +295,49 @@ for (const slug of ARTICLE_SLUGS) {
     }
   }
 }
+// slug → versioned social-crop URL path ("news/x/cover-og.jpg?v=abc"), handed
+// to buildFeed so the JSON Feed advertises the SAME optimized, cache-busted
+// card image og:image serves instead of the raw multi-MB cover.
+const ARTICLE_SOCIAL_PATHS = Object.create(null);
+for (const slug of Object.keys(ARTICLE_SOCIAL)) {
+  const s = ARTICLE_SOCIAL[slug];
+  ARTICLE_SOCIAL_PATHS[slug] = `${s.path}${s.version ? `?v=${s.version}` : ""}`;
+}
+
 // The loaded, validated articles in folder order — the single input shared by
 // the feed builders here and by the static build (feeds.js stays the one place
 // sitemap/rss/feed bytes are produced, so the live server and the build cannot
 // diverge).
 const ARTICLES = ARTICLE_SLUGS.map((slug) => ARTICLE_META[slug]).filter(Boolean);
-const PUBLICATION_YEARS = loadPublicationYears();
+const PUBLICATIONS = loadPublications();
+const PUBLICATION_YEARS = PUBLICATIONS.map((p) => Number(p.year)).filter(Number.isFinite);
+
+// /publications JSON-LD: the page carries the site's richest machine-readable
+// dataset (DOI-bearing peer-reviewed entries), so it is exposed as an
+// ItemList of ScholarlyArticle nodes rather than a bare BreadcrumbList.
+// Static data — built once at startup like PROFILE_JSONLD.
+const PUBLICATIONS_ITEMLIST = {
+  "@type": "ItemList",
+  "itemListElement": PUBLICATIONS.map((p, i) => {
+    // The DOI lives at the tail of the IEEE-style citation string
+    // ("… doi: 10.xxxx/yyyy."); the trailing period is citation punctuation,
+    // not part of the DOI.
+    const doiMatch = typeof p.citation === "string" && p.citation.match(/\bdoi:\s*(10\.\S+?)\.?\s*$/i);
+    const item = {
+      "@type": "ScholarlyArticle",
+      "headline": p.title,
+      "datePublished": String(p.year),
+      "author": { "@type": "Person", "name": SITE_CFG.name, "url": HOME_URL },
+    };
+    if (doiMatch) {
+      item.identifier = { "@type": "PropertyValue", "propertyID": "DOI", "value": doiMatch[1] };
+      item.sameAs = `https://doi.org/${doiMatch[1]}`;
+    } else if (Array.isArray(p.links) && p.links[0] && p.links[0].href) {
+      item.sameAs = p.links[0].href;
+    }
+    return { "@type": "ListItem", "position": i + 1, "item": item };
+  }),
+};
 // Only articles that PASSED validation ship to the client. A folder that
 // loadArticleMeta rejected must not have its script injected into every page
 // (the SPA would happily render the article the server refused to put in the
@@ -345,12 +392,16 @@ function computePageMeta(pathname) {
     return {
       title: pageTitle(route, titleCtx),
       description: DEFAULT_DESCRIPTION,
-      url: `${SITE_CFG.url}/`,
+      url: HOME_URL,
       image: DEFAULT_IMAGE,
       imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
       imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `${SITE_CFG.name} - ${SITE_CFG.jobTitle}`,
       ogType: "website",
+      // og:title without the "- <site name>" suffix pageTitle appends for the
+      // browser tab: social cards render og:site_name on its own line, so the
+      // suffixed form printed the name twice and truncated the headline.
+      socialTitle: SITE_CFG.name,
       jsonLd: PROFILE_JSONLD,
       preloadImage: HERO_PRELOAD_IMAGE,
       preloadImageSrcset: imageSrcset(SITE_CFG.heroImage, "avif"),
@@ -369,13 +420,14 @@ function computePageMeta(pathname) {
       imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `News from ${SITE_CFG.name}`,
       ogType: "website",
+      socialTitle: "News",
       jsonLd: {
         "@context": "https://schema.org",
         "@graph": [
           {
             "@type": "BreadcrumbList",
             "itemListElement": [
-              { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": HOME_URL },
               { "@type": "ListItem", "position": 2, "name": "News", "item": `${SITE_CFG.url}/news` },
             ],
           },
@@ -395,16 +447,18 @@ function computePageMeta(pathname) {
       imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `Publications by ${SITE_CFG.name}`,
       ogType: "website",
+      socialTitle: "Publications",
       jsonLd: {
         "@context": "https://schema.org",
         "@graph": [
           {
             "@type": "BreadcrumbList",
             "itemListElement": [
-              { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": HOME_URL },
               { "@type": "ListItem", "position": 2, "name": "Publications", "item": `${SITE_CFG.url}/publications` },
             ],
           },
+          PUBLICATIONS_ITEMLIST,
         ],
       },
     };
@@ -438,15 +492,21 @@ function computePageMeta(pathname) {
       // window without shortening the visible card text or the feed summaries.
       const description = article.seoDescription || article.excerpt;
 
+      // dateUpdated is the optional "content edited after publication" field
+      // (validated in article-schema.js); without it dateModified mirrors the
+      // publish date. Hardwiring dateModified to article.date made editing an
+      // article invisible to search engines.
+      const modifiedDate = article.dateUpdated || article.date;
+
       const articleSchema = {
         "@type": "Article",
         "headline": article.title,
         "description": description,
         "image": image,
         "datePublished": article.date,
-        "dateModified": article.date,
-        "author": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
-        "publisher": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
+        "dateModified": modifiedDate,
+        "author": { "@type": "Person", "name": SITE_CFG.name, "url": HOME_URL },
+        "publisher": { "@type": "Person", "name": SITE_CFG.name, "url": HOME_URL },
         "mainEntityOfPage": `${SITE_CFG.url}/news/${article.slug}`,
         "articleBody": articleBody,
         "wordCount": wordCount,
@@ -469,7 +529,7 @@ function computePageMeta(pathname) {
       const breadcrumbs = {
         "@type": "BreadcrumbList",
         "itemListElement": [
-          { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": HOME_URL },
           { "@type": "ListItem", "position": 2, "name": "News", "item": `${SITE_CFG.url}/news` },
           { "@type": "ListItem", "position": 3, "name": article.title, "item": `${SITE_CFG.url}/news/${article.slug}` },
         ],
@@ -484,13 +544,18 @@ function computePageMeta(pathname) {
         imageHeight: imageDimensions && imageDimensions.height,
         imageAlt: article.title,
         ogType: "article",
+        // Social cards want the bare headline: og:site_name already carries
+        // the author's name on its own line.
+        socialTitle: article.title,
         // article:* Open Graph properties (published/modified time, author,
         // section, tags) let LinkedIn/Facebook/Slack surface the publish date
-        // and topic on shares. All derived from already-validated article data.
+        // and topic on shares. All derived from already-validated article
+        // data. article:author is typed as a PROFILE URL in the OG article
+        // vertical — a display-string value is ignored by scrapers.
         articleMeta: {
           publishedTime: `${article.date}T00:00:00+00:00`,
-          modifiedTime: `${article.date}T00:00:00+00:00`,
-          author: SITE_CFG.name,
+          modifiedTime: `${modifiedDate}T00:00:00+00:00`,
+          author: HOME_URL,
           section: article.articleSection || undefined,
           tags: article.keywords && article.keywords.length ? article.keywords : undefined,
         },
@@ -523,8 +588,9 @@ function computePageMeta(pathname) {
   return {
     title: pageTitle(route, titleCtx),
     description: DEFAULT_DESCRIPTION,
-    url: `${SITE_CFG.url}/`,
+    url: HOME_URL,
     canonical: null,
+    socialTitle: "Page not found",
     image: DEFAULT_IMAGE,
     imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
     imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
@@ -618,16 +684,38 @@ function getCompressed(cacheKey, encoding, data) {
   return out;
 }
 
+// Pick the supported content coding the client ranks highest. Full qvalue
+// handling per RFC 9110 §12.5.3: a coding refused with q=0 is never chosen,
+// and an explicit ranking like "br;q=0.1, gzip;q=1.0" picks gzip — the old
+// fixed br-first preference honoured refusals but ignored the ranking.
+// Ties (including the common unranked "gzip, br") break toward br, the
+// smaller output for this site's text content.
+function negotiateEncoding(acceptHeader) {
+  const explicit = {};
+  let wildcard = null;
+  for (const part of String(acceptHeader || "").split(",")) {
+    const m = part.trim().match(/^(br|gzip|\*)\s*(?:;\s*q\s*=\s*([\d.]+))?$/i);
+    if (!m) continue;
+    const weight = m[2] === undefined ? 1 : Number(m[2]);
+    if (Number.isNaN(weight)) continue;
+    if (m[1] === "*") wildcard = weight;
+    else explicit[m[1].toLowerCase()] = weight;
+  }
+  // An explicit coding entry beats the wildcard; unmentioned codings with no
+  // wildcard rank 0 (not offered).
+  const rank = (name) =>
+    explicit[name] !== undefined ? explicit[name] : wildcard !== null ? wildcard : 0;
+  const br = rank("br");
+  const gzip = rank("gzip");
+  if (br <= 0 && gzip <= 0) return null;
+  if (gzip > br) return "gzip";
+  return br > 0 ? "br" : null;
+}
+
 function writeCompressed(req, res, headers, data, cacheKey) {
   const status = headers.__status || 200;
   delete headers.__status;
   const isHead = req.method === "HEAD";
-  // Codings the client explicitly refused with ";q=0" must not be chosen
-  // (RFC 9110 §12.5.3) — strip them before the \bbr\b / \bgzip\b tests below.
-  const accept = (req.headers["accept-encoding"] || "").replace(
-    /\b(?:br|gzip)\s*;\s*q=0(?:\.0{1,3})?\s*(?=,|$)/gi,
-    ""
-  );
   const ct = headers["Content-Type"] || "";
 
   // Normalize to a Buffer so Content-Length is the true byte count. A string's
@@ -637,8 +725,7 @@ function writeCompressed(req, res, headers, data, cacheKey) {
 
   let encoding = null;
   if (isCompressible(ct) && buf.length > 1024) {
-    if (/\bbr\b/.test(accept)) encoding = "br";
-    else if (/\bgzip\b/.test(accept)) encoding = "gzip";
+    encoding = negotiateEncoding(req.headers["accept-encoding"]);
   }
 
   if (encoding) {
@@ -685,6 +772,9 @@ function injectMeta(html, meta) {
   const producers = {
     __META_SITE_NAME__: () => escapeHtml(SITE_CFG.name),
     __META_TITLE__: () => escapeHtml(meta.title),
+    // og:title/twitter:title: the bare social headline (no "- <site name>"
+    // suffix — og:site_name already renders the name as its own card line).
+    __META_OG_TITLE__: () => escapeHtml(meta.socialTitle || meta.title),
     __META_DESCRIPTION__: () => escapeHtml(meta.description),
     __META_URL__: () => escapeHtml(meta.url),
     // rel=canonical is omitted entirely when meta.canonical is null (the 404
@@ -696,11 +786,25 @@ function injectMeta(html, meta) {
         ? ""
         : `<link rel="canonical" href="${escapeHtml(meta.url)}" />`,
     __META_IMAGE__: () => escapeHtml(meta.image),
-    __META_IMAGE_DIMS__: () =>
-      meta.imageWidth && meta.imageHeight
-        ? `<meta property="og:image:width" content="${meta.imageWidth}" />\n` +
-          `<meta property="og:image:height" content="${meta.imageHeight}" />`
-        : "",
+    // Width/height plus og:image:type (derived from the image extension so a
+    // future PNG cover stays correct; declaring it saves scrapers a probe).
+    // The dims come from imageDims' binary header reads and are always
+    // numbers, but they are coerced here anyway so this producer upholds the
+    // same "nothing unescaped reaches the HTML" invariant as its siblings.
+    __META_IMAGE_META__: () => {
+      const lines = [];
+      if (meta.imageWidth && meta.imageHeight) {
+        lines.push(`<meta property="og:image:width" content="${Number(meta.imageWidth) || 0}" />`);
+        lines.push(`<meta property="og:image:height" content="${Number(meta.imageHeight) || 0}" />`);
+      }
+      const ext = String(meta.image || "").split("?")[0].match(/\.(jpe?g|png)$/i);
+      if (ext) {
+        lines.push(
+          `<meta property="og:image:type" content="${ext[1].toLowerCase().startsWith("p") ? "image/png" : "image/jpeg"}" />`
+        );
+      }
+      return lines.join("\n");
+    },
     __META_IMAGE_ALT__: () => escapeHtml(meta.imageAlt || meta.title),
     __META_OG_TYPE__: () => escapeHtml(meta.ogType),
     // article:* OG properties, emitted only on article pages (meta.articleMeta).
@@ -783,7 +887,10 @@ function renderHtml(templateHtml, pathname, { deployVersion, articleScripts, ass
 function serveIndex(req, res, filePath, pathname, statusCode = 200) {
   fs.readFile(filePath, "utf8", (err, html) => {
     if (err) {
-      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      res.writeHead(404, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      });
       res.end("404 Not Found");
       return;
     }
@@ -808,6 +915,34 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
   });
 }
 
+// Weak validator derived from size + mtime: cheap (the stat is already in
+// hand), stable until the file is rewritten. Weak because the same entity is
+// also served content-encoded — byte-equality across encodings is not claimed.
+function entityTag(stats) {
+  return `W/"${stats.size.toString(16)}-${Math.trunc(stats.mtimeMs).toString(16)}"`;
+}
+
+// True when the request's conditional headers show the client copy is current
+// (→ 304). If-None-Match wins over If-Modified-Since (RFC 9110 §13.1.3).
+// Without these validators every asset was re-downloaded IN FULL once its
+// max-age expired — there was nothing for the browser to revalidate against.
+function isNotModified(req, etag, mtimeMs) {
+  const inm = req.headers["if-none-match"];
+  if (inm) {
+    return String(inm)
+      .split(",")
+      .map((t) => t.trim())
+      .some((t) => t === etag || t === "*");
+  }
+  const ims = req.headers["if-modified-since"];
+  if (ims) {
+    const since = Date.parse(ims);
+    // HTTP dates have whole-second resolution; truncate the mtime to match.
+    if (!Number.isNaN(since)) return Math.trunc(mtimeMs / 1000) * 1000 <= since;
+  }
+  return false;
+}
+
 function sendFile(req, res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = mimeTypes[ext] || "application/octet-stream";
@@ -822,11 +957,16 @@ function sendFile(req, res, filePath) {
   if (!isCompressible(contentType)) {
     fs.stat(filePath, (err, stats) => {
       if (err || !stats.isFile()) {
-        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.writeHead(404, {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+        });
         res.end("404 Not Found");
         return;
       }
       const size = stats.size;
+      const etag = entityTag(stats);
+      const lastModified = stats.mtime.toUTCString();
       let start = 0;
       let end = size > 0 ? size - 1 : 0;
       let status = 200;
@@ -834,10 +974,33 @@ function sendFile(req, res, filePath) {
         "Content-Type": contentType,
         "Cache-Control": cacheHeaderFor(req, contentType),
         "Accept-Ranges": "bytes",
+        "ETag": etag,
+        "Last-Modified": lastModified,
       };
 
+      if (isNotModified(req, etag, stats.mtimeMs)) {
+        // 304: validators + caching headers only, no body, no Content-Length.
+        res.writeHead(304, {
+          "Cache-Control": headers["Cache-Control"],
+          "ETag": etag,
+          "Last-Modified": lastModified,
+        });
+        res.end();
+        return;
+      }
+
+      // A Range is honoured only when If-Range (if present) still matches:
+      // a client resuming across a file replacement must get the full new
+      // entity, not a splice of two different versions.
+      const ifRange = req.headers["if-range"];
+      const ifRangeDate = ifRange && !String(ifRange).includes('"') ? Date.parse(ifRange) : NaN;
+      const rangeValid =
+        !ifRange ||
+        ifRange === etag ||
+        (!Number.isNaN(ifRangeDate) && Math.trunc(stats.mtimeMs / 1000) * 1000 <= ifRangeDate);
+
       const rangeHeader = req.headers["range"];
-      if (rangeHeader) {
+      if (rangeHeader && rangeValid) {
         const m = /^bytes=(\d*)-(\d*)$/.exec(String(rangeHeader).trim());
         if (m && (m[1] !== "" || m[2] !== "")) {
           if (m[1] === "") {
@@ -851,6 +1014,7 @@ function sendFile(req, res, filePath) {
           if (start > end || start >= size) {
             res.writeHead(416, {
               "Content-Type": "text/plain; charset=utf-8",
+              "Cache-Control": "no-cache, no-store, must-revalidate",
               "Content-Range": `bytes */${size}`,
             });
             res.end("416 Range Not Satisfiable");
@@ -885,15 +1049,37 @@ function sendFile(req, res, filePath) {
   // identity clients saw the fresh file. The mtime changes on every write.
   fs.stat(filePath, (statErr, stats) => {
     const mtime = statErr ? 0 : stats.mtimeMs;
+    // Same conditional-request handling as the streaming branch: text assets
+    // in the 86400 class revalidate to a 304 instead of a full re-download.
+    if (!statErr && stats.isFile()) {
+      const etag = entityTag(stats);
+      if (isNotModified(req, etag, stats.mtimeMs)) {
+        res.writeHead(304, {
+          "Cache-Control": cacheHeaderFor(req, contentType),
+          "ETag": etag,
+          "Last-Modified": stats.mtime.toUTCString(),
+          "Vary": "Accept-Encoding",
+        });
+        res.end();
+        return;
+      }
+    }
     fs.readFile(filePath, (err, data) => {
       if (err) {
-        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.writeHead(404, {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+        });
         res.end("404 Not Found");
         return;
       }
+      const validators = statErr || !stats.isFile()
+        ? null
+        : { "ETag": entityTag(stats), "Last-Modified": stats.mtime.toUTCString() };
       writeCompressed(req, res, {
         "Content-Type": contentType,
         "Cache-Control": cacheHeaderFor(req, contentType),
+        ...(validators || {}),
       }, data, `file:${filePath}:${mtime}`);
     });
   });
@@ -910,9 +1096,16 @@ const SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "DENY",
-  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  // `preload` makes the domain eligible for the browser HSTS preload list, so
+  // even a first-ever visit never has a plaintext hop.
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=()",
   "Cross-Origin-Opener-Policy": "same-origin",
+  // Companion to COOP: the site's images/fonts/PDF cannot be embedded or read
+  // cross-origin (XS-Leaks surface). COEP is deliberately NOT set: with
+  // require-corp, a Cloudflare-injected analytics beacon (allowed by the CSP
+  // below) would be blocked unless CF serves it with a CORP header.
+  "Cross-Origin-Resource-Policy": "same-origin",
   "Content-Security-Policy": [
     "default-src 'self'",
     // Analytics origins: the Cloudflare Web Analytics beacon (script from
@@ -964,6 +1157,9 @@ const ROOT_IMAGE_BASES = [
   "icon-192.png",
   "icon-256.png",
   "icon-512.png",
+  // Maskable variant (safe-zone padding baked in) for Android/Chromium
+  // adaptive icons — an "any"-only set gets letterboxed on the home screen.
+  "icon-512-maskable.png",
   "apple-touch-icon.png",
   "og-image.jpg",
   "lampros-konstantellos-picture.jpg",
@@ -1050,6 +1246,10 @@ function sendStatus(res, code, message, extraHeaders) {
   if (res.headersSent) return;
   res.writeHead(code, {
     "Content-Type": "text/plain; charset=utf-8",
+    // Error/status responses are heuristically cacheable per RFC 9110 §15.1
+    // and carry no validators, so without an explicit directive a shared
+    // cache may keep e.g. a 404 for a not-yet-published URL.
+    "Cache-Control": "no-cache, no-store, must-revalidate",
     ...(extraHeaders || {}),
   });
   res.end(message);
@@ -1139,6 +1339,20 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    // Trailing slashes redirect to the slash-less form, mirroring Cloudflare
+    // Pages (which 308s /foo/ → /foo for the flat foo.html layout). The dev
+    // server used to answer /news/<slug>/ with a 200 of the full article — a
+    // duplicate-content URL the deploy redirects, i.e. a status-code parity
+    // break between the two environments.
+    if (urlPathname !== "/" && urlPathname.endsWith("/")) {
+      res.writeHead(301, {
+        "Location": urlPathname.replace(/\/+$/, "") + (parsedUrl.search || ""),
+        "Content-Type": "text/plain; charset=utf-8",
+      });
+      res.end("Moved Permanently");
+      return;
+    }
+
     let pathname = urlPathname;
 
     if (isPrivatePath(urlPathname)) {
@@ -1146,8 +1360,8 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    if (pathname.endsWith("/")) {
-      pathname += "index.html";
+    if (pathname === "/") {
+      pathname = "/index.html";
     }
 
     const requestedPath = path.normalize(path.join(PUBLIC_DIR, pathname));
@@ -1171,7 +1385,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (urlPathname === "/feed.json") {
-    const json = buildFeed({ articles: ARTICLES, siteCfg: SITE_CFG });
+    const json = buildFeed({ articles: ARTICLES, siteCfg: SITE_CFG, socialImages: ARTICLE_SOCIAL_PATHS });
     writeCompressed(req, res, {
       "Content-Type": "application/feed+json; charset=utf-8",
       "Cache-Control": "public, max-age=3600",
@@ -1189,6 +1403,11 @@ const server = http.createServer((req, res) => {
   }
 
   fs.stat(requestedPath, (err, stats) => {
+    // The outer try/catch ends when the synchronous handler returns — a throw
+    // inside THIS callback would otherwise unwind to uncaughtException with
+    // the response never written, leaving the socket open until the request
+    // timeout. Answer 500 instead.
+    try {
     // A root-level file may only be served off the declared allowlist, even
     // when it has no extension (isPrivatePath's extension rule cannot class
     // those): a future extensionless root file (Makefile, TODO, deploy) must
@@ -1220,8 +1439,7 @@ const server = http.createServer((req, res) => {
 
     // Path has an extension → it's an asset request that missed → real 404
     if (path.extname(urlPathname) !== "") {
-      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-      res.end("404 Not Found");
+      sendStatus(res, 404, "404 Not Found");
       return;
     }
 
@@ -1229,6 +1447,10 @@ const server = http.createServer((req, res) => {
     // SPA HTML so the client can render a friendly 404 page.
     const statusCode = isValidSpaRoute(urlPathname) ? 200 : 404;
     serveIndex(req, res, path.join(PUBLIC_DIR, "index.html"), urlPathname, statusCode);
+    } catch (cbErr) {
+      console.error("Request handler error:", cbErr && cbErr.message);
+      sendStatus(res, 500, "500 Internal Server Error");
+    }
     });
   } catch (err) {
     console.error("Request handler error:", err && err.message);
@@ -1278,6 +1500,7 @@ module.exports = {
   DEPLOY_VERSION,
   ARTICLES,
   VALID_ARTICLE_SLUGS,
+  ARTICLE_SOCIAL_PATHS,
   PUBLICATION_YEARS,
   ARTICLE_SCRIPTS,
   ASSET_MAP,

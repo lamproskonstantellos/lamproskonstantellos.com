@@ -2,6 +2,7 @@
   "name": "Lampros Konstantellos",
   "short_name": "L. Konstantellos",
   "description": "Electrical & Computer Engineer - renewable energy, battery storage, grid flexibility, and electricity markets.",
+  "id": "/",
   "lang": "en",
   "start_url": "/",
   "display": "browser",
@@ -16,6 +17,7 @@
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
     { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
   ]
 }

@@ -29,6 +29,7 @@ const {
   // news/<slug>.html page written — which Cloudflare served with HTTP 200
   // where the dev server answered 404.
   VALID_ARTICLE_SLUGS,
+  ARTICLE_SOCIAL_PATHS,
   PUBLICATION_YEARS,
   ARTICLE_SCRIPTS,
   ASSET_MAP,
@@ -266,7 +267,7 @@ function buildStatic({ outDir = DEFAULT_OUT } = {}) {
   // --- 2. Feeds (same builders the server uses) ----------------------------
   writeFile(outDir, "sitemap.xml", buildSitemap({ articles: ARTICLES, siteCfg: SITE_CFG, publicationYears: PUBLICATION_YEARS }));
   writeFile(outDir, "rss.xml", buildRss({ articles: ARTICLES, siteCfg: SITE_CFG }));
-  writeFile(outDir, "feed.json", buildFeed({ articles: ARTICLES, siteCfg: SITE_CFG }));
+  writeFile(outDir, "feed.json", buildFeed({ articles: ARTICLES, siteCfg: SITE_CFG, socialImages: ARTICLE_SOCIAL_PATHS }));
 
   // --- 3. Cloudflare config ------------------------------------------------
   writeFile(outDir, "_headers", buildHeadersFile(SECURITY_HEADERS, htmlRoutes.map((r) => r.pathname)));

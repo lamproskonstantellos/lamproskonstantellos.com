@@ -51,6 +51,25 @@
         `[article] "${article.slug}" has impossible date "${article.date}" — not a real calendar day`
       );
     }
+    // Optional "content edited after publication" date, feeding dateModified /
+    // article:modified_time. Same format and calendar checks as `date`.
+    if (article.dateUpdated !== undefined) {
+      const upd = new Date(`${article.dateUpdated}T00:00:00Z`);
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(article.dateUpdated) ||
+        Number.isNaN(upd.getTime()) ||
+        upd.toISOString().slice(0, 10) !== article.dateUpdated
+      ) {
+        throw new Error(
+          `[article] "${article.slug}" has invalid dateUpdated "${article.dateUpdated}" — expected a real YYYY-MM-DD day`
+        );
+      }
+      if (article.dateUpdated < article.date) {
+        throw new Error(
+          `[article] "${article.slug}" has dateUpdated earlier than date`
+        );
+      }
+    }
     if (!Array.isArray(article.body) || article.body.length === 0) {
       throw new Error(`[article] "${article.slug}" has empty or non-array body`);
     }
