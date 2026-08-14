@@ -29,6 +29,10 @@ defineArticle({
     { name: "Curtailment (electricity)", sameAs: "https://en.wikipedia.org/wiki/Curtailment_(electricity)" },
   ],
   cover: "news/intersolar-europe-2026/cover.jpg",
+  // Natural cover dimensions (px): they let the srcset advertise the full
+  // variant's REAL width instead of the 2200 cap (see ui-helpers).
+  coverWidth: 3132,
+  coverHeight: 4176,
   body: [
     "From 23–25 June 2026, I attended **Intersolar Europe** and the wider **The smarter E Europe** in Munich, the umbrella event that brings together four co-located exhibitions: **Intersolar Europe** for solar, **ees Europe** for energy storage, **Power2Drive Europe** for charging infrastructure and e-mobility, and **EM-Power Europe** for energy management. According to the organisers, the event gathered around 105,000 trade visitors from 163 countries and 2,650 exhibitors from 52 countries, under the theme \"Renewables 24/7: Secure Energy for a Changing World\".",
     "What stood out to me most is that the industry has moved its centre of gravity. A few years ago, the defining question was how much photovoltaic capacity could be added. In Munich, the defining question was different: how to integrate, dispatch, and extract value from that capacity once it is on the system. The four exhibitions were no longer four separate worlds, but one system of generation, storage, charging, and software.",

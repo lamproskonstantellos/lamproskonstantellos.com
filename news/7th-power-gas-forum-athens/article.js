@@ -20,6 +20,10 @@ defineArticle({
   ],
   articleSection: "Energy Markets",
   cover: "news/7th-power-gas-forum-athens/cover.jpg",
+  // Natural cover dimensions (px): they let the srcset advertise the full
+  // variant's REAL width instead of the 2200 cap (see ui-helpers).
+  coverWidth: 3243,
+  coverHeight: 2432,
   photos: [],
   body: [
     "On 6–7 April 2026, I attended the **7th Power & Gas Forum** in Athens, organised by **energypress**. The forum focused on the changing structure of the Greek electricity and gas markets, including grid development, system adequacy, flexibility, storage, gas infrastructure, retail market evolution, and the growing impact of large electricity consumers such as data centres.",

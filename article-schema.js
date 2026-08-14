@@ -76,14 +76,32 @@
     // C0 control characters are illegal in XML 1.0, so a stray one in a title
     // or excerpt would produce an rss.xml every feed reader rejects (escapeHtml
     // only handles the five markup characters). Reject at the source instead.
-    for (const field of ["title", "excerpt", "seoDescription", "dateLabel"]) {
-      if (
-        typeof article[field] === "string" &&
-        /[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(article[field])
-      ) {
+    // Body paragraphs reach the same feeds (content_text/JSON-LD articleBody),
+    // and keywords/articleSection reach <meta property="article:*"> — a
+    // pasted-from-PDF stray byte in any of them breaks the same consumers,
+    // so the guard covers every text field a feed or the head interpolates.
+    const CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F]/;
+    for (const field of ["title", "excerpt", "seoDescription", "dateLabel", "articleSection", "location"]) {
+      if (typeof article[field] === "string" && CONTROL_CHARS.test(article[field])) {
         throw new Error(
           `[article] "${article.slug}" has a control character in ${field}`
         );
+      }
+    }
+    for (let i = 0; i < article.body.length; i++) {
+      if (typeof article.body[i] === "string" && CONTROL_CHARS.test(article.body[i])) {
+        throw new Error(
+          `[article] "${article.slug}" has a control character in body[${i}]`
+        );
+      }
+    }
+    if (Array.isArray(article.keywords)) {
+      for (const k of article.keywords) {
+        if (typeof k === "string" && CONTROL_CHARS.test(k)) {
+          throw new Error(
+            `[article] "${article.slug}" has a control character in a keyword`
+          );
+        }
       }
     }
     if (article.photos && !Array.isArray(article.photos)) {
@@ -196,6 +214,18 @@
     }
     if ((article.videoWidth === undefined) !== (article.videoHeight === undefined)) {
       throw new Error(`[article] "${article.slug}" must set videoWidth and videoHeight together`);
+    }
+    // Optional NATURAL pixel dimensions of the cover source file. They feed
+    // the srcset's full-variant descriptor (ui-helpers.fullVariantWidth) in
+    // both worlds, so a wrong pair silently re-introduces the over-fetch the
+    // field exists to fix. Set both or neither.
+    for (const key of ["coverWidth", "coverHeight"]) {
+      if (article[key] !== undefined && (!Number.isFinite(article[key]) || article[key] <= 0)) {
+        throw new Error(`[article] "${article.slug}" has invalid ${key} (expected a positive number)`);
+      }
+    }
+    if ((article.coverWidth === undefined) !== (article.coverHeight === undefined)) {
+      throw new Error(`[article] "${article.slug}" must set coverWidth and coverHeight together`);
     }
     // Optional 0-based paragraph index the video is placed after. The renderer
     // quietly falls back to end-of-article for a non-integer, so without this

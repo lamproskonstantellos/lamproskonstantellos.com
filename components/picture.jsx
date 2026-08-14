@@ -21,6 +21,11 @@ function Picture({
   width,
   height,
   sizes,
+  // The source's NATURAL dimensions ({width, height}), when the caller's
+  // data carries them: they let imageSrcset state the full variant's real
+  // width instead of the 2200 cap (see ui-helpers). Distinct from
+  // width/height above, which are the rendered box.
+  natural,
   loading = "lazy",
   decoding = "async",
   fetchPriority,
@@ -35,7 +40,7 @@ function Picture({
                 fetchpriority={fetchPriority} />;
   }
   const base = src.replace(/\.(jpe?g|png)$/i, "");
-  const srcSetFor = (ext) => (sizes ? imageSrcset(src, ext) : `${base}.${ext}`);
+  const srcSetFor = (ext) => (sizes ? imageSrcset(src, ext, natural) : `${base}.${ext}`);
 
   return (
     <picture>

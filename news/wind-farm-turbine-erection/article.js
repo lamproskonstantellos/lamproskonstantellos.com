@@ -21,6 +21,10 @@ defineArticle({
   ],
   articleSection: "Construction and Engineering",
   cover: "news/wind-farm-turbine-erection/cover.jpg",
+  // Natural cover dimensions (px): they let the srcset advertise the full
+  // variant's REAL width instead of the 2200 cap (see ui-helpers).
+  coverWidth: 2048,
+  coverHeight: 1536,
   body: [
     "On 16 October 2025, I visited the site during the installation of the **bottom tower section** of a wind turbine, part of the ongoing construction works at the **23.1 MW Wind Farm** project.",
     "A turbine is erected in a strict sequence: the **bottom**, **mid 1**, **mid 2**, and **top** tower sections, followed by the **nacelle**, the **drive train**, the **hub**, and finally the **three blades**. Each lift has to land within tight tolerances, and each one depends on the one before it.",
