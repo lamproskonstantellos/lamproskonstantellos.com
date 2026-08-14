@@ -3,15 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "description": "Personal website, pre-rendered to a static site for Cloudflare Pages.",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "build:static": "node build-static.js",
     "test": "node --test",
     "optimize-images": "node scripts/optimize-images.js",
-    "build": "npm run optimize-images && esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx components/picture.jsx --outdir=dist --entry-names=[dir]/[name]-[hash] --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --minify --metafile=dist/manifest.json",
-    "watch": "esbuild app.jsx icons.jsx components/shared.jsx components/about.jsx components/publications.jsx components/news.jsx components/picture.jsx --outdir=dist --entry-names=[dir]/[name]-[hash] --loader:.jsx=jsx --jsx=transform --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2020 --watch --metafile=dist/manifest.json"
+    "build": "npm run optimize-images && node scripts/build.js",
+    "watch": "node scripts/build.js --watch"
   },
   "engines": {
     "node": ">=18.17"

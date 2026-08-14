@@ -20,21 +20,44 @@ function normalizeHtml(s) {
     .replace(/\?v=[^"'&\s]*/g, "?v=V");
 }
 
-// Compare `actual` against test/golden/<name>. First run (or UPDATE_GOLDEN=1)
-// writes the golden; later runs assert byte-equality.
+// Compare `actual` against test/golden/<name>. UPDATE_GOLDEN=1 (re)writes the
+// golden; otherwise a MISSING golden is a hard failure — silently creating it
+// would turn a byte-equality assertion into an unconditional pass whenever a
+// fixture is deleted or never committed.
 function matchGolden(name, actual) {
   const file = path.join(GOLDEN_DIR, name);
   fs.mkdirSync(GOLDEN_DIR, { recursive: true });
-  if (process.env.UPDATE_GOLDEN || !fs.existsSync(file)) {
+  if (process.env.UPDATE_GOLDEN) {
     fs.writeFileSync(file, actual);
     return;
   }
+  assert.ok(
+    fs.existsSync(file),
+    `golden "${name}" is missing — run UPDATE_GOLDEN=1 npm test to create it`
+  );
   const expected = fs.readFileSync(file, "utf8");
   assert.strictEqual(
     actual,
     expected,
     `golden mismatch: ${name} — run UPDATE_GOLDEN=1 to refresh after a DELIBERATE change`
   );
+}
+
+// Evaluate data.js (a browser-global script, not a module) against a stub
+// window carrying exactly the globals it depends on. ONE copy here: four test
+// files used to inline their own stub, and each new data.js dependency broke
+// three of them in confusing ways.
+function loadDataWindow() {
+  const schema = require("../article-schema.js");
+  const code = fs.readFileSync(path.join(__dirname, "..", "data.js"), "utf8");
+  const window = {
+    SITE: require("../site.config.js"),
+    validateArticle: schema.validateArticle,
+    compareByDateDesc: schema.compareByDateDesc,
+  };
+  // eslint-disable-next-line no-new-func
+  new Function("window", code)(window);
+  return window;
 }
 
 let listening = null;
@@ -106,4 +129,4 @@ function rawRequest(port, raw) {
   });
 }
 
-module.exports = { start, stop, request, rawRequest, normalizeHtml, matchGolden };
+module.exports = { start, stop, request, rawRequest, normalizeHtml, matchGolden, loadDataWindow };

@@ -1,7 +1,8 @@
 "use strict";
 
-// SEO / meta / feed correctness against the relevant specs, plus the status
-// and canonical truth fixes from Phase 4.
+// SEO / meta / feed correctness against the relevant specs, plus route
+// status/canonical truth: every route must serve the status its metadata
+// claims (200 with a self-canonical, or 404 with noindex and no canonical).
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert");
@@ -35,24 +36,37 @@ test("/index.html → 301 redirect to /", async () => {
   assert.equal(res.headers["location"], "/");
 });
 
-// ---- SEO2: unknown route is 404 with a non-reflecting canonical ------------
+// ---- SEO2: unknown route is 404, noindex, no canonical, non-reflecting -----
 
-test("unknown route: 404 + canonical/og:url point at home, not the path", async () => {
+test("unknown route: 404 + noindex, no canonical, og:url points at home", async () => {
   const res = await request(base, "/no-such-page");
   assert.equal(res.status, 404);
   const html = res.body.toString("utf8");
-  assert.match(html, /<link rel="canonical" href="https:\/\/lamproskonstantellos\.com\/"/);
+  // noindex plus a canonical to a DIFFERENT URL is a conflicting-signal
+  // anti-pattern (the noindex can consolidate onto the canonical target), so
+  // the 404 page must emit no rel=canonical at all.
+  assert.ok(!html.includes('rel="canonical"'), "404 must not emit a canonical");
+  assert.match(html, /<meta name="robots" content="noindex,follow"/);
   assert.match(html, /<meta property="og:url" content="https:\/\/lamproskonstantellos\.com\/"/);
   assert.ok(!html.includes("no-such-page"), "404 must not reflect the requested path");
 });
 
-// ---- Trailing-slash policy: 200, deduped via canonical ---------------------
+// ---- Trailing-slash policy: 301 to the slash-less canonical form -----------
+// Mirrors Cloudflare Pages, which 308s /foo/ → /foo for the flat foo.html
+// layout — the dev server used to answer 200 with duplicate content here.
 
-test("/news/ serves 200 with canonical to /news (no trailing slash)", async () => {
-  const res = await request(base, "/news/");
-  assert.equal(res.status, 200);
-  const html = res.body.toString("utf8");
-  assert.match(html, /<link rel="canonical" href="https:\/\/lamproskonstantellos\.com\/news"/);
+test("trailing-slash URLs redirect to the slash-less form", async () => {
+  for (const [from, to] of [
+    ["/news/", "/news"],
+    ["/publications/", "/publications"],
+    [`/news/${ARTICLE}/`, `/news/${ARTICLE}`],
+  ]) {
+    const res = await request(base, from);
+    assert.equal(res.status, 301, `${from} should 301`);
+    assert.equal(res.headers["location"], to, `${from} should point at ${to}`);
+  }
+  // The root itself is NOT redirected.
+  assert.equal((await request(base, "/")).status, 200);
 });
 
 // ---- Every 200 route is self-consistent (title/canonical/og:url) -----------
@@ -137,13 +151,18 @@ test("JSON-LD Article is schema-correct", async () => {
 
 // ---- JSON-LD Person sameAs mirrors socialLinks ------------------------------
 
-test("home JSON-LD Person sameAs is exactly site.config socialLinks (incl. ResearchGate + GitHub)", async () => {
+test("home JSON-LD Person sameAs is socialLinks minus search URLs", async () => {
   const html = (await request(base, "/")).body.toString("utf8");
   const block = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1];
   const graph = JSON.parse(block)["@graph"];
   const person = graph.find((n) => n["@type"] === "ProfilePage").mainEntity;
   assert.equal(person["@type"], "Person");
-  assert.deepEqual(person.sameAs, SITE.socialLinks, "sameAs drifted from socialLinks");
+  // sameAs must hold IDENTITY URLs. The Zenodo entry in socialLinks is a
+  // paginated full-text search (fine on the contact row, wrong as an identity
+  // claim), so search URLs are filtered out of the schema.
+  const identityLinks = SITE.socialLinks.filter((u) => !u.includes("/search?"));
+  assert.deepEqual(person.sameAs, identityLinks, "sameAs drifted from socialLinks");
+  assert.ok(person.sameAs.every((u) => !u.includes("/search?")), "search URL leaked into sameAs");
   assert.ok(person.sameAs.includes("https://www.researchgate.net/profile/Lampros-Konstantellos"));
   assert.ok(person.sameAs.includes("https://github.com/lamproskonstantellos"));
 });
@@ -246,4 +265,93 @@ test("article served HTML carries title/canonical/JSON-LD without JS", async () 
   assert.match(html, new RegExp(`<link rel="canonical" href="${SITE.url}/news/${ARTICLE}"`));
   assert.match(html, /<meta property="og:type" content="article"/);
   assert.ok(html.includes('"@type":"Article"'), "Article JSON-LD present in raw HTML");
+});
+
+// ---- seoDescription override (the branch 6 of 9 articles ship through) ------
+
+test("an article with seoDescription uses it for the meta description", async () => {
+  const slug = "intersolar-europe-2026";
+  const a = server.loadArticleMeta(slug);
+  assert.ok(a && a.seoDescription, "fixture article must carry seoDescription");
+  const meta = server.computePageMeta(`/news/${slug}`);
+  assert.equal(meta.description, a.seoDescription);
+  assert.notEqual(meta.description, a.excerpt);
+  assert.ok(a.seoDescription.length <= 160, "seoDescription should fit the SERP snippet window");
+});
+
+// ---- robots.txt --------------------------------------------------------------
+
+test("robots.txt advertises the real sitemap URL", async () => {
+  const body = (await request(base, "/robots.txt")).body.toString("utf8");
+  assert.ok(
+    body.split("\n").some((l) => l.trim() === `Sitemap: ${SITE.url}/sitemap.xml`),
+    "robots.txt Sitemap line must match SITE.url (it is hardcoded and drifts silently)"
+  );
+});
+
+// ---- Web manifest ------------------------------------------------------------
+
+test("site.webmanifest: identity, theme colors and icons are real", async () => {
+  const mani = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "site.webmanifest"), "utf8"));
+  assert.equal(mani.name, SITE.name);
+  // Without an explicit id the app identity derives from start_url and any
+  // future start_url change reads as a brand-new app.
+  assert.equal(mani.id, "/");
+  // Android/Chromium letterboxes an "any"-only icon set inside the adaptive
+  // mask; at least one maskable icon must be declared.
+  assert.ok(mani.icons.some((i) => i.purpose === "maskable"), "no maskable icon declared");
+  // theme_color matches the light-theme <meta name="theme-color"> in the shell.
+  const shell = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  const light = shell.match(/<meta name="theme-color" content="([^"]+)" \/>/)[1];
+  assert.equal(mani.theme_color, light);
+  // Every declared PNG icon exists on disk (the SVG too).
+  for (const icon of mani.icons) {
+    const p = path.join(__dirname, "..", icon.src.replace(/^\//, ""));
+    assert.ok(fs.existsSync(p), `${icon.src} declared in manifest but missing on disk`);
+  }
+});
+
+// ---- og:title vs <title> ------------------------------------------------------
+
+test("og:title is the bare headline; <title> keeps the site-name suffix", async () => {
+  const html = (await request(base, `/news/${ARTICLE}`)).body.toString("utf8");
+  assert.match(html, /<meta property="og:title" content="Third Best Paper Award at IEEE PESS 2025" \/>/);
+  assert.match(html, /<meta name="twitter:title" content="Third Best Paper Award at IEEE PESS 2025" \/>/);
+  assert.match(html, /<title>Third Best Paper Award at IEEE PESS 2025 - Lampros Konstantellos<\/title>/);
+  // Lists and home carry og:type website plus their own social titles.
+  const news = (await request(base, "/news")).body.toString("utf8");
+  assert.match(news, /<meta property="og:type" content="website"/);
+  assert.match(news, /<meta property="og:title" content="News" \/>/);
+  const home = (await request(base, "/")).body.toString("utf8");
+  assert.match(home, /<meta property="og:title" content="Lampros Konstantellos" \/>/);
+});
+
+// ---- Sitemap loc set exactness ----------------------------------------------
+
+test("sitemap <loc> set is exactly the three pages plus every valid article", async () => {
+  const xml = (await request(base, "/sitemap.xml")).body.toString("utf8");
+  const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]).sort();
+  const expected = [
+    `${SITE.url}/`,
+    `${SITE.url}/news`,
+    `${SITE.url}/publications`,
+    ...server.VALID_ARTICLE_SLUGS.map((s) => `${SITE.url}/news/${s}`),
+  ].sort();
+  assert.deepEqual(locs, expected, "sitemap loc set has orphans or omissions");
+});
+
+// ---- /publications structured data ------------------------------------------
+
+test("/publications emits a ScholarlyArticle ItemList with DOIs", async () => {
+  const html = (await request(base, "/publications")).body.toString("utf8");
+  const block = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1];
+  const graph = JSON.parse(block.replace(/\\u003c/g, "<"))["@graph"];
+  const list = graph.find((n) => n["@type"] === "ItemList");
+  assert.ok(list, "no ItemList on /publications");
+  assert.ok(list.itemListElement.length >= 5, "ItemList missing entries");
+  const doi = list.itemListElement
+    .map((e) => e.item.identifier && e.item.identifier.value)
+    .filter(Boolean);
+  assert.ok(doi.includes("10.30420/566656006"), "IEEE PESS DOI missing from ItemList");
+  assert.ok(doi.every((d) => /^10\.\S+$/.test(d) && !d.endsWith(".")), "malformed DOI in ItemList");
 });

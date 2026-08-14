@@ -74,8 +74,12 @@ function Header({ route, navigate, activeSection }) {
   // On the homepage the highlight follows the scroll-spy (activeSection,
   // null while the hero is in view); list and article pages keep their
   // route-derived highlight. The two states carry different aria-current
-  // tokens: "location" for a scroll position within the homepage, "page" for
-  // the actual list/article route you are on.
+  // tokens: "location" for a scroll position within the homepage, "true"
+  // (current item of the set) on list/article pages. NOT "page": these links
+  // point at the home sections (/#news, /#publications), and aria-current=
+  // "page" asserts the link's TARGET is the page you are on — announcing
+  // "current page" on a link that navigates away misleads screen-reader
+  // users.
   const currentToken = (it) => {
     if (route.page === "home" && activeSection === it.id) return "location";
     if (
@@ -83,7 +87,7 @@ function Header({ route, navigate, activeSection }) {
       (route.page === "news-list" && it.id === "news") ||
       (route.page === "article" && it.id === "news")
     ) {
-      return "page";
+      return "true";
     }
     return undefined;
   };
@@ -230,11 +234,14 @@ function Hero({ navigate }) {
 function EmailContactCard({ contact, BrandIcon, tint }) {
   const [copied, setCopied] = React.useState(false);
   const copyTimer = React.useRef(null);
-  React.useEffect(() => () => clearTimeout(copyTimer.current), []);
+  // Guard against the clipboard promise resolving after unmount (see
+  // ArticleShare) — it would otherwise arm a timer with no cleanup left.
+  const mounted = React.useRef(true);
+  React.useEffect(() => () => { mounted.current = false; clearTimeout(copyTimer.current); }, []);
 
   const copyEmail = () => {
     copyTextToClipboard(contact.href.replace(/^mailto:/, "")).then((ok) => {
-      if (!ok) return;
+      if (!ok || !mounted.current) return;
       setCopied(true);
       clearTimeout(copyTimer.current);
       copyTimer.current = setTimeout(() => setCopied(false), 1800);
@@ -465,7 +472,16 @@ function NotFound({ navigate }) {
 const HOME_SECTION_IDS = ["about", "publications", "news", "contact"];
 
 function App() {
-  const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
+  // route carries an optional `from` (which page linked here — drives the
+  // article Back link) so components read it as a prop instead of pulling
+  // window.history.state during render: a render-time read of mutable
+  // external state is not tearing-safe under concurrent rendering and only
+  // worked because navigate() happened to pushState before setRoute. The
+  // initial value picks up history.state so a reload keeps its Back target.
+  const [route, setRoute] = useState(() => ({
+    ...parseRoute(window.location.pathname),
+    from: (window.history.state || {}).from,
+  }));
   const [activeSection, setActiveSection] = useState(null);
   const mainRef = useRef(null);
   const firstRender = useRef(true);
@@ -475,6 +491,10 @@ function App() {
   // scroll collapses to the top. Instead we tag every history entry with a `key`,
   // remember each entry's latest scroll position, and re-apply it after the new
   // view has rendered. Fresh (push) navigations still start at the top.
+  // Bounded: every navigation mints a new entry, and entries for history
+  // slots destroyed by pushState truncation are never revisited — without a
+  // cap the map grew for the whole session.
+  const SCROLL_POSITIONS_MAX = 50;
   const scrollPositions = useRef(new Map());
   const currentKey = useRef(0);
   const keyCounter = useRef(0);
@@ -488,6 +508,11 @@ function App() {
     const st = window.history.state || {};
     if (st.key === undefined) window.history.replaceState({ ...st, key: 0 }, "");
     currentKey.current = (window.history.state && window.history.state.key) || 0;
+    // Seed the mint counter past the restored key: after a reload deep in a
+    // session's history the entry might carry key 3 while the counter restarts
+    // at 0, so the next pushState would mint key 1 — a key an EARLIER entry
+    // still owns, cross-wiring the two entries' saved scroll positions.
+    keyCounter.current = Math.max(keyCounter.current, currentKey.current);
     return () => { if (supported) window.history.scrollRestoration = prev; };
   }, []);
 
@@ -520,11 +545,11 @@ function App() {
         const key = ++keyCounter.current;
         window.history.replaceState({ ...(state || {}), key }, "");
         currentKey.current = key;
-        setRoute(parseRoute(window.location.pathname));
+        setRoute({ ...parseRoute(window.location.pathname), from: state && state.from });
         return;
       }
       currentKey.current = state.key;
-      setRoute(parseRoute(window.location.pathname));
+      setRoute({ ...parseRoute(window.location.pathname), from: state.from });
       restoreScroll(scrollPositions.current.get(state.key) || 0, restoreCtl.current);
     };
     window.addEventListener("popstate", onPop);
@@ -546,12 +571,19 @@ function App() {
   // Move focus to the main region on a full page change so keyboard and
   // screen-reader users land in the new content. Skipped on first render and
   // during in-page section scrolls (which manage their own scroll position).
+  // "In-page" means the page itself did not change: a section target alone is
+  // not enough — every nav/back link targets { page: "home", section }, so a
+  // cross-page navigation (say /publications → /#publications) unmounts the
+  // focused element and must still move focus to the new main region.
+  const prevFocusPage = useRef(route.page);
   useEffect(() => {
+    const pageChanged = route.page !== prevFocusPage.current;
+    prevFocusPage.current = route.page;
     if (firstRender.current) {
       firstRender.current = false;
       return;
     }
-    if (route.page === "home" && route.section) return;
+    if (!pageChanged && route.page === "home" && route.section) return;
     // preventScroll: the page components manage their own scroll-to-top.
     if (mainRef.current) mainRef.current.focus({ preventScroll: true });
   }, [route]);
@@ -596,16 +628,22 @@ function App() {
       });
       setActiveSection(pickActiveSection(observations, HOME_SECTION_IDS));
     };
-    const io = new IntersectionObserver(recompute, { rootMargin: "-15% 0px -80% 0px" });
-    sections.forEach((el) => io.observe(el));
+    // Feature-detected: a constructor throw inside an effect would unmount
+    // the whole root (blank page) for a purely decorative highlight. The
+    // passive scroll listener below drives recompute on its own regardless.
+    const io = typeof IntersectionObserver === "function"
+      ? new IntersectionObserver(recompute, { rootMargin: "-15% 0px -80% 0px" })
+      : null;
+    if (io) sections.forEach((el) => io.observe(el));
     let raf = 0;
     const onScroll = () => {
       if (raf) return;
       raf = requestAnimationFrame(() => { raf = 0; recompute(); });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
+    recompute();
     return () => {
-      io.disconnect();
+      if (io) io.disconnect();
       window.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(raf);
     };
@@ -625,12 +663,17 @@ function App() {
     let raf = 0;
     // The re-assert loop must yield to the user: a wheel/touch/key scroll in
     // the first ~half second would otherwise be snapped back to the section
-    // until the 30 frames run out.
+    // until the 30 frames run out. pointerdown covers a mouse CLICK inside
+    // that window — navigate()'s own smooth scroll was yanked back to the
+    // hash target every frame without it — and popstate covers an immediate
+    // Back/Forward whose restoreScroll would fight the same loop.
     const stop = () => cancelAnimationFrame(raf);
     const cancelOpts = { passive: true, once: true };
     window.addEventListener("wheel", stop, cancelOpts);
     window.addEventListener("touchstart", stop, cancelOpts);
     window.addEventListener("keydown", stop, cancelOpts);
+    window.addEventListener("pointerdown", stop, cancelOpts);
+    window.addEventListener("popstate", stop, cancelOpts);
     const attempt = () => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -645,6 +688,8 @@ function App() {
       window.removeEventListener("wheel", stop);
       window.removeEventListener("touchstart", stop);
       window.removeEventListener("keydown", stop);
+      window.removeEventListener("pointerdown", stop);
+      window.removeEventListener("popstate", stop);
     };
   }, []);
 
@@ -675,6 +720,11 @@ function App() {
     if (window.location.pathname !== targetPathname) {
       // Remember where we were before leaving, then start a freshly-keyed entry.
       scrollPositions.current.set(currentKey.current, window.scrollY);
+      // Evict the oldest entries beyond the cap (Map preserves insertion
+      // order; keys for truncated history slots are never read again anyway).
+      while (scrollPositions.current.size > SCROLL_POSITIONS_MAX) {
+        scrollPositions.current.delete(scrollPositions.current.keys().next().value);
+      }
       const key = ++keyCounter.current;
       window.history.pushState({ ...fromState, key }, "", desiredUrl);
       currentKey.current = key;
@@ -683,7 +733,9 @@ function App() {
       // for in-page section jumps. Keep the current entry's key.
       window.history.replaceState({ ...fromState, key: currentKey.current }, "", desiredUrl);
     }
-    setRoute(next);
+    // Mirror `from` onto the route so consumers get it as a prop (the history
+    // entry keeps carrying it for reload/Back-Forward restoration).
+    setRoute(opts.from !== undefined ? { ...next, from: opts.from } : next);
 
     if (next.page === "home" && next.section) {
       requestAnimationFrame(() => {
@@ -712,7 +764,7 @@ function App() {
         {route.page === "home" && <HomePage navigate={navigate} />}
         {route.page === "news-list" && <NewsListPage navigate={navigate} />}
         {route.page === "publications-list" && <PublicationsListPage navigate={navigate} />}
-        {route.page === "article" && <Article slug={route.slug} navigate={navigate} />}
+        {route.page === "article" && <Article slug={route.slug} from={route.from} navigate={navigate} />}
         {route.page === "not-found" && <NotFound navigate={navigate} />}
       </main>
       <Footer navigate={navigate} />

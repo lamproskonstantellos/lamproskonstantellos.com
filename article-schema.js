@@ -51,14 +51,63 @@
         `[article] "${article.slug}" has impossible date "${article.date}" — not a real calendar day`
       );
     }
+    // Optional "content edited after publication" date, feeding dateModified /
+    // article:modified_time. Same format and calendar checks as `date`.
+    if (article.dateUpdated !== undefined) {
+      const upd = new Date(`${article.dateUpdated}T00:00:00Z`);
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(article.dateUpdated) ||
+        Number.isNaN(upd.getTime()) ||
+        upd.toISOString().slice(0, 10) !== article.dateUpdated
+      ) {
+        throw new Error(
+          `[article] "${article.slug}" has invalid dateUpdated "${article.dateUpdated}" — expected a real YYYY-MM-DD day`
+        );
+      }
+      if (article.dateUpdated < article.date) {
+        throw new Error(
+          `[article] "${article.slug}" has dateUpdated earlier than date`
+        );
+      }
+    }
     if (!Array.isArray(article.body) || article.body.length === 0) {
       throw new Error(`[article] "${article.slug}" has empty or non-array body`);
+    }
+    // C0 control characters are illegal in XML 1.0, so a stray one in a title
+    // or excerpt would produce an rss.xml every feed reader rejects (escapeHtml
+    // only handles the five markup characters). Reject at the source instead.
+    for (const field of ["title", "excerpt", "seoDescription", "dateLabel"]) {
+      if (
+        typeof article[field] === "string" &&
+        /[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(article[field])
+      ) {
+        throw new Error(
+          `[article] "${article.slug}" has a control character in ${field}`
+        );
+      }
     }
     if (article.photos && !Array.isArray(article.photos)) {
       throw new Error(`[article] "${article.slug}" has non-array photos`);
     }
     if (article.sources && !Array.isArray(article.sources)) {
       throw new Error(`[article] "${article.slug}" has non-array sources`);
+    }
+    // Each source lands in an <a href> — require { href, label } and an
+    // http(s) scheme so a malformed (or javascript:) value fails loudly at
+    // load like every other invalid field instead of shipping as a link.
+    if (Array.isArray(article.sources)) {
+      for (const s of article.sources) {
+        if (!s || typeof s !== "object" || typeof s.href !== "string" || typeof s.label !== "string") {
+          throw new Error(
+            `[article] "${article.slug}" has an invalid sources entry (expected { href, label })`
+          );
+        }
+        if (!/^https?:\/\//.test(s.href)) {
+          throw new Error(
+            `[article] "${article.slug}" has a sources href that is not http(s): "${s.href}"`
+          );
+        }
+      }
     }
     if (article.keywords && !Array.isArray(article.keywords)) {
       throw new Error(`[article] "${article.slug}" has non-array keywords`);
@@ -78,6 +127,33 @@
     // Optional open-codec (VP9/AV1 WebM) fallback source for the video.
     if (article.videoWebm !== undefined && typeof article.videoWebm !== "string") {
       throw new Error(`[article] "${article.slug}" has non-string videoWebm`);
+    }
+    // Every asset path is read from disk at server startup (path.join with the
+    // document root) and interpolated into public URLs and <link rel=preload>.
+    // The slug/date fields are tightly constrained; the asset paths must be
+    // too, or a "../" value would read a file OUTSIDE the document root at
+    // boot and emit an og:image URL escaping the site. Each must live inside
+    // THIS article's own folder and use a conservative filename charset.
+    const assetPath = (value, field) => {
+      if (value === undefined) return;
+      const okPath =
+        new RegExp(`^news\\/${article.slug}\\/(?!\\.)[a-z0-9._-]+$`).test(value) &&
+        !value.includes("..");
+      if (!okPath) {
+        throw new Error(
+          `[article] "${article.slug}" has an invalid ${field} path "${value}" — expected news/${article.slug}/<filename>`
+        );
+      }
+    };
+    assetPath(article.cover, "cover");
+    assetPath(article.video, "video");
+    assetPath(article.videoWebm, "videoWebm");
+    assetPath(article.poster, "poster");
+    assetPath(article.captions, "captions");
+    if (Array.isArray(article.photos)) {
+      for (const p of article.photos) {
+        assetPath(typeof p === "string" ? p : p && p.src, "photos src");
+      }
     }
     // Optional SEO meta description (<=~160 chars) used for the meta/OG/Twitter
     // description in place of the fuller card/feed excerpt when present.
@@ -101,6 +177,18 @@
     }
     if ((article.videoWidth === undefined) !== (article.videoHeight === undefined)) {
       throw new Error(`[article] "${article.slug}" must set videoWidth and videoHeight together`);
+    }
+    // Optional 0-based paragraph index the video is placed after. The renderer
+    // quietly falls back to end-of-article for a non-integer, so without this
+    // guard a typo like videoAfter: "8" changed the layout silently instead of
+    // failing loudly like every other bad field.
+    if (
+      article.videoAfter !== undefined &&
+      (!Number.isInteger(article.videoAfter) || article.videoAfter < 0)
+    ) {
+      throw new Error(
+        `[article] "${article.slug}" has invalid videoAfter (expected a non-negative integer)`
+      );
     }
     // A photos entry is either a path string or { src, align?, after?,
     // caption?, width?, height? } — width/height (set both or neither) are the
@@ -132,6 +220,20 @@
     return article;
   }
 
+  // HTML/XML escaping for the five markup characters. Lives HERE — the one
+  // module both server.js and feeds.js already require — because the two used
+  // to carry hand-synchronized copies whose "deliberately byte-identical"
+  // contract was enforced only by a comment. The RSS feed must escape exactly
+  // as the served HTML does, so there is exactly one implementation.
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   // Newest first, by ISO date string. Stable for equal dates (returns 0).
   function compareByDateDesc(a, b) {
     if (a.date < b.date) return 1;
@@ -147,14 +249,16 @@
     return (Array.isArray(body) ? body.join("\n\n") : "").replace(/\*\*/g, "");
   }
 
-  const api = { validateArticle, compareByDateDesc, plainBody };
+  const api = { validateArticle, compareByDateDesc, plainBody, escapeHtml };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
   }
   if (typeof window !== "undefined") {
-    // The same three names module.exports carries — every browser consumer
-    // (data.js, the components) uses these bare globals.
-    Object.assign(window, { validateArticle, compareByDateDesc, plainBody });
+    // Only the names the browser actually consumes: data.js uses
+    // validateArticle (defineArticle) and compareByDateDesc (sortedNews).
+    // plainBody and escapeHtml are Node-side concerns (JSON-LD/feeds/meta) —
+    // no component references them, so they are not put on window.
+    Object.assign(window, { validateArticle, compareByDateDesc });
   }
 })();

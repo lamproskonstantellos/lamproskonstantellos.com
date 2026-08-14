@@ -59,7 +59,7 @@ tooling and config never are.
 ├── site.config.js         Single source of truth for site identity (dual Node/browser)
 ├── routes.js              Route table: parseRoute / routeToPath / isValidSpaRoute / pageTitle (dual)
 ├── article-schema.js      Article validation + newest-first comparator (dual)
-├── ui-helpers.js          Share links, scroll-spy, publication filters/grouping, hero joiner (dual)
+├── ui-helpers.js          Share links, scroll-spy, publication filters/grouping, hero joiner, responsive image variants (dual)
 ├── data.js                Profile, hero, about, publications, contact, selectors
 ├── PUBLICATIONS.md        Guide: adding publications (journal / conference / theses & reports)
 ├── styles.css             Global stylesheet
@@ -82,9 +82,10 @@ Four modules are loaded both in the browser (as `window` globals, before
 (site identity), `routes.js` (the route table, titles), `article-schema.js`
 (article validation, sort order, and the plain-text body flattener) and
 `ui-helpers.js` (share links, the scroll-spy resolver, the publications
-filters/grouping, and the hero joiner). Because both worlds share one
-definition, the client and server can never diverge on routes, titles,
-validation, sort order or identity.
+filters/grouping, the hero joiner, and the responsive image widths/srcset
+builder shared by `<Picture>`, the server preloads and the image pipeline).
+Because both worlds share one definition, the client and server can never
+diverge on routes, titles, validation, sort order or identity.
 
 ## Testing
 
@@ -119,7 +120,7 @@ first — nothing else changes.
 
 ### SEO checklist for new content
 
-- **Articles:** fill `excerpt` (and `seoDescription` when the excerpt runs past ~160 characters), plus `keywords`, `articleSection`, and `topics` for rich results; commit a `cover.jpg` — the build derives the 1200×630 `cover-og.jpg` social card automatically. `<title>`, meta description, canonical, Open Graph/Twitter tags, `Article` JSON-LD, `sitemap.xml`, `rss.xml`, and `feed.json` all update automatically at build time.
+- **Articles:** fill `excerpt` (and `seoDescription` when the excerpt runs past ~160 characters), plus `keywords` and `articleSection` for rich results (`topics` is also supported for JSON-LD `about` entities — optional, currently unused by the published articles); commit a `cover.jpg` — the build derives the 1200×630 `cover-og.jpg` social card automatically. `<title>`, meta description, canonical, Open Graph/Twitter tags, `Article` JSON-LD, `sitemap.xml`, `rss.xml`, and `feed.json` all update automatically at build time.
 - **Publications:** no extra steps — page-level meta and JSON-LD are already in place (details in [`PUBLICATIONS.md`](./PUBLICATIONS.md)).
 
 ## SEO

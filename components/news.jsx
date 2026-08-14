@@ -200,7 +200,10 @@ function Lightbox({ photos, index, onIndex, onClose }) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={multi ? `Photo viewer, ${index + 1} of ${count}` : "Photo viewer"}
+      // Static name: several screen readers re-announce a CHANGED aria-label
+      // on the focused container, which doubled up with the live region below
+      // on every photo change. The live region is the sole position announcer.
+      aria-label="Photo viewer"
     >
       <button
         type="button"
@@ -259,10 +262,15 @@ function ArticleShare({ article }) {
   const url = SITE.url + "/news/" + article.slug;
   const [copied, setCopied] = React.useState(false);
   const copyTimer = React.useRef(null);
+  // The clipboard promise can resolve AFTER unmount (copy, then immediately
+  // navigate Back): the unmount cleanup has already run by then, so without
+  // the mounted guard markCopied armed a fresh 1.8s timer nothing would clear.
+  const mounted = React.useRef(true);
 
-  React.useEffect(() => () => clearTimeout(copyTimer.current), []);
+  React.useEffect(() => () => { mounted.current = false; clearTimeout(copyTimer.current); }, []);
 
   const markCopied = () => {
+    if (!mounted.current) return;
     setCopied(true);
     clearTimeout(copyTimer.current);
     copyTimer.current = setTimeout(() => setCopied(false), 1800);
@@ -309,7 +317,7 @@ function ArticleShare({ article }) {
   );
 }
 
-function Article({ slug, navigate }) {
+function Article({ slug, from, navigate }) {
   const article = React.useMemo(() => getArticle(slug), [slug]);
   // The lightbox pages across ALL of an article's photos; it holds the index of
   // the open photo (null when closed) into the flat `openable` list built below.
@@ -324,8 +332,10 @@ function Article({ slug, navigate }) {
   // The visible label is always "Back"; the destination still depends on where
   // the reader came from (home News section vs the /news list), so the
   // aria-label names it — identically-labelled links with different targets
-  // are ambiguous in a screen reader's link list.
-  const from = window.history.state?.from;
+  // are ambiguous in a screen reader's link list. `from` arrives as a prop
+  // (App mirrors it from history state onto the route): reading
+  // window.history.state here during render was a non-reactive external read,
+  // correct only because navigate() happened to pushState before setRoute.
   const backRoute = from === "home"
     ? { page: "home", section: "news" }
     : { page: "news-list" };
@@ -541,4 +551,6 @@ function Article({ slug, navigate }) {
   );
 }
 
-Object.assign(window, { NewsCard, NewsPreview, NewsListPage, Article });
+// Cross-bundle exports only — NewsCard stays module-local (its consumers all
+// live in this file; the window slot had no reader in any other bundle).
+Object.assign(window, { NewsPreview, NewsListPage, Article });

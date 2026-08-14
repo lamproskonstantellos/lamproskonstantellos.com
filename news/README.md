@@ -85,7 +85,7 @@ defineArticle({
 
 ### Photos
 
-Each entry in `photos` is either a bare path string or an object `{ src, align?, after?, caption? }`:
+Each entry in `photos` is either a bare path string or an object `{ src, align?, after?, caption?, width?, height? }`:
 
 - **`after`** (number) — render the photo **inline**, right after the `body` paragraph at that (0-based) index, instead of in the end gallery. Inline photos show whole, at their natural aspect ratio (portrait or landscape), capped in size.
 - **`caption`** (string) — a short caption shown beneath an inline photo (also used as its alt text).
@@ -123,9 +123,18 @@ build time — you only supply good inputs:
 Validation lives in `article-schema.js` (`validateArticle`) and runs in **both**
 the browser (`defineArticle`, throwing a clear console error) and the server
 (`loadArticleMeta`, which logs and skips an invalid article so bad data never
-reaches the feeds). It enforces the required fields, the `YYYY-MM-DD` date
-format, and that `body`/`photos`/`sources`/`keywords`/`topics` are arrays. The
-legacy `(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({ ... })` form
+reaches the feeds). It enforces: the required fields; that `date` (and the
+optional `dateUpdated`) is a **real** `YYYY-MM-DD` calendar day; that `slug`
+is lowercase letters/digits/hyphens **and equals the folder name**; that
+`body` is a non-empty array and `photos`/`sources`/`keywords`/`topics` are
+arrays; that every asset path (`cover`, `video`, `videoWebm`, `poster`,
+`captions`, `photos[].src`) points inside the article's own `news/<slug>/`
+folder; that each `sources` entry is `{ href, label }` with an `http(s)`
+URL; that `title`/`excerpt`/`seoDescription`/`dateLabel` contain no control
+characters (they would break the XML feeds); that `videoWidth`/`videoHeight`
+(and a photo's `width`/`height`) are positive numbers set together; and that
+`videoAfter` is a non-negative integer. The legacy
+`(window.NEWS_ARTICLES = window.NEWS_ARTICLES || []).push({ ... })` form
 still works if you ever need it.
 
 ## Publishing checklist

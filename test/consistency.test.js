@@ -6,8 +6,9 @@
 const { test, before, after } = require("node:test");
 const assert = require("node:assert");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
-const { start, stop, request } = require("./helper");
+const { start, stop, request, loadDataWindow } = require("./helper");
 
 const ROOT = path.join(__dirname, "..");
 const SITE = require("../site.config.js");
@@ -128,8 +129,12 @@ test("every discovered article's folder name equals its slug field", () => {
 });
 
 test("loadArticleMeta skips an article whose slug field diverges from its folder", () => {
+  // Fixture in an OS temp dir, NOT the real news/ tree: node --test runs test
+  // files in parallel, and a transient folder under news/ would leak into any
+  // concurrently running article discovery (e.g. parity's static build).
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "consistency-"));
   const folder = "__consistency_divergent__";
-  const dir = path.join(ROOT, "news", folder);
+  const dir = path.join(base, "news", folder);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
     path.join(dir, "article.js"),
@@ -139,9 +144,9 @@ test("loadArticleMeta skips an article whose slug field diverges from its folder
     `defineArticle({ slug: "elsewhere", date: "2026-01-01", dateLabel: "x", title: "t", excerpt: "e", body: ["b"] });`
   );
   try {
-    assert.equal(server.loadArticleMeta(folder), null);
+    assert.equal(server.loadArticleMeta(folder, base), null);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(base, { recursive: true, force: true });
   }
 });
 
@@ -158,11 +163,7 @@ test("validateArticle rejects a slug with URL-unsafe characters", () => {
 // ---- C10: contact links never diverge from site.config socialLinks ---------
 
 test("PROFILE.contact hrefs (minus email) are exactly site.config.socialLinks", () => {
-  const code = fs.readFileSync(path.join(ROOT, "data.js"), "utf8");
-  const window = { SITE, validateArticle: schema.validateArticle, compareByDateDesc: schema.compareByDateDesc };
-  // eslint-disable-next-line no-new-func
-  new Function("window", code)(window);
-  const social = window.PROFILE.contact
+  const social = loadDataWindow().PROFILE.contact
     .filter((c) => c.id !== "email")
     .map((c) => c.href);
   // Same set, same order: the contact row and JSON-LD sameAs share one list.
@@ -193,8 +194,10 @@ test("validateArticle rejects a non-string cover (path.join would kill the boot)
 });
 
 test("loadArticleMeta skips an invalid article (returns null, fails loudly)", () => {
+  // Same temp-dir isolation as the divergent-slug case above.
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "consistency-"));
   const slug = "__consistency_invalid__";
-  const dir = path.join(ROOT, "news", slug);
+  const dir = path.join(base, "news", slug);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
     path.join(dir, "article.js"),
@@ -202,8 +205,8 @@ test("loadArticleMeta skips an invalid article (returns null, fails loudly)", ()
     `defineArticle({ slug: "${slug}", date: "2026-01-01", dateLabel: "x", title: "t", body: ["b"] });`
   );
   try {
-    assert.equal(server.loadArticleMeta(slug), null);
+    assert.equal(server.loadArticleMeta(slug, base), null);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(base, { recursive: true, force: true });
   }
 });

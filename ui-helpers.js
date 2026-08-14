@@ -1,10 +1,13 @@
 /* ============================================================
    ui-helpers.js — shared UI logic (share links, scroll-spy,
-   publications filters/grouping, hero joiner)
+   publications filters/grouping, hero joiner, responsive image
+   variants: widths, cap, srcset builder, sizes attributes)
    ------------------------------------------------------------
    Pure functions behind the article share row, the homepage
    scroll-spy nav, the /publications filter pills + year groups,
-   and the hero headline joiners. No React, no DOM, no Node APIs
+   the hero headline joiners, and the responsive-image vocabulary
+   shared by <Picture>, the server's preloads, the static build
+   and scripts/optimize-images.js. No React, no DOM, no Node APIs
    — so the logic loads identically in the browser (window
    globals) and in Node (require) and is unit-testable without
    compiling JSX, exactly like routes.js / site.config.js.
@@ -112,10 +115,13 @@
   // sizes attributes shared between the components and the server-side
   // preloads (they MUST match, or the browser preloads one candidate and
   // renders another — a double download).
-  // Hero portrait: the 96px mobile intro card below 820px, ~44vw of the
-  // desktop hero grid above it. Article cover: the full column width up to
-  // the 720px article measure.
-  const HERO_IMG_SIZES = "(max-width: 820px) 96px, 44vw";
+  // Hero portrait: the 96px mobile intro card below 820px; above it ~44vw of
+  // the hero grid, but never more than the 360px the CSS caps .hero-photo at
+  // — a bare 44vw claimed up to ~700px on wide desktops and made DPR-1
+  // screens (and the preload) fetch the 960w candidate where 480w suffices,
+  // on the LCP path. Article cover: the full column width up to the 720px
+  // article measure.
+  const HERO_IMG_SIZES = "(max-width: 820px) 96px, min(44vw, 360px)";
   const ARTICLE_COVER_SIZES = "(max-width: 776px) 100vw, 720px";
 
   const api = {

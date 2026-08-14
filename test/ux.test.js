@@ -12,6 +12,7 @@ const path = require("node:path");
 const routes = require("../routes.js");
 const server = require("../server.js");
 const SITE = require("../site.config.js");
+const { loadDataWindow } = require("./helper");
 
 const ROOT = path.join(__dirname, "..");
 const ctx = { siteName: SITE.name, jobTitle: SITE.jobTitle };
@@ -189,16 +190,9 @@ test("compiled app bundle carries the redesigned 404", () => {
 // ---- View-all threshold is exactly "more than the cap" ---------------------
 
 test("news preview cap: View-all appears only when items exceed the limit", () => {
-  // Reproduce the component's predicate against real data via the data.js shim.
-  const schema = require("../article-schema.js");
-  const window = {
-    SITE,
-    validateArticle: schema.validateArticle,
-    compareByDateDesc: schema.compareByDateDesc,
-  };
-  const code = fs.readFileSync(path.join(ROOT, "data.js"), "utf8");
-  // eslint-disable-next-line no-new-func
-  new Function("window", code)(window);
+  // Reproduce the component's predicate against real data via the shared
+  // data.js shim (test/helper.js loadDataWindow).
+  const window = loadDataWindow();
   // Seed N articles and check the predicate getRecentNews().length > cap.
   window.NEWS_ARTICLES = [];
   const cap = window.LIMITS.newsPreview;

@@ -36,7 +36,6 @@
      (was #6c7790 at 4.15 / 4.49, below the 4.5:1 threshold for normal text). */
   --muted-2: #646e88;
   --line: #e3e7ee;
-  --line-soft: #eef1f6;
   --accent: #1f3a8a;
   --accent-hover: #142a6b;
   /* --- Theme-aware component tokens: the light values below reproduce the
@@ -96,8 +95,12 @@
 .skip-link:focus-visible {
   top: 8px;
   color: var(--solid-ink);
-  outline: 2px solid #fff;
+  /* Theme-aware ring: a hardcoded white outline was invisible on the light
+     theme's near-white page background (≈1.08:1). The accent ring holds
+     contrast on both themes; the --bg halo separates it from the navy chip. */
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--bg);
 }
 html, body { margin: 0; padding: 0; }
 /* Suppress the translucent grey box iOS Safari / Android Chrome flash over a
@@ -127,6 +130,13 @@ a { color: var(--accent); text-decoration: none; transition: color var(--transit
 a:hover { color: var(--accent-hover); }
 img { max-width: 100%; display: block; }
 button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+/* Sticky footer: on short routes (the 404 view, an empty list) the footer
+   used to float mid-viewport with bare --bg below it. The app renders
+   header/main/footer inside #root; letting main flex-grow pins the footer to
+   the bottom and changes nothing on pages taller than the viewport. */
+#root { min-height: 100vh; display: flex; flex-direction: column; }
+main { flex: 1 0 auto; }
 
 /* No-JS fallback note (shown only inside <noscript>). Centered, readable, and
    independent of the app shell so it stands alone when nothing hydrates. */
@@ -788,7 +798,10 @@ section.block {
 .news-card .cover .ph {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  color: var(--muted-2);
+  /* --ink-soft, not --muted-2: the 11px placeholder sits on the gradient's
+     darker end (--photo-grad-b), where --muted-2 computed ≈3.98:1 in light
+     theme — below the 4.5:1 AA floor for normal-size text. */
+  color: var(--ink-soft);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11px;
   letter-spacing: 0.06em;
@@ -1026,16 +1039,8 @@ section.block {
 .article-gallery .photo:hover { transform: scale(1.01); }
 .article-gallery .photo img { width: 100%; height: 100%; object-fit: cover; }
 .article-gallery .photo.photo-align-top img { object-position: top center; }
-.article-gallery .photo .ph {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--muted-2);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  background-image:
-    linear-gradient(135deg, transparent 0 49%, var(--hatch) 49% 51%, transparent 51% 100%);
-  background-size: 14px 14px;
-}
+/* (No .ph placeholder rule here: gallery tiles always render a <Picture> —
+   the only .ph element in the app is the news-card cover fallback above.) */
 
 /* Lightbox / image zoom */
 .lightbox {
@@ -1241,7 +1246,15 @@ section.block {
   transition: opacity var(--transition), transform var(--transition),
     color var(--transition);
 }
-.contact-card:hover .ext { opacity: 1; transform: translate(2px, -2px); color: var(--accent); }
+.contact-card:hover .ext,
+.contact-card:focus-visible .ext {
+  opacity: 1; transform: translate(2px, -2px); color: var(--accent);
+}
+/* These cards open in a new tab and the ↗ arrow is their only "external"
+   cue — a hover-only reveal never showed it to touch or keyboard users. */
+@media (hover: none) {
+  .contact-card .ext { opacity: 1; }
+}
 
 /* The email card behaves like every other card on hover — the ↗ arrow fades
    in at the far right — while its copy-address button stays permanently
@@ -1279,7 +1292,10 @@ section.block {
 }
 .contact-copy.copied { color: var(--accent); }
 
-@media (max-width: 720px) {
+/* 719, not 720: pairs exclusively with the site's (min-width: 720px) queries
+   (justified article/about text) — at exactly 720px both used to fire,
+   mixing desktop typography with the collapsed mobile grid. */
+@media (max-width: 719px) {
   .contact-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 460px) {
@@ -1533,7 +1549,6 @@ section.block {
     --muted: #9aa7c4;
     --muted-2: #8e9bba;
     --line: #263250;
-    --line-soft: #1c2640;
     --accent: #93a9ea;
     --accent-hover: #aec0f2;
     --header-bg: rgba(13, 20, 36, 0.85);
@@ -1564,4 +1579,40 @@ section.block {
      envelope) stay visible. !important beats the per-brand inline tint the
      component sets. */
   .contact-card .ico-badge { background: #e9edf6 !important; }
+}
+
+/* ===== Print =====
+   The content pages (articles, publications) are the plausible print/save-as-
+   PDF targets. Chrome-only furniture is dropped: the sticky header repeats on
+   every sheet, the navy footer prints as a solid ink slab, and interactive
+   controls (share, filters, copy buttons) do nothing on paper. External link
+   targets are spelled out after their text — a printed "IEEE Xplore" without
+   its URL is a dead end. */
+@media print {
+  .site-header,
+  .site-footer,
+  .skip-link,
+  .article-share,
+  .back-link,
+  .view-all,
+  .pub-filters,
+  .pub-cite,
+  .contact-copy,
+  .lightbox {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+  main {
+    flex: none;
+  }
+  .article-body a[href^="http"]::after,
+  .article-sources a[href^="http"]::after,
+  .pub-links a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    word-break: break-all;
+  }
 }

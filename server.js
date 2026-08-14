@@ -6,14 +6,19 @@ const crypto = require("crypto");
 const { URL } = require("url");
 const SITE_CFG = require("./site.config.js");
 const { parseRoute, isValidSpaRoute: routeIsValidSpa, pageTitle } = require("./routes.js");
-const { validateArticle, plainBody } = require("./article-schema.js");
+const { validateArticle, plainBody, escapeHtml } = require("./article-schema.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
 // Shared responsive-image vocabulary (same module the browser loads), so the
 // preload's imagesrcset/imagesizes can never drift from what <Picture> renders.
-const { imageSrcset, HERO_IMG_SIZES, ARTICLE_COVER_SIZES } = require("./ui-helpers.js");
+const { imageSrcset, HERO_IMG_SIZES, ARTICLE_COVER_SIZES, IMAGE_WIDTH_VARIANTS } = require("./ui-helpers.js");
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
+// Symlink-resolved document root, computed once: the per-request containment
+// check compares fs.realpath(requestedPath) against THIS, so the comparison
+// still holds when the checkout itself lives behind a symlink (e.g. /tmp on
+// macOS resolving to /private/tmp).
+const PUBLIC_DIR_REAL = fs.realpathSync(PUBLIC_DIR);
 
 // Unique per server start - forces browser to re-fetch JS/CSS on every deploy.
 // This is the local preview server; the static build (build-static.js) stamps
@@ -132,6 +137,11 @@ const DEFAULT_IMAGE_VERSION = imageVersion(DEFAULT_IMAGE_PATH);
 const DEFAULT_IMAGE = `${SITE_CFG.url}${SITE_CFG.defaultImage}${DEFAULT_IMAGE_VERSION ? `?v=${DEFAULT_IMAGE_VERSION}` : ""}`;
 const DEFAULT_IMAGE_DIMS = imageDims(DEFAULT_IMAGE_PATH);
 const DEFAULT_DESCRIPTION = SITE_CFG.defaultDescription;
+// The home page's one spelling, WITH the trailing slash — the same form the
+// canonical tag and the sitemap emit. Every machine-readable home reference
+// (JSON-LD WebSite/Person/author/publisher URLs, breadcrumb item 1) uses this
+// constant so the site cannot reference its own root under two spellings.
+const HOME_URL = `${SITE_CFG.url}/`;
 // The hero is the LCP image; preload the AVIF sibling the <picture> will pick.
 // Derived from the same SITE_CFG.heroImage the Hero component renders, so the
 // preload can never point at a renamed/missing file.
@@ -143,7 +153,7 @@ const PROFILE_JSONLD = {
     {
       "@type": "WebSite",
       "name": SITE_CFG.name,
-      "url": SITE_CFG.url
+      "url": HOME_URL
     },
     {
       "@type": "ProfilePage",
@@ -151,9 +161,14 @@ const PROFILE_JSONLD = {
         "@type": "Person",
         "name": SITE_CFG.name,
         "jobTitle": SITE_CFG.jobTitle,
-        "url": SITE_CFG.url,
+        "url": HOME_URL,
         "image": DEFAULT_IMAGE,
-        "sameAs": SITE_CFG.socialLinks
+        // sameAs must hold URLs that IDENTIFY the person (profile pages,
+        // authority records). The Zenodo entry in socialLinks is a paginated
+        // full-text SEARCH — useful on the contact row, but as an identity
+        // claim it matches anyone whose name appears in a record — so search
+        // URLs are excluded here. (ORCID already covers the Zenodo deposits.)
+        "sameAs": SITE_CFG.socialLinks.filter((u) => !u.includes("/search?"))
       }
     }
   ]
@@ -168,8 +183,13 @@ const PROFILE_JSONLD = {
 // through the SAME validateArticle the browser uses, so a field the client
 // would reject is logged and skipped here instead of silently shipping into
 // the RSS / JSON-LD / sitemap output.
-function loadArticleMeta(slug) {
-  const file = path.join(PUBLIC_DIR, "news", slug, "article.js");
+// baseDir is the parent of the news/ tree (PUBLIC_DIR in production). Tests
+// pass their own temp directory so fixture articles never touch the real
+// news/ folder — `node --test` runs test FILES in parallel, and a fixture
+// folder existing for even a moment desynchronised any concurrently running
+// discovery (parity's static build, the slug-consistency sweep).
+function loadArticleMeta(slug, baseDir = PUBLIC_DIR) {
+  const file = path.join(baseDir, "news", slug, "article.js");
   if (!fs.existsSync(file)) return null;
   try {
     const code = fs.readFileSync(file, "utf8");
@@ -202,21 +222,21 @@ function loadArticleMeta(slug) {
   }
 }
 
-// Publications live in data.js as a browser global (PROFILE.publications). The
-// sitemap needs their newest year so /publications' lastmod tracks that page's
-// own content instead of the news archive. Same plain-Function shim — and the
-// same repository trust boundary — as loadArticleMeta above; a broken data.js
-// degrades to an empty list (the sitemap falls back to the article dates)
-// rather than crashing the server.
-function loadPublicationYears() {
+// Publications live in data.js as a browser global (PROFILE.publications).
+// Node needs them twice: the sitemap wants their newest year so
+// /publications' lastmod tracks that page's own content, and the
+// /publications JSON-LD wants the full entries for its ScholarlyArticle list.
+// Same plain-Function shim — and the same repository trust boundary — as
+// loadArticleMeta above; a broken data.js degrades to an empty list (the
+// sitemap falls back to the article dates) rather than crashing the server.
+function loadPublications() {
   try {
     const code = fs.readFileSync(path.join(PUBLIC_DIR, "data.js"), "utf8");
     const fakeWindow = { SITE: SITE_CFG };
     new Function("window", code)(fakeWindow);
-    const pubs = fakeWindow.PROFILE && Array.isArray(fakeWindow.PROFILE.publications)
+    return fakeWindow.PROFILE && Array.isArray(fakeWindow.PROFILE.publications)
       ? fakeWindow.PROFILE.publications
       : [];
-    return pubs.map((p) => Number(p.year)).filter(Number.isFinite);
   } catch (e) {
     console.error(`Could not load publications from data.js — ${e.message}`);
     return [];
@@ -234,25 +254,31 @@ function jsonLdScript(obj) {
     .replace(/\u2029/g, "\\u2029");
 }
 
-// Built once at startup. Article folders and the esbuild asset map only change
-// between deploys, and every deploy starts a fresh process - so there is no
-// need to hit the filesystem on each request.
+// Article/meta state is built once at startup: article folders only change
+// between deploys, and every deploy starts a fresh process. The ONE deliberate
+// per-request filesystem touch is currentAssetMap()'s fs.stat of the esbuild
+// manifest (per HTML render, for `npm run watch` freshness — see below).
 const ARTICLE_SLUGS = discoverArticleSlugs();
-const ARTICLE_META = {};
+// Prototype-less maps: these are looked up with an attacker-controlled key
+// (the URL slug), and on a plain object literal ARTICLE_META["__proto__"] /
+// ["constructor"] return truthy inherited values — which sent /news/__proto__
+// through the article meta branch and emitted garbage og/canonical/JSON-LD on
+// a 404 response. Object.create(null) has no inherited properties at all.
+const ARTICLE_META = Object.create(null);
 // Pixel dimensions of each article's cover (its og:image), read once at startup
 // so computePageMeta can declare accurate og:image:width/height without touching
 // the (multi-megabyte) image files on every request.
-const ARTICLE_COVER_DIMS = {};
+const ARTICLE_COVER_DIMS = Object.create(null);
 // Content hash of each cover, appended to its og:image URL as a ?v= cache-buster
 // so a same-name cover replacement is re-fetched by social scrapers and CDNs.
-const ARTICLE_COVER_VERSION = {};
+const ARTICLE_COVER_VERSION = Object.create(null);
 // Dedicated 1200x630 social crop (cover-og.jpg) per article, generated by
 // scripts/optimize-images.js. Social cards want a landscape ~1.91:1 image; the
 // raw covers are full-res and sometimes portrait/4:3, which platforms crop
 // badly and are slow to fetch. When the crop exists it becomes the article's
 // og:image; when it does not (e.g. before a build) the raw cover is used, so
 // this only ever improves the share card. { path, dims, version } per slug.
-const ARTICLE_SOCIAL = {};
+const ARTICLE_SOCIAL = Object.create(null);
 for (const slug of ARTICLE_SLUGS) {
   const meta = loadArticleMeta(slug);
   ARTICLE_META[slug] = meta;
@@ -270,12 +296,49 @@ for (const slug of ARTICLE_SLUGS) {
     }
   }
 }
+// slug → versioned social-crop URL path ("news/x/cover-og.jpg?v=abc"), handed
+// to buildFeed so the JSON Feed advertises the SAME optimized, cache-busted
+// card image og:image serves instead of the raw multi-MB cover.
+const ARTICLE_SOCIAL_PATHS = Object.create(null);
+for (const slug of Object.keys(ARTICLE_SOCIAL)) {
+  const s = ARTICLE_SOCIAL[slug];
+  ARTICLE_SOCIAL_PATHS[slug] = `${s.path}${s.version ? `?v=${s.version}` : ""}`;
+}
+
 // The loaded, validated articles in folder order — the single input shared by
 // the feed builders here and by the static build (feeds.js stays the one place
 // sitemap/rss/feed bytes are produced, so the live server and the build cannot
 // diverge).
 const ARTICLES = ARTICLE_SLUGS.map((slug) => ARTICLE_META[slug]).filter(Boolean);
-const PUBLICATION_YEARS = loadPublicationYears();
+const PUBLICATIONS = loadPublications();
+const PUBLICATION_YEARS = PUBLICATIONS.map((p) => Number(p.year)).filter(Number.isFinite);
+
+// /publications JSON-LD: the page carries the site's richest machine-readable
+// dataset (DOI-bearing peer-reviewed entries), so it is exposed as an
+// ItemList of ScholarlyArticle nodes rather than a bare BreadcrumbList.
+// Static data — built once at startup like PROFILE_JSONLD.
+const PUBLICATIONS_ITEMLIST = {
+  "@type": "ItemList",
+  "itemListElement": PUBLICATIONS.map((p, i) => {
+    // The DOI lives at the tail of the IEEE-style citation string
+    // ("… doi: 10.xxxx/yyyy."); the trailing period is citation punctuation,
+    // not part of the DOI.
+    const doiMatch = typeof p.citation === "string" && p.citation.match(/\bdoi:\s*(10\.\S+?)\.?\s*$/i);
+    const item = {
+      "@type": "ScholarlyArticle",
+      "headline": p.title,
+      "datePublished": String(p.year),
+      "author": { "@type": "Person", "name": SITE_CFG.name, "url": HOME_URL },
+    };
+    if (doiMatch) {
+      item.identifier = { "@type": "PropertyValue", "propertyID": "DOI", "value": doiMatch[1] };
+      item.sameAs = `https://doi.org/${doiMatch[1]}`;
+    } else if (Array.isArray(p.links) && p.links[0] && p.links[0].href) {
+      item.sameAs = p.links[0].href;
+    }
+    return { "@type": "ListItem", "position": i + 1, "item": item };
+  }),
+};
 // Only articles that PASSED validation ship to the client. A folder that
 // loadArticleMeta rejected must not have its script injected into every page
 // (the SPA would happily render the article the server refused to put in the
@@ -313,15 +376,6 @@ function currentAssetMap() {
   return liveAssetMap;
 }
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 // Default robots directive for real, indexable routes: allow indexing and give
 // crawlers the large image/snippet previews. The not-found route overrides this
 // with a noindex directive (below) — an error page must not ask to be indexed.
@@ -339,12 +393,16 @@ function computePageMeta(pathname) {
     return {
       title: pageTitle(route, titleCtx),
       description: DEFAULT_DESCRIPTION,
-      url: `${SITE_CFG.url}/`,
+      url: HOME_URL,
       image: DEFAULT_IMAGE,
       imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
       imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `${SITE_CFG.name} - ${SITE_CFG.jobTitle}`,
       ogType: "website",
+      // og:title without the "- <site name>" suffix pageTitle appends for the
+      // browser tab: social cards render og:site_name on its own line, so the
+      // suffixed form printed the name twice and truncated the headline.
+      socialTitle: SITE_CFG.name,
       jsonLd: PROFILE_JSONLD,
       preloadImage: HERO_PRELOAD_IMAGE,
       preloadImageSrcset: imageSrcset(SITE_CFG.heroImage, "avif"),
@@ -363,13 +421,14 @@ function computePageMeta(pathname) {
       imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `News from ${SITE_CFG.name}`,
       ogType: "website",
+      socialTitle: "News",
       jsonLd: {
         "@context": "https://schema.org",
         "@graph": [
           {
             "@type": "BreadcrumbList",
             "itemListElement": [
-              { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": HOME_URL },
               { "@type": "ListItem", "position": 2, "name": "News", "item": `${SITE_CFG.url}/news` },
             ],
           },
@@ -389,16 +448,18 @@ function computePageMeta(pathname) {
       imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `Publications by ${SITE_CFG.name}`,
       ogType: "website",
+      socialTitle: "Publications",
       jsonLd: {
         "@context": "https://schema.org",
         "@graph": [
           {
             "@type": "BreadcrumbList",
             "itemListElement": [
-              { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": HOME_URL },
               { "@type": "ListItem", "position": 2, "name": "Publications", "item": `${SITE_CFG.url}/publications` },
             ],
           },
+          PUBLICATIONS_ITEMLIST,
         ],
       },
     };
@@ -432,15 +493,21 @@ function computePageMeta(pathname) {
       // window without shortening the visible card text or the feed summaries.
       const description = article.seoDescription || article.excerpt;
 
+      // dateUpdated is the optional "content edited after publication" field
+      // (validated in article-schema.js); without it dateModified mirrors the
+      // publish date. Hardwiring dateModified to article.date made editing an
+      // article invisible to search engines.
+      const modifiedDate = article.dateUpdated || article.date;
+
       const articleSchema = {
         "@type": "Article",
         "headline": article.title,
         "description": description,
         "image": image,
         "datePublished": article.date,
-        "dateModified": article.date,
-        "author": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
-        "publisher": { "@type": "Person", "name": SITE_CFG.name, "url": SITE_CFG.url },
+        "dateModified": modifiedDate,
+        "author": { "@type": "Person", "name": SITE_CFG.name, "url": HOME_URL },
+        "publisher": { "@type": "Person", "name": SITE_CFG.name, "url": HOME_URL },
         "mainEntityOfPage": `${SITE_CFG.url}/news/${article.slug}`,
         "articleBody": articleBody,
         "wordCount": wordCount,
@@ -463,7 +530,7 @@ function computePageMeta(pathname) {
       const breadcrumbs = {
         "@type": "BreadcrumbList",
         "itemListElement": [
-          { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_CFG.url },
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": HOME_URL },
           { "@type": "ListItem", "position": 2, "name": "News", "item": `${SITE_CFG.url}/news` },
           { "@type": "ListItem", "position": 3, "name": article.title, "item": `${SITE_CFG.url}/news/${article.slug}` },
         ],
@@ -478,13 +545,18 @@ function computePageMeta(pathname) {
         imageHeight: imageDimensions && imageDimensions.height,
         imageAlt: article.title,
         ogType: "article",
+        // Social cards want the bare headline: og:site_name already carries
+        // the author's name on its own line.
+        socialTitle: article.title,
         // article:* Open Graph properties (published/modified time, author,
         // section, tags) let LinkedIn/Facebook/Slack surface the publish date
-        // and topic on shares. All derived from already-validated article data.
+        // and topic on shares. All derived from already-validated article
+        // data. article:author is typed as a PROFILE URL in the OG article
+        // vertical — a display-string value is ignored by scrapers.
         articleMeta: {
           publishedTime: `${article.date}T00:00:00+00:00`,
-          modifiedTime: `${article.date}T00:00:00+00:00`,
-          author: SITE_CFG.name,
+          modifiedTime: `${modifiedDate}T00:00:00+00:00`,
+          author: HOME_URL,
           section: article.articleSection || undefined,
           tags: article.keywords && article.keywords.length ? article.keywords : undefined,
         },
@@ -506,16 +578,20 @@ function computePageMeta(pathname) {
   }
 
   // Unknown route — used by the SPA NotFound page (served with HTTP 404) and by
-  // the static 404.html. Canonical/og:url point at the home root rather than
-  // reflecting the requested (attacker-controllable) pathname back into shared
-  // metadata. robots is noindex (an error page must not ask to be indexed) and
-  // jsonLd is null (no structured-data block emitted at all — an empty
+  // the static 404.html. og:url points at the home root rather than reflecting
+  // the requested (attacker-controllable) pathname back into shared metadata.
+  // canonical is null — no rel=canonical tag at all: noindex plus a canonical
+  // to a different URL is a conflicting-signal anti-pattern. robots is noindex
+  // (an error page must not ask to be indexed) and jsonLd is null (no
+  // structured-data block emitted at all — an empty
   // <script type="application/ld+json"></script> is invalid JSON that
   // rich-results validators flag).
   return {
     title: pageTitle(route, titleCtx),
     description: DEFAULT_DESCRIPTION,
-    url: `${SITE_CFG.url}/`,
+    url: HOME_URL,
+    canonical: null,
+    socialTitle: "Page not found",
     image: DEFAULT_IMAGE,
     imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
     imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
@@ -543,8 +619,22 @@ function cacheHeaderFor(req, contentType) {
   } catch {
     return "public, max-age=86400";
   }
-  if (url.searchParams.has("v") || url.pathname.startsWith("/dist/")) {
+  // /dist/ bundles carry a content hash in their FILENAME — new content is a
+  // new URL, so a year of immutable is always sound.
+  if (url.pathname.startsWith("/dist/")) {
     return "public, max-age=31536000, immutable";
+  }
+  // ?v=-stamped assets: only the token the CURRENT deploy stamps earns the
+  // immutable class. Any-?v= qualified before, which (a) let third parties
+  // pin arbitrary cache keys (…?v=anything) for a year, and (b) froze
+  // styles.css/data.js/article.js in the browser for the whole of a local dev
+  // session — DEPLOY_VERSION is fixed at boot, so the stamped URLs never
+  // changed while files on disk did. In production (CF_PAGES_COMMIT_SHA set)
+  // every deploy is a new token, so immutable is correct; in dev, revalidate.
+  if (url.searchParams.get("v") === String(DEPLOY_VERSION)) {
+    return process.env.CF_PAGES_COMMIT_SHA
+      ? "public, max-age=31536000, immutable"
+      : "no-cache";
   }
   return "public, max-age=86400";
 }
@@ -595,16 +685,38 @@ function getCompressed(cacheKey, encoding, data) {
   return out;
 }
 
+// Pick the supported content coding the client ranks highest. Full qvalue
+// handling per RFC 9110 §12.5.3: a coding refused with q=0 is never chosen,
+// and an explicit ranking like "br;q=0.1, gzip;q=1.0" picks gzip — the old
+// fixed br-first preference honoured refusals but ignored the ranking.
+// Ties (including the common unranked "gzip, br") break toward br, the
+// smaller output for this site's text content.
+function negotiateEncoding(acceptHeader) {
+  const explicit = {};
+  let wildcard = null;
+  for (const part of String(acceptHeader || "").split(",")) {
+    const m = part.trim().match(/^(br|gzip|\*)\s*(?:;\s*q\s*=\s*([\d.]+))?$/i);
+    if (!m) continue;
+    const weight = m[2] === undefined ? 1 : Number(m[2]);
+    if (Number.isNaN(weight)) continue;
+    if (m[1] === "*") wildcard = weight;
+    else explicit[m[1].toLowerCase()] = weight;
+  }
+  // An explicit coding entry beats the wildcard; unmentioned codings with no
+  // wildcard rank 0 (not offered).
+  const rank = (name) =>
+    explicit[name] !== undefined ? explicit[name] : wildcard !== null ? wildcard : 0;
+  const br = rank("br");
+  const gzip = rank("gzip");
+  if (br <= 0 && gzip <= 0) return null;
+  if (gzip > br) return "gzip";
+  return br > 0 ? "br" : null;
+}
+
 function writeCompressed(req, res, headers, data, cacheKey) {
   const status = headers.__status || 200;
   delete headers.__status;
   const isHead = req.method === "HEAD";
-  // Codings the client explicitly refused with ";q=0" must not be chosen
-  // (RFC 9110 §12.5.3) — strip them before the \bbr\b / \bgzip\b tests below.
-  const accept = (req.headers["accept-encoding"] || "").replace(
-    /\b(?:br|gzip)\s*;\s*q=0(?:\.0{1,3})?\s*(?=,|$)/gi,
-    ""
-  );
   const ct = headers["Content-Type"] || "";
 
   // Normalize to a Buffer so Content-Length is the true byte count. A string's
@@ -614,8 +726,7 @@ function writeCompressed(req, res, headers, data, cacheKey) {
 
   let encoding = null;
   if (isCompressible(ct) && buf.length > 1024) {
-    if (/\bbr\b/.test(accept)) encoding = "br";
-    else if (/\bgzip\b/.test(accept)) encoding = "gzip";
+    encoding = negotiateEncoding(req.headers["accept-encoding"]);
   }
 
   if (encoding) {
@@ -662,14 +773,39 @@ function injectMeta(html, meta) {
   const producers = {
     __META_SITE_NAME__: () => escapeHtml(SITE_CFG.name),
     __META_TITLE__: () => escapeHtml(meta.title),
+    // og:title/twitter:title: the bare social headline (no "- <site name>"
+    // suffix — og:site_name already renders the name as its own card line).
+    __META_OG_TITLE__: () => escapeHtml(meta.socialTitle || meta.title),
     __META_DESCRIPTION__: () => escapeHtml(meta.description),
     __META_URL__: () => escapeHtml(meta.url),
+    // rel=canonical is omitted entirely when meta.canonical is null (the 404
+    // page): a noindex page that nominates a DIFFERENT URL as canonical sends
+    // conflicting signals — search engines may consolidate the noindex onto
+    // the canonical target. og:url keeps pointing at home for share safety.
+    __META_CANONICAL__: () =>
+      meta.canonical === null
+        ? ""
+        : `<link rel="canonical" href="${escapeHtml(meta.url)}" />`,
     __META_IMAGE__: () => escapeHtml(meta.image),
-    __META_IMAGE_DIMS__: () =>
-      meta.imageWidth && meta.imageHeight
-        ? `<meta property="og:image:width" content="${meta.imageWidth}" />\n` +
-          `<meta property="og:image:height" content="${meta.imageHeight}" />`
-        : "",
+    // Width/height plus og:image:type (derived from the image extension so a
+    // future PNG cover stays correct; declaring it saves scrapers a probe).
+    // The dims come from imageDims' binary header reads and are always
+    // numbers, but they are coerced here anyway so this producer upholds the
+    // same "nothing unescaped reaches the HTML" invariant as its siblings.
+    __META_IMAGE_META__: () => {
+      const lines = [];
+      if (meta.imageWidth && meta.imageHeight) {
+        lines.push(`<meta property="og:image:width" content="${Number(meta.imageWidth) || 0}" />`);
+        lines.push(`<meta property="og:image:height" content="${Number(meta.imageHeight) || 0}" />`);
+      }
+      const ext = String(meta.image || "").split("?")[0].match(/\.(jpe?g|png)$/i);
+      if (ext) {
+        lines.push(
+          `<meta property="og:image:type" content="${ext[1].toLowerCase().startsWith("p") ? "image/png" : "image/jpeg"}" />`
+        );
+      }
+      return lines.join("\n");
+    },
     __META_IMAGE_ALT__: () => escapeHtml(meta.imageAlt || meta.title),
     __META_OG_TYPE__: () => escapeHtml(meta.ogType),
     // article:* OG properties, emitted only on article pages (meta.articleMeta).
@@ -752,7 +888,10 @@ function renderHtml(templateHtml, pathname, { deployVersion, articleScripts, ass
 function serveIndex(req, res, filePath, pathname, statusCode = 200) {
   fs.readFile(filePath, "utf8", (err, html) => {
     if (err) {
-      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      res.writeHead(404, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      });
       res.end("404 Not Found");
       return;
     }
@@ -777,6 +916,34 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
   });
 }
 
+// Weak validator derived from size + mtime: cheap (the stat is already in
+// hand), stable until the file is rewritten. Weak because the same entity is
+// also served content-encoded — byte-equality across encodings is not claimed.
+function entityTag(stats) {
+  return `W/"${stats.size.toString(16)}-${Math.trunc(stats.mtimeMs).toString(16)}"`;
+}
+
+// True when the request's conditional headers show the client copy is current
+// (→ 304). If-None-Match wins over If-Modified-Since (RFC 9110 §13.1.3).
+// Without these validators every asset was re-downloaded IN FULL once its
+// max-age expired — there was nothing for the browser to revalidate against.
+function isNotModified(req, etag, mtimeMs) {
+  const inm = req.headers["if-none-match"];
+  if (inm) {
+    return String(inm)
+      .split(",")
+      .map((t) => t.trim())
+      .some((t) => t === etag || t === "*");
+  }
+  const ims = req.headers["if-modified-since"];
+  if (ims) {
+    const since = Date.parse(ims);
+    // HTTP dates have whole-second resolution; truncate the mtime to match.
+    if (!Number.isNaN(since)) return Math.trunc(mtimeMs / 1000) * 1000 <= since;
+  }
+  return false;
+}
+
 function sendFile(req, res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = mimeTypes[ext] || "application/octet-stream";
@@ -791,11 +958,16 @@ function sendFile(req, res, filePath) {
   if (!isCompressible(contentType)) {
     fs.stat(filePath, (err, stats) => {
       if (err || !stats.isFile()) {
-        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.writeHead(404, {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+        });
         res.end("404 Not Found");
         return;
       }
       const size = stats.size;
+      const etag = entityTag(stats);
+      const lastModified = stats.mtime.toUTCString();
       let start = 0;
       let end = size > 0 ? size - 1 : 0;
       let status = 200;
@@ -803,10 +975,33 @@ function sendFile(req, res, filePath) {
         "Content-Type": contentType,
         "Cache-Control": cacheHeaderFor(req, contentType),
         "Accept-Ranges": "bytes",
+        "ETag": etag,
+        "Last-Modified": lastModified,
       };
 
+      if (isNotModified(req, etag, stats.mtimeMs)) {
+        // 304: validators + caching headers only, no body, no Content-Length.
+        res.writeHead(304, {
+          "Cache-Control": headers["Cache-Control"],
+          "ETag": etag,
+          "Last-Modified": lastModified,
+        });
+        res.end();
+        return;
+      }
+
+      // A Range is honoured only when If-Range (if present) still matches:
+      // a client resuming across a file replacement must get the full new
+      // entity, not a splice of two different versions.
+      const ifRange = req.headers["if-range"];
+      const ifRangeDate = ifRange && !String(ifRange).includes('"') ? Date.parse(ifRange) : NaN;
+      const rangeValid =
+        !ifRange ||
+        ifRange === etag ||
+        (!Number.isNaN(ifRangeDate) && Math.trunc(stats.mtimeMs / 1000) * 1000 <= ifRangeDate);
+
       const rangeHeader = req.headers["range"];
-      if (rangeHeader) {
+      if (rangeHeader && rangeValid) {
         const m = /^bytes=(\d*)-(\d*)$/.exec(String(rangeHeader).trim());
         if (m && (m[1] !== "" || m[2] !== "")) {
           if (m[1] === "") {
@@ -820,6 +1015,7 @@ function sendFile(req, res, filePath) {
           if (start > end || start >= size) {
             res.writeHead(416, {
               "Content-Type": "text/plain; charset=utf-8",
+              "Cache-Control": "no-cache, no-store, must-revalidate",
               "Content-Range": `bytes */${size}`,
             });
             res.end("416 Range Not Satisfiable");
@@ -854,31 +1050,63 @@ function sendFile(req, res, filePath) {
   // identity clients saw the fresh file. The mtime changes on every write.
   fs.stat(filePath, (statErr, stats) => {
     const mtime = statErr ? 0 : stats.mtimeMs;
+    // Same conditional-request handling as the streaming branch: text assets
+    // in the 86400 class revalidate to a 304 instead of a full re-download.
+    if (!statErr && stats.isFile()) {
+      const etag = entityTag(stats);
+      if (isNotModified(req, etag, stats.mtimeMs)) {
+        res.writeHead(304, {
+          "Cache-Control": cacheHeaderFor(req, contentType),
+          "ETag": etag,
+          "Last-Modified": stats.mtime.toUTCString(),
+          "Vary": "Accept-Encoding",
+        });
+        res.end();
+        return;
+      }
+    }
     fs.readFile(filePath, (err, data) => {
       if (err) {
-        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.writeHead(404, {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+        });
         res.end("404 Not Found");
         return;
       }
+      const validators = statErr || !stats.isFile()
+        ? null
+        : { "ETag": entityTag(stats), "Last-Modified": stats.mtime.toUTCString() };
       writeCompressed(req, res, {
         "Content-Type": contentType,
         "Cache-Control": cacheHeaderFor(req, contentType),
+        ...(validators || {}),
       }, data, `file:${filePath}:${mtime}`);
     });
   });
 }
 
-// Applied to every response. CSP is tuned to this site: self-hosted scripts,
-// self-hosted fonts (vendor/fonts), and inline style attributes emitted by
-// React's style prop. No third-party font or style origins — the webfonts are
-// served from this origin.
+// Applied to every response. CSP is tuned to this site: self-hosted scripts
+// and self-hosted fonts (vendor/fonts). No third-party font or style origins —
+// the webfonts are served from this origin. style-src carries NO
+// 'unsafe-inline': React's style prop writes through the CSSOM (which CSP
+// does not govern), the rendered markup contains no style attributes and no
+// <style> blocks (locked by a characterization test), so the token would be
+// pure attack surface.
 const SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "DENY",
-  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  // `preload` makes the domain eligible for the browser HSTS preload list, so
+  // even a first-ever visit never has a plaintext hop.
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=()",
   "Cross-Origin-Opener-Policy": "same-origin",
+  // Companion to COOP: the site's images/fonts/PDF cannot be embedded or read
+  // cross-origin (XS-Leaks surface). COEP is deliberately NOT set: with
+  // require-corp, a Cloudflare-injected analytics beacon (allowed by the CSP
+  // below) would be blocked unless CF serves it with a CORP header.
+  "Cross-Origin-Resource-Policy": "same-origin",
   "Content-Security-Policy": [
     "default-src 'self'",
     // Analytics origins: the Cloudflare Web Analytics beacon (script from
@@ -886,7 +1114,7 @@ const SECURITY_HEADERS = {
     // enabling it from the Cloudflare Pages dashboard is not silently blocked
     // by this CSP.
     "script-src 'self' https://static.cloudflareinsights.com",
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self'",
     "font-src 'self'",
     "img-src 'self' data:",
     "connect-src 'self' https://cloudflareinsights.com",
@@ -897,14 +1125,75 @@ const SECURITY_HEADERS = {
   ].join("; "),
 };
 
-// The repo root is the document root, so anything not listed here is public.
-// Intended public set: index.html, styles.css, the app scripts (site.config.js,
-// routes.js, article-schema.js, ui-helpers.js, data.js), dist/* bundles, vendor/* React,
-// favicons/og-image/manifest/robots, and news/<slug>/article.js + images.
-// Everything below is source, config, tooling or docs and is blocked. Keep this
-// in sync with build-static.js's MUST_BE_ABSENT list.
-// Entries are lowercased to match isPrivatePath's case-normalized lookup
-// (the names below stay spelled like the real files for grepability).
+// The repo root is the document root, so the PUBLIC surface is declared
+// explicitly and everything else is private BY DEFAULT. The two lists below
+// are the single source of truth shared with build-static.js (which copies
+// exactly these root files into the deploy), so a new root file is invisible
+// on both surfaces until it is deliberately published here.
+//
+// Root files served (and copied to the build) verbatim:
+const ROOT_PLAIN_FILES = [
+  "styles.css",
+  "site.config.js",
+  "routes.js",
+  "article-schema.js",
+  "ui-helpers.js",
+  "data.js",
+  "site.webmanifest",
+  "robots.txt",
+  "favicon.ico",
+  "favicon.svg",
+  // The hero's "Download CV" target (site.config.js cvPath).
+  "lampros-konstantellos-cv.pdf",
+];
+// Root images: served/copied along with their optimize-images siblings
+// (.webp/.avif plus the -480/-960 width variants).
+const ROOT_IMAGE_BASES = [
+  "favicon-16x16.png",
+  "favicon-32x32.png",
+  "favicon-48x48.png",
+  "favicon-64x64.png",
+  "favicon-96x96.png",
+  "favicon-128x128.png",
+  "icon-192.png",
+  "icon-256.png",
+  "icon-512.png",
+  // Maskable variant (safe-zone padding baked in) for Android/Chromium
+  // adaptive icons — an "any"-only set gets letterboxed on the home screen.
+  "icon-512-maskable.png",
+  "apple-touch-icon.png",
+  "og-image.jpg",
+  "lampros-konstantellos-picture.jpg",
+];
+
+// Every root-level pathname the server may answer: the plain files, the image
+// bases and their generated variants, the rendered pages/feeds (answered by
+// dedicated branches before file serving, but they must not be classed
+// private), and index.html itself (the "/" template).
+const PUBLIC_ROOT_PATHS = new Set(
+  [
+    "/",
+    "/index.html",
+    "/sitemap.xml",
+    "/rss.xml",
+    "/feed.json",
+    ...ROOT_PLAIN_FILES.map((f) => `/${f}`),
+    ...ROOT_IMAGE_BASES.flatMap((f) => {
+      const noExt = f.replace(/\.[^.]+$/, "");
+      return [
+        `/${f}`,
+        ...[".webp", ".avif"].flatMap((ext) => [
+          `/${noExt}${ext}`,
+          ...IMAGE_WIDTH_VARIANTS.map((w) => `/${noExt}-${w}${ext}`),
+        ]),
+      ];
+    }),
+  ].map((p) => p.toLowerCase())
+);
+
+// Redundant explicit denylist kept as a second gate for the paths whose
+// exposure would be worst — a regression in the allowlist logic above must
+// ALSO get past this before a source file is served.
 const PRIVATE_PATHS = new Set(
   [
     "/server.js",
@@ -921,22 +1210,35 @@ const PRIVATE_PATHS = new Set(
 function isPrivatePath(rawPathname) {
   // Case-normalized: every public asset path is lowercase, and on a
   // case-insensitive filesystem (a macOS dev machine) "/SERVER.JS" would
-  // otherwise bypass the byte-exact denylist and serve the source file.
+  // otherwise bypass the byte-exact matching and serve the source file.
   const pathname = rawPathname.toLowerCase();
   if (PRIVATE_PATHS.has(pathname)) return true;
-  if (pathname.startsWith("/scripts/")) return true; // build tooling
-  if (pathname.startsWith("/test/")) return true; // test suite
-  if (pathname.startsWith("/docs/")) return true; // internal docs
-  if (pathname.startsWith("/node_modules/")) return true; // dependency tree
-  if (pathname.startsWith("/components/")) return true; // uncompiled sources
-  if (pathname.startsWith("/build/")) return true; // generated static deploy tree
-  if (pathname.startsWith("/scratch/")) return true; // gitignored scratch space
-  if (pathname.startsWith("/.")) return true; // dotfiles (.git, .github, ...)
+  // Any dot-prefixed SEGMENT, not just a root dotfile: build-static.js
+  // filters nested dotfiles out of the deploy for the same reason (a
+  // .DS_Store inside an article folder must not ship), and the server must
+  // not be the looser of the two.
+  if (/(^|\/)\./.test(pathname)) return true;
   // No public asset is Markdown (covers README.md, news/README.md, and any
   // future notes) or raw JSX (the browser loads the compiled /dist/ bundles;
   // app.jsx / icons.jsx / components/*.jsx are source only).
   if (/\.(md|jsx)$/i.test(pathname)) return true;
-  return false;
+  // Root level with an extension: a file request — allowlist only. Root level
+  // WITHOUT an extension is a clean URL (/news, /publications, /any-typo):
+  // never private here so the SPA fallback can answer it (friendly HTML 404
+  // for unknown routes); the file-serving branch separately refuses to serve
+  // a real-but-unlisted extensionless root file (see the stat callback).
+  if (!pathname.slice(1).includes("/")) {
+    if (pathname.includes(".")) return !PUBLIC_ROOT_PATHS.has(pathname);
+    return false;
+  }
+  // Subdirectories: only the compiled bundles, the vendored runtime/fonts and
+  // the article folders are public. scripts/, test/, docs/, node_modules/,
+  // components/, build/, scratch/ and anything future all fall through here.
+  return !(
+    pathname.startsWith("/dist/") ||
+    pathname.startsWith("/vendor/") ||
+    pathname.startsWith("/news/")
+  );
 }
 
 const ALLOWED_METHODS = "GET, HEAD, OPTIONS";
@@ -945,6 +1247,10 @@ function sendStatus(res, code, message, extraHeaders) {
   if (res.headersSent) return;
   res.writeHead(code, {
     "Content-Type": "text/plain; charset=utf-8",
+    // Error/status responses are heuristically cacheable per RFC 9110 §15.1
+    // and carry no validators, so without an explicit directive a shared
+    // cache may keep e.g. a 404 for a not-yet-published URL.
+    "Cache-Control": "no-cache, no-store, must-revalidate",
     ...(extraHeaders || {}),
   });
   res.end(message);
@@ -970,6 +1276,16 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    // A request target beginning "//" is origin-form, but new URL(target, base)
+    // parses the second segment as an AUTHORITY: "//news" yields pathname "/",
+    // so GET //news answered 200 with the home page (and //x/foo with /foo) —
+    // a request-line/content mismatch that desyncs caches and diverges from
+    // the static deploy. Reject rather than guess.
+    if ((req.url || "/").startsWith("//")) {
+      sendStatus(res, 400, "400 Bad Request");
+      return;
+    }
+
     // Parse against a fixed base (host-independent) and decode defensively.
     let parsedUrl;
     try {
@@ -989,6 +1305,17 @@ const server = http.createServer((req, res) => {
     // A NUL byte (%00) is never valid in a served path and would make the fs
     // layer throw; reject it cleanly as a bad request.
     if (urlPathname.includes("\x00")) {
+      sendStatus(res, 400, "400 Bad Request");
+      return;
+    }
+    // A backslash is never part of a public path either. A RAW backslash is
+    // already folded to "/" by the WHATWG URL parser, but an ENCODED one
+    // (%5C) survives to here — and while the denylist below compares with
+    // POSIX rules (where "\" is an ordinary character), path.join/normalize
+    // use PLATFORM rules, where win32 treats "\" as a separator. On a Windows
+    // dev machine /news/..%5Cserver.js therefore dodged isPrivatePath yet
+    // resolved onto the source file. Reject the whole class.
+    if (urlPathname.includes("\\")) {
       sendStatus(res, 400, "400 Bad Request");
       return;
     }
@@ -1013,6 +1340,20 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    // Trailing slashes redirect to the slash-less form, mirroring Cloudflare
+    // Pages (which 308s /foo/ → /foo for the flat foo.html layout). The dev
+    // server used to answer /news/<slug>/ with a 200 of the full article — a
+    // duplicate-content URL the deploy redirects, i.e. a status-code parity
+    // break between the two environments.
+    if (urlPathname !== "/" && urlPathname.endsWith("/")) {
+      res.writeHead(301, {
+        "Location": urlPathname.replace(/\/+$/, "") + (parsedUrl.search || ""),
+        "Content-Type": "text/plain; charset=utf-8",
+      });
+      res.end("Moved Permanently");
+      return;
+    }
+
     let pathname = urlPathname;
 
     if (isPrivatePath(urlPathname)) {
@@ -1020,8 +1361,8 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    if (pathname.endsWith("/")) {
-      pathname += "index.html";
+    if (pathname === "/") {
+      pathname = "/index.html";
     }
 
     const requestedPath = path.normalize(path.join(PUBLIC_DIR, pathname));
@@ -1045,7 +1386,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (urlPathname === "/feed.json") {
-    const json = buildFeed({ articles: ARTICLES, siteCfg: SITE_CFG });
+    const json = buildFeed({ articles: ARTICLES, siteCfg: SITE_CFG, socialImages: ARTICLE_SOCIAL_PATHS });
     writeCompressed(req, res, {
       "Content-Type": "application/feed+json; charset=utf-8",
       "Cache-Control": "public, max-age=3600",
@@ -1063,19 +1404,43 @@ const server = http.createServer((req, res) => {
   }
 
   fs.stat(requestedPath, (err, stats) => {
-    if (!err && stats.isFile()) {
-      if (requestedPath.endsWith(".html")) {
-        serveIndex(req, res, requestedPath, urlPathname);
-      } else {
-        sendFile(req, res, requestedPath);
-      }
+    // The outer try/catch ends when the synchronous handler returns — a throw
+    // inside THIS callback would otherwise unwind to uncaughtException with
+    // the response never written, leaving the socket open until the request
+    // timeout. Answer 500 instead.
+    try {
+    // A root-level file may only be served off the declared allowlist, even
+    // when it has no extension (isPrivatePath's extension rule cannot class
+    // those): a future extensionless root file (Makefile, TODO, deploy) must
+    // fall through to the SPA fallback's 404, not ship its bytes.
+    const rootLevel = !urlPathname.slice(1).includes("/");
+    const allowedFile =
+      !rootLevel || PUBLIC_ROOT_PATHS.has(urlPathname.toLowerCase());
+    if (!err && stats.isFile() && allowedFile) {
+      // The lexical boundary check above cannot see symlinks: fs.stat and
+      // createReadStream FOLLOW them, so a link committed or dropped anywhere
+      // under the root whose target lies outside it would be served with a
+      // 200. Re-apply the containment test against the RESOLVED path.
+      fs.realpath(requestedPath, (rpErr, realPath) => {
+        if (
+          rpErr ||
+          (realPath !== PUBLIC_DIR_REAL && !realPath.startsWith(PUBLIC_DIR_REAL + path.sep))
+        ) {
+          sendStatus(res, 403, "403 Forbidden");
+          return;
+        }
+        if (requestedPath.endsWith(".html")) {
+          serveIndex(req, res, requestedPath, urlPathname);
+        } else {
+          sendFile(req, res, requestedPath);
+        }
+      });
       return;
     }
 
     // Path has an extension → it's an asset request that missed → real 404
     if (path.extname(urlPathname) !== "") {
-      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-      res.end("404 Not Found");
+      sendStatus(res, 404, "404 Not Found");
       return;
     }
 
@@ -1083,6 +1448,10 @@ const server = http.createServer((req, res) => {
     // SPA HTML so the client can render a friendly 404 page.
     const statusCode = isValidSpaRoute(urlPathname) ? 200 : 404;
     serveIndex(req, res, path.join(PUBLIC_DIR, "index.html"), urlPathname, statusCode);
+    } catch (cbErr) {
+      console.error("Request handler error:", cbErr && cbErr.message);
+      sendStatus(res, 500, "500 Internal Server Error");
+    }
     });
   } catch (err) {
     console.error("Request handler error:", err && err.message);
@@ -1131,8 +1500,14 @@ module.exports = {
   // exact bytes the server serves by reusing this already-loaded state.
   DEPLOY_VERSION,
   ARTICLES,
+  VALID_ARTICLE_SLUGS,
+  ARTICLE_SOCIAL_PATHS,
   PUBLICATION_YEARS,
   ARTICLE_SCRIPTS,
   ASSET_MAP,
   SITE_CFG,
+  // The declared public root surface — build-static.js copies exactly these
+  // (so server allowlist and deploy contents cannot drift apart).
+  ROOT_PLAIN_FILES,
+  ROOT_IMAGE_BASES,
 };

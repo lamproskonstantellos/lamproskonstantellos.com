@@ -39,8 +39,12 @@ const PROFILE = {
       kind: "journal",
       venue: "Electric Power Systems Research",
       // Listed under the year it went online (7 August 2026); vol. 265 is
-      // the April 2027 issue, which the Cite reference below carries.
+      // the April 2027 issue, which the Cite reference below carries. The
+      // description spells that out on the page — without it the "2026" year
+      // label and the "Apr. 2027" in the copied citation read as a
+      // contradiction.
       year: "2026",
+      description: "Available online August 2026; assigned to vol. 265, pt. A (April 2027 issue).",
       title: "Regulation-aware BESS dispatch for PV systems under virtual net-billing in Greece",
       authors: "**Konstantellos, L.**, Vazakas, A., Koumkoudis, K., & Papadopoulos, N.-A. (2026)",
       citation: 'L. Konstantellos, A. Vazakas, K. Koumkoudis and N.-A. Papadopoulos, "Regulation-aware BESS dispatch for PV systems under virtual net-billing in Greece," Electric Power Systems Research, vol. 265, pt. A, Art. no. 113914, Apr. 2027, doi: 10.1016/j.epsr.2026.113914.',
@@ -84,7 +88,10 @@ const PROFILE = {
       year: "2025",
       title: "Integration of Photovoltaic Power and Vehicle-to-Grid Technology in Electric Power Systems of Non-Interconnected Islands: A Case Study of Kastellorizo",
       authors: "**Konstantellos, L.** (2025)",
-      citation: 'L. Konstantellos, G. Konstantopoulos and T. Hamacher, "Integration of Photovoltaic Power and Vehicle-to-Grid Technology in Electric Power Systems of Non-Interconnected Islands: A Case Study of Kastellorizo", Feb. 12, 2025, Zenodo. doi: 10.5281/zenodo.14871102.',
+      // Sole-author IEEE thesis form, matching the visible author line above
+      // (supervisors are credited in the thesis itself, not as citation
+      // authors) — the previous three-name citation contradicted the card.
+      citation: 'L. Konstantellos, "Integration of Photovoltaic Power and Vehicle-to-Grid Technology in Electric Power Systems of Non-Interconnected Islands: A Case Study of Kastellorizo", M.S. thesis, University of Patras, Patras, Greece, 2025. doi: 10.5281/zenodo.14871102.',
       links: [
         { label: "Nemertes", href: "https://hdl.handle.net/10889/28931" },
         { label: "Zenodo",   href: "https://zenodo.org/records/14871102" },

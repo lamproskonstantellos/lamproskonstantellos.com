@@ -128,6 +128,12 @@ test("compression is cached: repeated requests return identical Content-Length",
   assert.ok(a.body.equals(b.body), "cached compressed bytes differ");
 });
 
+// Per-entry budget for the MINIFIED app bundles. Chosen as roughly 3x today's
+// largest entry (~15 KB): generous enough for organic growth, small enough
+// that accidentally inlining a dependency (React is ~130 KB) trips it. Only
+// meaningful for `npm run build` output — `npm run watch` skips --minify.
+const MAX_ENTRY_BUNDLE_BYTES = 50000;
+
 test("dist bundles do not embed React (kept external via window globals)", () => {
   const manifest = require("../dist/manifest.json");
   for (const [out, info] of Object.entries(manifest.outputs)) {
@@ -135,14 +141,74 @@ test("dist bundles do not embed React (kept external via window globals)", () =>
     const code = fs.readFileSync(path.join(ROOT, out), "utf8");
     // A bundled React copy would contain its dev/prod banner or scheduler text.
     assert.ok(!code.includes("react.production.min"), `${out} appears to embed React`);
-    assert.ok(code.length < 50000, `${out} unexpectedly large (${code.length}b)`);
+    assert.ok(
+      code.length < MAX_ENTRY_BUNDLE_BYTES,
+      `${out} unexpectedly large (${code.length}b > ${MAX_ENTRY_BUNDLE_BYTES}b) — dependency inlined?`
+    );
   }
 });
 
-test("optimize-images is idempotent and tolerates per-image failure", () => {
-  const src = fs.readFileSync(path.join(ROOT, "scripts/optimize-images.js"), "utf8");
-  // Skips work when siblings are newer than source (idempotence).
-  assert.ok(/mtimeMs\s*>=\s*srcMtime/.test(src), "missing freshness/idempotence check");
-  // One bad image is logged and skipped, not fatal.
-  assert.ok(/catch\s*\(e\)\s*\{[\s\S]*console\.error/.test(src), "per-image failure not caught");
+// Behavioural check of the pipeline itself, on throwaway fixtures — asserting
+// on the script's SOURCE TEXT (as before) locked variable spellings while
+// missing real regressions like an inverted freshness comparison.
+test("optimize-images: processes, is idempotent, and reports per-image failure", async () => {
+  const os = require("node:os");
+  const { run } = require("../scripts/optimize-images.js");
+  const { IMAGE_WIDTH_VARIANTS } = require("../ui-helpers.js");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "optimg-"));
+  try {
+    // A real (tiny) source image plus a corrupt one.
+    const sharp = require("sharp");
+    const good = path.join(dir, "photo.jpg");
+    await sharp({ create: { width: 8, height: 8, channels: 3, background: "#123456" } })
+      .jpeg()
+      .toFile(good);
+    fs.writeFileSync(path.join(dir, "broken.jpg"), "not actually a jpeg");
+
+    // First run: the good image is processed (all variants appear), the broken
+    // one is counted as failed without aborting the rest.
+    const first = await run([dir], { stamp: false });
+    assert.equal(first.failed, 1, "corrupt image must be reported as failed");
+    assert.ok(first.processed >= 1, "good image must be processed");
+    for (const ext of [".webp", ".avif"]) {
+      assert.ok(fs.existsSync(path.join(dir, `photo${ext}`)), `missing photo${ext}`);
+      for (const w of IMAGE_WIDTH_VARIANTS) {
+        assert.ok(fs.existsSync(path.join(dir, `photo-${w}${ext}`)), `missing photo-${w}${ext}`);
+      }
+    }
+
+    // Second run: nothing new to do for the good image (idempotence).
+    const second = await run([dir], { stamp: false });
+    assert.equal(second.processed, 0, "second run must be a no-op for fresh outputs");
+
+    // Touching the source makes it stale again.
+    const future = new Date(Date.now() + 5000);
+    fs.utimesSync(good, future, future);
+    const third = await run([dir], { stamp: false });
+    assert.ok(third.processed >= 1, "touched source must be re-processed");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// A cover.* source must additionally produce the 1200x630 social crop.
+test("optimize-images: article covers get a cover-og.jpg social crop", async () => {
+  const os = require("node:os");
+  const { run } = require("../scripts/optimize-images.js");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "optimg-og-"));
+  try {
+    const sharp = require("sharp");
+    await sharp({ create: { width: 1400, height: 1400, channels: 3, background: "#345678" } })
+      .jpeg()
+      .toFile(path.join(dir, "cover.jpg"));
+    const { failed } = await run([dir], { stamp: false });
+    assert.equal(failed, 0);
+    const og = path.join(dir, "cover-og.jpg");
+    assert.ok(fs.existsSync(og), "cover-og.jpg not generated");
+    const meta = await sharp(og).metadata();
+    assert.equal(meta.width, 1200);
+    assert.equal(meta.height, 630);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

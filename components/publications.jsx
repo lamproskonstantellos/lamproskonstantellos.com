@@ -41,7 +41,10 @@ function PubMetaRow({ pub, showYear = true }) {
 function CiteButton({ pub }) {
   const [copied, setCopied] = React.useState(false);
   const copyTimer = React.useRef(null);
-  React.useEffect(() => () => clearTimeout(copyTimer.current), []);
+  // Guard against the clipboard promise resolving after unmount (see
+  // ArticleShare) — it would otherwise arm a timer with no cleanup left.
+  const mounted = React.useRef(true);
+  React.useEffect(() => () => { mounted.current = false; clearTimeout(copyTimer.current); }, []);
 
   const citation =
     pub.citation ||
@@ -50,7 +53,7 @@ function CiteButton({ pub }) {
 
   const copyCitation = () => {
     copyTextToClipboard(citation).then((ok) => {
-      if (!ok) return;
+      if (!ok || !mounted.current) return;
       setCopied(true);
       clearTimeout(copyTimer.current);
       copyTimer.current = setTimeout(() => setCopied(false), 1800);
@@ -59,9 +62,13 @@ function CiteButton({ pub }) {
 
   return (
     <>
+      {/* No `copied` class: .pub-cite's resting color is already the accent
+          the other copy controls flip TO, so a class flip had nothing visible
+          to add — the check icon + "Copied!" label + live region are the
+          confirmation. */}
       <button
         type="button"
-        className={"pub-cite" + (copied ? " copied" : "")}
+        className="pub-cite"
         onClick={copyCitation}
       >
         {copied
@@ -192,8 +199,13 @@ function PublicationsListPage({ navigate }) {
           <section className="pub-year-group" key={g.year}>
             <h2 className="pub-year">{g.year}</h2>
             <div className="pub-year-items">
-              {g.items.map((p, i) => (
-                <PublicationRow key={`${g.year}-${i}`} pub={p} />
+              {/* Identity key (titles are unique in data.js), not the list
+                  position: a filter click re-partitions the groups, and a
+                  positional key made React reuse a PublicationRow instance —
+                  its CiteButton's "Copied!" state and 1.8s timer — for a
+                  DIFFERENT publication that landed on the same index. */}
+              {g.items.map((p) => (
+                <PublicationRow key={p.title} pub={p} />
               ))}
             </div>
           </section>
@@ -203,4 +215,6 @@ function PublicationsListPage({ navigate }) {
   );
 }
 
-Object.assign(window, { PublicationCard, PublicationsPreview, PublicationsListPage });
+// Cross-bundle exports only — PublicationCard stays module-local (its
+// consumers all live in this file; the window slot had no reader elsewhere).
+Object.assign(window, { PublicationsPreview, PublicationsListPage });

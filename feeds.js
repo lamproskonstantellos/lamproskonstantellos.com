@@ -21,19 +21,12 @@
 
 "use strict";
 
-const { compareByDateDesc, plainBody } = require("./article-schema.js");
-
-// Local copy of server.js's escapeHtml so this module stays self-contained
-// (no require cycle with server.js). Deliberately byte-identical to that one:
-// the RSS feed must escape exactly as the served HTML does.
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+// escapeHtml comes from the shared dual module (no require cycle with
+// server.js — server.js imports it from the same place), so the RSS feed
+// escapes EXACTLY as the served HTML does by construction. The two modules
+// used to carry hand-synchronized copies whose byte-identity was enforced
+// only by a comment.
+const { compareByDateDesc, plainBody, escapeHtml } = require("./article-schema.js");
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -51,7 +44,11 @@ function buildSitemap({ articles, siteCfg, publicationYears }) {
     .filter((d) => d && ISO_DATE.test(d))
     .sort()
     .reverse();
-  const latestContentDate = articleDates[0] || "2026-01-01";
+  // null when there is no dated content at all: <lastmod> is optional in the
+  // sitemap protocol, and omitting it beats fabricating a date (a hardcoded
+  // fallback here aged into an ever-staler lie, and new Date() would make the
+  // output nondeterministic between server and static build).
+  const latestContentDate = articleDates[0] || null;
 
   const years = (Array.isArray(publicationYears) ? publicationYears : [])
     .filter(Number.isFinite);
@@ -63,9 +60,11 @@ function buildSitemap({ articles, siteCfg, publicationYears }) {
   // newest dated content; a same-or-past year passes through unchanged.
   const yearLastmod = years.length ? `${Math.max(...years)}-01-01` : latestContentDate;
   const publicationsLastmod =
-    yearLastmod <= latestContentDate ? yearLastmod : latestContentDate;
-  const homeLastmod =
-    publicationsLastmod > latestContentDate ? publicationsLastmod : latestContentDate;
+    latestContentDate && yearLastmod <= latestContentDate ? yearLastmod : latestContentDate;
+  // The home page previews news AND publications, so it changes whenever the
+  // newer of the two does. publicationsLastmod is capped at latestContentDate
+  // above, so the max is always latestContentDate — spelled as such.
+  const homeLastmod = latestContentDate;
 
   const entries = [
     { path: "/", lastmod: homeLastmod },
@@ -80,11 +79,17 @@ function buildSitemap({ articles, siteCfg, publicationYears }) {
     });
   }
 
+  // The slug charset is enforced by validateArticle, so escapeHtml on the URL
+  // is a no-op today — it is here so this module's XML safety does not depend
+  // on a precondition enforced in another file.
   return (
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
     entries
-      .map((e) => `  <url>\n    <loc>${siteCfg.url}${e.path}</loc>\n    <lastmod>${e.lastmod}</lastmod>\n  </url>`)
+      .map((e) =>
+        `  <url>\n    <loc>${escapeHtml(`${siteCfg.url}${e.path}`)}</loc>\n` +
+        (e.lastmod ? `    <lastmod>${escapeHtml(e.lastmod)}</lastmod>\n` : "") +
+        `  </url>`)
       .join("\n") +
     `\n</urlset>\n`
   );
@@ -98,7 +103,9 @@ function buildRss({ articles, siteCfg }) {
 
   const itemXml = items
     .map((a) => {
-      const link = `${siteCfg.url}/news/${a.slug}`;
+      // Slug charset is validateArticle-enforced; escapeHtml keeps this
+      // module's XML safety self-contained anyway (see buildSitemap).
+      const link = escapeHtml(`${siteCfg.url}/news/${a.slug}`);
       const pubDate = new Date(`${a.date}T00:00:00Z`).toUTCString();
       return (
         `  <item>\n` +
@@ -112,20 +119,25 @@ function buildRss({ articles, siteCfg }) {
     })
     .join("\n");
 
+  // <lastBuildDate> is optional in RSS 2.0 and omitted when there are no
+  // dated items: a new Date() fallback made the body time-dependent, which
+  // (a) diverged between the server and the static build and (b) broke the
+  // constant-key compression cache's assumption that the body is
+  // deterministic per process.
   const lastBuildDate = items.length
-    ? new Date(`${items[0].date}T00:00:00Z`).toUTCString()
-    : new Date().toUTCString();
+    ? `  <lastBuildDate>${new Date(`${items[0].date}T00:00:00Z`).toUTCString()}</lastBuildDate>\n`
+    : "";
 
   return (
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n` +
     `<channel>\n` +
     `  <title>${escapeHtml(siteCfg.name)} - News</title>\n` +
-    `  <link>${siteCfg.url}/news</link>\n` +
+    `  <link>${escapeHtml(`${siteCfg.url}/news`)}</link>\n` +
     `  <description>${escapeHtml(siteCfg.defaultDescription)}</description>\n` +
     `  <language>en</language>\n` +
-    `  <lastBuildDate>${lastBuildDate}</lastBuildDate>\n` +
-    `  <atom:link href="${siteCfg.url}/rss.xml" rel="self" type="application/rss+xml" />\n` +
+    lastBuildDate +
+    `  <atom:link href="${escapeHtml(`${siteCfg.url}/rss.xml`)}" rel="self" type="application/rss+xml" />\n` +
     (itemXml ? itemXml + `\n` : "") +
     `</channel>\n` +
     `</rss>\n`
@@ -133,11 +145,14 @@ function buildRss({ articles, siteCfg }) {
 }
 
 // feed.json — JSON Feed 1.1, newest-first, pretty-printed (2-space) exactly as
-// the server serves it.
-function buildFeed({ articles, siteCfg }) {
+// the server serves it. socialImages (optional) maps slug → the article's
+// versioned social-crop URL path (e.g. "news/x/cover-og.jpg?v=abc"), the same
+// image og:image uses; items fall back to the raw cover when no crop exists.
+function buildFeed({ articles, siteCfg, socialImages }) {
   const items = (Array.isArray(articles) ? articles : [])
     .filter((a) => a && a.date)
     .sort(compareByDateDesc);
+  const social = socialImages || {};
 
   const feed = {
     version: "https://jsonfeed.org/version/1.1",
@@ -161,7 +176,13 @@ function buildFeed({ articles, siteCfg }) {
         summary: a.excerpt || "",
         date_published: new Date(`${a.date}T00:00:00Z`).toISOString(),
       };
-      if (a.cover) item.image = `${siteCfg.url}/${a.cover}`;
+      // Prefer the same optimized, cache-busted 1200x630 social crop og:image
+      // serves; the raw cover (multi-MB, unversioned) is the fallback only.
+      const socialPath = Object.prototype.hasOwnProperty.call(social, a.slug)
+        ? social[a.slug]
+        : null;
+      if (socialPath) item.image = `${siteCfg.url}/${socialPath}`;
+      else if (a.cover) item.image = `${siteCfg.url}/${a.cover}`;
       if (a.keywords && a.keywords.length) item.tags = a.keywords;
       return item;
     }),
