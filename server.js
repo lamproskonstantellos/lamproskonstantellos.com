@@ -16,6 +16,7 @@ const {
 } = require("./routes.js");
 const { validateArticle, plainBody, escapeHtml } = require("./article-schema.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
+const { createSsrRenderer } = require("./ssr.js");
 // Shared responsive-image vocabulary (same module the browser loads), so the
 // preload's imagesrcset/imagesizes can never drift from what <Picture> renders.
 const { imageSrcset, HERO_IMG_SIZES, ARTICLE_COVER_SIZES, IMAGE_WIDTH_VARIANTS } = require("./ui-helpers.js");
@@ -429,9 +430,38 @@ function currentAssetMap() {
       liveAssetMap = next;
       liveAssetMapMtime = mtime;
       COMPRESSION_CACHE.clear();
+      // New bundles → the SSR renderer compiled over the old ones is stale.
+      ssrRenderer = undefined;
     }
   }
   return liveAssetMap;
+}
+
+// Lazy SSR renderer over the current bundles. `undefined` = not built yet
+// (or invalidated by a watch rebuild); `null` = unavailable (no compiled
+// bundles — e.g. `npm start` before any build), in which case pages serve
+// with an empty #root and the client bundle renders fresh, exactly the
+// pre-SSR behavior.
+let ssrRenderer;
+function ssrAppHtml(pathname) {
+  if (ssrRenderer === undefined) {
+    try {
+      ssrRenderer = createSsrRenderer({
+        assetMap: currentAssetMap(),
+        articleSlugs: VALID_ARTICLE_SLUGS,
+      });
+    } catch (e) {
+      console.error(`SSR pre-render unavailable — serving empty #root (${e.message})`);
+      ssrRenderer = null;
+    }
+  }
+  if (!ssrRenderer) return "";
+  try {
+    return ssrRenderer.renderApp(pathname);
+  } catch (e) {
+    console.error(`SSR render failed for ${pathname} — serving empty #root (${e.message})`);
+    return "";
+  }
 }
 
 // Robots directives live in routes.js (shared with the client head-sync);
@@ -933,7 +963,15 @@ function renderHtml(templateHtml, pathname, { deployVersion, articleScripts, ass
     /((?:src|href)=")(\/(?!dist\/)[^"?]+\.(?:css|js))(")/g,
     `$1$2?v=${deployVersion}$3`
   );
-  return versioned;
+  // Full-body pre-render: <App /> for this pathname baked into #root (ssr.js)
+  // so non-JS consumers see the real page; the client hydrates it. Injected
+  // LAST — the app markup must not pass through the rewrites above — and via
+  // a function replacement (article prose can contain $-sequences). An empty
+  // string (SSR unavailable) leaves the shell exactly as before.
+  const appHtml = ssrAppHtml(pathname);
+  return appHtml
+    ? versioned.replace('<div id="root"></div>', () => `<div id="root">${appHtml}</div>`)
+    : versioned;
 }
 
 function serveIndex(req, res, filePath, pathname, statusCode = 200) {
@@ -1284,6 +1322,7 @@ const PUBLIC_ROOT_PATHS = new Set(
 const PRIVATE_PATHS = new Set(
   [
     "/server.js",
+    "/ssr.js",
     "/feeds.js",
     "/build-static.js",
     "/package.json",

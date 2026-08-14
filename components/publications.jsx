@@ -77,8 +77,8 @@ function CiteButton({ pub }) {
         onClick={copyCitation}
       >
         {copied
-          ? <Icon.check style={{ width: 12, height: 12 }} />
-          : <Icon.copy style={{ width: 12, height: 12 }} />}
+          ? <Icon.check />
+          : <Icon.copy />}
         {copied ? "Copied!" : "Cite"}
       </button>
       <span className="sr-only" aria-live="polite">
@@ -96,7 +96,7 @@ function PubLinks({ pub }) {
       {links.map((l, j) => (
         <a key={j} href={l.href} target="_blank" rel="noopener noreferrer">
           {l.label}
-          <Icon.external style={{ width: 12, height: 12 }} />
+          <Icon.external />
         </a>
       ))}
       <CiteButton pub={pub} />

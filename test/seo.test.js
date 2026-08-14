@@ -128,9 +128,13 @@ test("og:image is a per-article 1200x630 social crop, not the raw cover", async 
   );
   assert.match(article, /<meta property="og:image:width" content="1200" \/>/);
   assert.match(article, /<meta property="og:image:height" content="630" \/>/);
+  // Scoped to <head>: the pre-rendered BODY legitimately renders the raw
+  // cover as the on-page <img> — only the share metadata must never point
+  // at it.
+  const head = article.slice(0, article.indexOf("</head>"));
   assert.ok(
-    !article.includes(`/news/${ARTICLE}/cover.jpg`),
-    "article shell must not reference the raw cover as a share image"
+    !head.includes(`/news/${ARTICLE}/cover.jpg`),
+    "article head must not reference the raw cover as a share image"
   );
 });
 

@@ -74,7 +74,7 @@ test("cacheHeaderFor classes", () => {
 test("isPrivatePath corpus: private stays private, public stays public", () => {
   const privates = [
     "/server.js", "/SERVER.JS",             // denylist, case-insensitive
-    "/feeds.js", "/build-static.js", "/build.config.js",
+    "/ssr.js", "/feeds.js", "/build-static.js", "/build.config.js",
     "/package.json", "/package-lock.json", "/LICENSE",
     "/dist/manifest.json",
     "/scripts/optimize-images.js", "/test/unit.test.js", "/node_modules/x.js",

@@ -234,7 +234,7 @@ function Hero({ navigate }) {
 // visitors without a configured mailto handler. The button cannot nest inside
 // the anchor (interactive-inside-interactive), so a wrapper positions it where
 // the other cards show their external-link mark.
-function EmailContactCard({ contact, BrandIcon, tint }) {
+function EmailContactCard({ contact, BrandIcon }) {
   const [copied, setCopied] = React.useState(false);
   const copyTimer = React.useRef(null);
   // Guard against the clipboard promise resolving after unmount (see
@@ -259,14 +259,14 @@ function EmailContactCard({ contact, BrandIcon, tint }) {
   return (
     <div className="contact-card-wrap">
       <a className="contact-card" href={contact.href}>
-        <span className="ico-badge" style={{ background: tint }}>
-          <BrandIcon style={{ width: 22, height: 22 }} />
+        <span className={`ico-badge ico-badge-${contact.id}`}>
+          <BrandIcon />
         </span>
         <span className="label">{contact.label}</span>
         {/* Same hover arrow as every other card — here it reads "opens your
             mail app". Positioned absolutely (styles.css) so the copy button
             outside the anchor can sit immediately to its left. */}
-        <Icon.external className="ext" style={{ width: 13, height: 13 }} />
+        <Icon.external className="ext" />
       </a>
       <button
         type="button"
@@ -274,9 +274,7 @@ function EmailContactCard({ contact, BrandIcon, tint }) {
         aria-label="Copy email address"
         onClick={copyEmail}
       >
-        {copied
-          ? <Icon.check style={{ width: 15, height: 15 }} />
-          : <Icon.copy style={{ width: 15, height: 15 }} />}
+        {copied ? <Icon.check /> : <Icon.copy />}
       </button>
       <span className="sr-only" aria-live="polite">
         {copied ? "Email address copied to clipboard" : ""}
@@ -286,16 +284,19 @@ function EmailContactCard({ contact, BrandIcon, tint }) {
 }
 
 function Contact() {
+  // Per-brand badge tints live in styles.css as .ico-badge-<id> classes, NOT
+  // style props: the markup is pre-rendered now, a serialized style attribute
+  // is inline CSS, and the CSP deliberately allows none.
   const map = {
-    linkedin:     { I: Icon.brandLinkedin,     tint: "rgba(10,102,194,0.10)" },
-    scholar:      { I: Icon.brandScholar,      tint: "rgba(66,133,244,0.10)" },
-    ieee:         { I: Icon.brandIeee,         tint: "rgba(0,98,155,0.10)"   },
-    orcid:        { I: Icon.brandOrcid,        tint: "rgba(166,206,57,0.15)" },
-    zenodo:       { I: Icon.brandZenodo,       tint: "rgba(31,71,152,0.10)"  },
-    researchgate: { I: Icon.brandResearchgate, tint: "rgba(0,204,187,0.12)"  },
-    scopus:       { I: Icon.brandScopus,       tint: "rgba(233,113,28,0.10)" },
-    github:       { I: Icon.brandGithub,       tint: "rgba(23,23,23,0.08)"   },
-    email:        { I: Icon.brandEmail,        tint: "rgba(10,31,68,0.08)"   },
+    linkedin:     Icon.brandLinkedin,
+    scholar:      Icon.brandScholar,
+    ieee:         Icon.brandIeee,
+    orcid:        Icon.brandOrcid,
+    zenodo:       Icon.brandZenodo,
+    researchgate: Icon.brandResearchgate,
+    scopus:       Icon.brandScopus,
+    github:       Icon.brandGithub,
+    email:        Icon.brandEmail,
   };
   return (
     <section className="block" id="contact">
@@ -304,11 +305,10 @@ function Contact() {
         {PROFILE.contact.map((c) => {
           // A data.js contact id with no icon here must degrade to "not
           // shown", not crash the whole homepage render on a destructure.
-          const entry = map[c.id];
-          if (!entry) return null;
-          const { I, tint } = entry;
+          const I = map[c.id];
+          if (!I) return null;
           if (c.id === "email") {
-            return <EmailContactCard key={c.id} contact={c} BrandIcon={I} tint={tint} />;
+            return <EmailContactCard key={c.id} contact={c} BrandIcon={I} />;
           }
           return (
             <a
@@ -318,11 +318,11 @@ function Contact() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <span className="ico-badge" style={{ background: tint }}>
-                <I style={{ width: 22, height: 22 }} />
+              <span className={`ico-badge ico-badge-${c.id}`}>
+                <I />
               </span>
               <span className="label">{c.label}</span>
-              <Icon.external className="ext" style={{ width: 13, height: 13 }} />
+              <Icon.external className="ext" />
             </a>
           );
         })}
@@ -336,8 +336,13 @@ function Contact() {
    ============================================================ */
 
 function Footer({ navigate }) {
-  // Current year only, derived — never hardcoded (locked by a test).
-  const year = new Date().getFullYear();
+  // Current year only, derived — never hardcoded (locked by a test). SSR
+  // note: the pre-rendered markup bakes the BUILD-time year; the effect
+  // refreshes it after hydration so a visitor in a later year sees the right
+  // one, and suppressHydrationWarning (on the copy line below) keeps the
+  // one-render difference from being reported as a mismatch.
+  const [year, setYear] = React.useState(() => new Date().getFullYear());
+  React.useEffect(() => { setYear(new Date().getFullYear()); }, []);
 
   // Sitemap: the two standalone pages plus the two home-only sections.
   const explore = [
@@ -404,7 +409,7 @@ function Footer({ navigate }) {
         </div>
 
         <div className="footer-bottom">
-          <span className="copy">© {year} {PROFILE.name}</span>
+          <span className="copy" suppressHydrationWarning>© {year} {PROFILE.name}</span>
         </div>
       </div>
     </footer>
@@ -488,12 +493,13 @@ function App() {
   // article Back link) so components read it as a prop instead of pulling
   // window.history.state during render: a render-time read of mutable
   // external state is not tearing-safe under concurrent rendering and only
-  // worked because navigate() happened to pushState before setRoute. The
-  // initial value picks up history.state so a reload keeps its Back target.
-  const [route, setRoute] = useState(() => ({
-    ...parseRoute(window.location.pathname),
-    from: (window.history.state || {}).from,
-  }));
+  // worked because navigate() happened to pushState before setRoute.
+  // `from` is NOT part of the initial state: the pre-rendered markup cannot
+  // know it (no history at build time), so reading it here would make the
+  // first client render disagree with the server HTML on the article
+  // back-link. The mount effect below restores it from history.state right
+  // after hydration instead.
+  const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
   const [activeSection, setActiveSection] = useState(null);
   const mainRef = useRef(null);
   const firstRender = useRef(true);
@@ -525,6 +531,12 @@ function App() {
     // at 0, so the next pushState would mint key 1 — a key an EARLIER entry
     // still owns, cross-wiring the two entries' saved scroll positions.
     keyCounter.current = Math.max(keyCounter.current, currentKey.current);
+    // Restore `from` (the article Back-link target) from the reloaded
+    // history entry AFTER hydration — it is kept out of the initial state so
+    // the first client render matches the pre-rendered markup.
+    if (st.from !== undefined) {
+      setRoute((r) => ({ ...r, from: st.from }));
+    }
     return () => { if (supported) window.history.scrollRestoration = prev; };
   }, []);
 
@@ -832,4 +844,18 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+// Exposed for the Node-side pre-render (ssr.js renders <App /> to the HTML
+// that build-static bakes into #root — there is no document there).
+window.App = App;
+
+if (typeof document !== "undefined") {
+  const rootEl = document.getElementById("root");
+  if (rootEl.firstElementChild) {
+    // Pre-rendered shell (the normal case): adopt the existing markup.
+    ReactDOM.hydrateRoot(rootEl, <App />);
+  } else {
+    // Empty shell (e.g. a raw template before any static render): fall back
+    // to a fresh client render so the page still works.
+    ReactDOM.createRoot(rootEl).render(<App />);
+  }
+}

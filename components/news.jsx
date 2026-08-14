@@ -291,7 +291,14 @@ function ArticleShare({ article }) {
     copyTextToClipboard(url).then((ok) => { if (ok) markCopied(); });
   };
 
-  const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
+  // Mount-gated, not a render-time capability read: the pre-rendered markup
+  // is built where navigator does not exist, so deciding during render would
+  // make hydration disagree with the server HTML on share-capable devices.
+  // The button appearing right after hydration is the standard trade.
+  const [canNativeShare, setCanNativeShare] = React.useState(false);
+  React.useEffect(() => {
+    if (navigator.share) setCanNativeShare(true);
+  }, []);
   const nativeShare = () => {
     // Rejects with AbortError when the user dismisses the sheet — not an error.
     navigator.share({ title: article.title, url }).catch(() => {});
@@ -306,17 +313,17 @@ function ArticleShare({ article }) {
         rel="noopener noreferrer"
         aria-label="Share on LinkedIn"
       >
-        <Icon.brandLinkedin style={{ width: 14, height: 14 }} /> LinkedIn
+        <Icon.brandLinkedin /> LinkedIn
       </a>
       <button type="button" className={copied ? "copied" : ""} onClick={copyUrl}>
         {copied
-          ? <Icon.check style={{ width: 14, height: 14 }} />
-          : <Icon.link style={{ width: 14, height: 14 }} />}
+          ? <Icon.check />
+          : <Icon.link />}
         {copied ? "Copied!" : "Copy link"}
       </button>
       {canNativeShare && (
         <button type="button" onClick={nativeShare}>
-          <Icon.arrowUR style={{ width: 14, height: 14 }} /> Share
+          <Icon.arrowUR /> Share
         </button>
       )}
       <span className="sr-only" aria-live="polite">
@@ -366,7 +373,7 @@ function Article({ slug, from, navigate }) {
       <div className="page article">
         {backLink}
         <h1>Article not found</h1>
-        <p style={{ color: "var(--muted)" }}>
+        <p className="muted-note">
           This article may have moved, or never existed.
         </p>
       </div>

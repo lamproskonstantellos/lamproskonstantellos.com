@@ -64,6 +64,7 @@ const NOT_FOUND_ROUTE = "/this-route-does-not-exist";
 // with server.js's isPrivatePath deny rules.
 const MUST_BE_ABSENT = [
   "server.js",
+  "ssr.js",
   "build-static.js",
   "build.config.js",
   "feeds.js",
