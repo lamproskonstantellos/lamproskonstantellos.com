@@ -1,7 +1,7 @@
 # lamproskonstantellos.com
 
 [![License: All Rights Reserved](https://img.shields.io/badge/license-All%20Rights%20Reserved-red.svg)](./LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D18.17-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Node](https://img.shields.io/badge/node-%3E%3D20.9-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Deployed on Cloudflare Pages](https://img.shields.io/badge/deployed%20on-Cloudflare%20Pages-F38020?logo=cloudflarepages&logoColor=white)](https://pages.cloudflare.com/)
 [![Live site](https://img.shields.io/badge/live-lamproskonstantellos.com-0a66c2)](https://lamproskonstantellos.com)
 
@@ -67,7 +67,7 @@ tooling and config never are.
 ├── feeds.js               sitemap.xml / rss.xml / feed.json builders (shared by server + build)
 ├── build-static.js        Pre-render every route to build/ for Cloudflare Pages
 ├── server.js              Local preview server: per-route meta, sitemap/rss/feed, compression, security
-├── scripts/               Build tooling (optimize-images.js)
+├── scripts/               Build tooling (build.js, optimize-images.js)
 ├── vendor/                Self-hosted React 18 UMD builds + Inter woff2 subsets (vendor/fonts/)
 ├── test/                  node:test suite + golden files (test/golden/)
 ├── .github/workflows/     CI (npm ci → build → test)
@@ -144,6 +144,6 @@ See [`LICENSE`](./LICENSE) for the full terms, including how to request permissi
 
 ### Third-party notices
 
-- **React / ReactDOM** (`vendor/react.production.min.js`, `vendor/react-dom.production.min.js`): MIT License, © Facebook, Inc. and its affiliates. The react-dom build additionally bundles a custom Modernizr build (MIT). The original MIT headers are retained verbatim in those files.
-- **Inter** (`vendor/fonts/inter-latin.woff2`, `vendor/fonts/inter-latin-ext.woff2`): © The Inter Project Authors, redistributed as self-hosted woff2 subsets under the [SIL Open Font License 1.1](https://openfontlicense.org/).
+- **React / ReactDOM** (`vendor/react.production.min.js`, `vendor/react-dom.production.min.js`): MIT License, © Facebook, Inc. and its affiliates. The full license text ships alongside the bundles in [`vendor/LICENSE-MIT.txt`](./vendor/LICENSE-MIT.txt); the original MIT headers are also retained verbatim in the files.
+- **Inter** (`vendor/fonts/inter-latin.woff2`, `vendor/fonts/inter-latin-ext.woff2`): © The Inter Project Authors, redistributed as self-hosted woff2 subsets under the SIL Open Font License 1.1 — full text in [`vendor/fonts/OFL.txt`](./vendor/fonts/OFL.txt).
 - **Brand icons** in `icons.jsx` (LinkedIn, Google Scholar, IEEE, ORCID, Zenodo, ResearchGate, Scopus, GitHub) reference trademarks owned by their respective owners and are used only to link to the author's profiles.

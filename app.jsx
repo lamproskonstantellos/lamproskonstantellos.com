@@ -1,5 +1,6 @@
 /* global React, ReactDOM, SITE, PROFILE, Icon, SectionHeader, Picture,
-   parseRoute, routeToPath, pageTitle, getArticle, handleAnchorClick,
+   parseRoute, routeToPath, pageTitle, pageSocialTitle, pageDescription,
+   ROBOTS_INDEX, ROBOTS_NOINDEX, getArticle, handleAnchorClick,
    pickActiveSection, headlineJoiner, copyTextToClipboard, HERO_IMG_SIZES,
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
@@ -127,13 +128,15 @@ function Header({ route, navigate, activeSection }) {
             );
           })}
           {/* The CV chip: the one filled action among the text links. Plain
-              browser navigation — the PDF opens like any document link. */}
+              browser navigation — the PDF opens like any document link. The
+              label says "Open", not "Download": target=_blank opens the PDF
+              in a viewer tab rather than saving it. */}
           <a
             className="nav-cv"
             href={SITE.cvPath}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Download CV (PDF)"
+            aria-label="Open CV (PDF, new tab)"
           >
             CV
           </a>
@@ -237,7 +240,12 @@ function EmailContactCard({ contact, BrandIcon, tint }) {
   // Guard against the clipboard promise resolving after unmount (see
   // ArticleShare) — it would otherwise arm a timer with no cleanup left.
   const mounted = React.useRef(true);
-  React.useEffect(() => () => { mounted.current = false; clearTimeout(copyTimer.current); }, []);
+  React.useEffect(() => {
+    // Body re-arms the flag: a cleanup+re-run cycle (StrictMode
+    // double-invoke, future reusable state) must not leave it stuck false.
+    mounted.current = true;
+    return () => { mounted.current = false; clearTimeout(copyTimer.current); };
+  }, []);
 
   const copyEmail = () => {
     copyTextToClipboard(contact.href.replace(/^mailto:/, "")).then((ok) => {
@@ -432,12 +440,16 @@ function NotFound({ navigate }) {
       <h1>Page not found</h1>
       <p className="notfound-sub">This page may have moved, or never existed.</p>
       <div className="notfound-actions">
+        {/* "Home", not "Back": this action navigates to the homepage, and
+            "Back" beside three destination labels (News/Publications/Contact)
+            read as browser-back — which from a 404 goes to wherever the
+            broken link came from. */}
         <a
           className="btn btn-primary"
           href="/"
           onClick={(e) => handleAnchorClick(e, navigate, { page: "home" })}
         >
-          Back
+          Home
         </a>
         <a
           className="btn btn-ghost"
@@ -549,6 +561,12 @@ function App() {
         return;
       }
       currentKey.current = state.key;
+      // Keep the mint counter ahead of ANY key we observe: the mount-time
+      // seeding covers the entry we reloaded on, but forward entries survive
+      // a reload too — reload deep in history, press Forward onto a
+      // higher-keyed entry, then navigate, and the counter would mint a key
+      // that live entry still owns (cross-wiring their saved scrolls).
+      keyCounter.current = Math.max(keyCounter.current, state.key);
       setRoute({ ...parseRoute(window.location.pathname), from: state.from });
       restoreScroll(scrollPositions.current.get(state.key) || 0, restoreCtl.current);
     };
@@ -556,16 +574,58 @@ function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // Keep the tab title correct after client-side navigation (and back/forward).
-  // Derived from the SAME pageTitle the server injects, so they cannot diverge.
+  // Keep the document HEAD correct after client-side navigation (and
+  // back/forward). The served HTML is per-route, but SPA navigations only
+  // swap the DOM below <body> — so title, canonical, og:url/title,
+  // descriptions and robots kept the values of the FIRST page loaded, and a
+  // client-side 404 kept an index,follow + stale canonical. Everything is
+  // derived from the SAME shared helpers the server injects with
+  // (pageTitle / pageSocialTitle / pageDescription / ROBOTS_*), so the two
+  // cannot drift. og:image/twitter:image are deliberately left alone: social
+  // scrapers fetch the served HTML (correct per route), and the client has
+  // no access to the versioned social-crop paths the server computes.
   useEffect(() => {
-    const articleTitle =
-      route.page === "article" ? (getArticle(route.slug) || {}).title : undefined;
+    const article = route.page === "article" ? getArticle(route.slug) : undefined;
+    const articleTitle = article && article.title;
     document.title = pageTitle(route, {
       siteName: SITE.name,
       jobTitle: SITE.jobTitle,
       articleTitle,
     });
+
+    // A route that renders the not-found view (unknown path OR unknown slug)
+    // must carry noindex and NO canonical, like the served 404.
+    const found = route.page !== "not-found" && !(route.page === "article" && !article);
+    const url = SITE.url + (found ? routeToPath({ ...route, section: null }) : "/");
+
+    const setContent = (selector, value) => {
+      const el = document.head.querySelector(selector);
+      if (el) el.setAttribute("content", value);
+    };
+    let canonical = document.head.querySelector('link[rel="canonical"]');
+    if (found) {
+      if (!canonical) {
+        canonical = document.createElement("link");
+        canonical.setAttribute("rel", "canonical");
+        document.head.appendChild(canonical);
+      }
+      canonical.setAttribute("href", url);
+    } else if (canonical) {
+      canonical.remove();
+    }
+    setContent('meta[property="og:url"]', url);
+    const social = pageSocialTitle(route, { jobTitle: SITE.jobTitle, articleTitle });
+    setContent('meta[property="og:title"]', social);
+    setContent('meta[name="twitter:title"]', social);
+    const description = pageDescription(route, {
+      defaultDescription: SITE.defaultDescription,
+      articleDescription: article && (article.seoDescription || article.excerpt),
+    });
+    setContent('meta[name="description"]', description);
+    setContent('meta[property="og:description"]', description);
+    setContent('meta[name="twitter:description"]', description);
+    setContent('meta[name="robots"]', found ? ROBOTS_INDEX : ROBOTS_NOINDEX);
+    setContent('meta[property="og:type"]', route.page === "article" && article ? "article" : "website");
   }, [route]);
 
   // Move focus to the main region on a full page change so keyboard and

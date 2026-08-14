@@ -44,7 +44,12 @@ function CiteButton({ pub }) {
   // Guard against the clipboard promise resolving after unmount (see
   // ArticleShare) — it would otherwise arm a timer with no cleanup left.
   const mounted = React.useRef(true);
-  React.useEffect(() => () => { mounted.current = false; clearTimeout(copyTimer.current); }, []);
+  React.useEffect(() => {
+    // Body re-arms the flag: a cleanup+re-run cycle (StrictMode
+    // double-invoke, future reusable state) must not leave it stuck false.
+    mounted.current = true;
+    return () => { mounted.current = false; clearTimeout(copyTimer.current); };
+  }, []);
 
   const citation =
     pub.citation ||

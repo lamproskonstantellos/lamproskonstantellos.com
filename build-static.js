@@ -42,9 +42,12 @@ const {
   DEPLOY_VERSION,
   // The public root surface, declared once in server.js: the server's
   // allowlist (isPrivatePath) and the deploy contents both derive from these,
-  // so publishing a new root file is a single edit that updates both.
+  // so publishing a new root file is a single edit that updates both. Brand
+  // images copy plain (no variants exist for them); picture images pull
+  // their optimize-images siblings.
   ROOT_PLAIN_FILES,
-  ROOT_IMAGE_BASES,
+  ROOT_BRAND_IMAGES,
+  ROOT_PICTURE_IMAGES,
 } = require("./server.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
 const { IMAGE_WIDTH_VARIANTS } = require("./ui-helpers.js");
@@ -275,7 +278,8 @@ function buildStatic({ outDir = DEFAULT_OUT } = {}) {
 
   // --- 4. Public assets ----------------------------------------------------
   for (const rel of ROOT_PLAIN_FILES) copyFile(outDir, rel);
-  for (const rel of ROOT_IMAGE_BASES) copyImage(outDir, rel);
+  for (const rel of ROOT_BRAND_IMAGES) copyFile(outDir, rel);
+  for (const rel of ROOT_PICTURE_IMAGES) copyImage(outDir, rel);
   copyDir(outDir, "vendor");
   // dist/: only the CURRENT hashed bundles — the ones the asset map (and thus
   // the rendered HTML) references. esbuild leaves older-hash siblings behind

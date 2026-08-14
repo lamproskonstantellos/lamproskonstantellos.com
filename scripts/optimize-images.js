@@ -30,6 +30,14 @@ const sharp = require("sharp");
 // server's preload (ui-helpers.imageSrcset) so the descriptors always match
 // the files this script writes.
 const { IMAGE_WIDTH_VARIANTS, IMAGE_MAX_WIDTH } = require("../ui-helpers.js");
+// The brand-image list (favicons/icons/og-image — rendered at fixed sizes,
+// no srcset consumer) comes from server.js, the single owner of the root
+// image classes, so this skip can never drift from what the server and the
+// build advertise. Scoped to ROOT files only — a hypothetical
+// news/<slug>/icon-something.jpg is a normal article image and keeps its
+// variants.
+const { ROOT_BRAND_IMAGES } = require("../server.js");
+const NO_VARIANT_ROOT_FILES = new Set(ROOT_BRAND_IMAGES);
 
 // Walking "." already covers news/ recursively.
 const SOURCE_DIRS = ["."];
@@ -37,9 +45,6 @@ const EXTENSIONS = [".jpg", ".jpeg", ".png"];
 // "build" (the static deploy output) and "scratch" are generated trees — never
 // re-encode inside them.
 const SKIP_DIRS = new Set(["node_modules", "dist", "build", "scratch", ".git", "vendor", "scripts"]);
-// Root brand/social assets rendered at fixed sizes — no <Picture>, no srcset,
-// so no variants.
-const NO_VARIANT_BASES = /^(favicon-|icon-|apple-touch-icon$|og-image$)/;
 const WEBP_QUALITY = 80;
 const AVIF_QUALITY = 65;
 // The widest display slot on the site is the 1100px content column, so 2200px
@@ -155,22 +160,27 @@ async function socialCrop(srcPath, { force = false } = {}) {
 
 // Process every image under `dirs`. Returns { processed, failed }; the CLI
 // wrapper turns failed > 0 into a non-zero exit. `stamp: false` (tests) skips
-// the settings-stamp bookkeeping so runs over fixture dirs stay independent.
-async function run(dirs = SOURCE_DIRS, { stamp = true } = {}) {
-  const force = stamp ? settingsChanged() : false;
-  if (force) console.log("Encoder settings changed — regenerating all variants.");
+// the settings-stamp bookkeeping so runs over fixture dirs stay independent;
+// `force` overrides the freshness check outright and is a separate, testable
+// knob (the stamp path resolves to exactly this flag).
+async function run(dirs = SOURCE_DIRS, { stamp = true, force } = {}) {
+  const effectiveForce = force !== undefined ? force : stamp ? settingsChanged() : false;
+  if (effectiveForce && force === undefined) {
+    console.log("Encoder settings changed — regenerating all variants.");
+  }
   let processed = 0;
   let failed = 0;
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
     for (const file of walk(dir)) {
-      // The generated social crop is an output, never a source; the root
-      // brand/social assets get no variants at all.
+      // The generated social crop is an output, never a source; the ROOT
+      // brand/social assets get no variants at all (fixed-size consumers).
       if (file.toLowerCase().endsWith(OG_SUFFIX)) continue;
-      if (NO_VARIANT_BASES.test(path.basename(file, path.extname(file)))) continue;
+      const isRootFile = !file.includes(path.sep);
+      if (isRootFile && NO_VARIANT_ROOT_FILES.has(path.basename(file))) continue;
       try {
-        if (await optimize(file, { force })) processed++;
-        if (await socialCrop(file, { force })) processed++;
+        if (await optimize(file, { force: effectiveForce })) processed++;
+        if (await socialCrop(file, { force: effectiveForce })) processed++;
       } catch (e) {
         console.error(`Failed ${file}: ${e.message}`);
         failed++;
@@ -184,14 +194,21 @@ async function run(dirs = SOURCE_DIRS, { stamp = true } = {}) {
   return { processed, failed };
 }
 
-module.exports = { run, optimize, socialCrop };
+module.exports = { run, optimize, socialCrop, settingsChanged, STAMP_FILE, SETTINGS_KEY };
 
 if (require.main === module) {
-  run().then(({ failed }) => {
-    // A failed image must fail the build: Cloudflare Pages runs
-    // `npm run build && npm run build:static` with no test step, so a green
-    // exit here despite a sharp failure shipped a site whose hero preload and
-    // article og:images 404'd.
-    if (failed > 0) process.exitCode = 1;
-  });
+  run()
+    .then(({ failed }) => {
+      // A failed image must fail the build: Cloudflare Pages runs
+      // `npm run build && npm run build:static` with no test step, so a green
+      // exit here despite a sharp failure shipped a site whose hero preload
+      // and article og:images 404'd.
+      if (failed > 0) process.exitCode = 1;
+    })
+    .catch((e) => {
+      // Errors OUTSIDE the per-file try (an unreadable directory, the stamp
+      // write) must also fail cleanly, not as an unhandled rejection.
+      console.error(e);
+      process.exitCode = 1;
+    });
 }

@@ -72,6 +72,11 @@
 }
 
 * { box-sizing: border-box; }
+/* Tell the UA the page supports both schemes so its own furniture follows:
+   without this, dark-mode visitors got a LIGHT scrollbar track (permanently
+   visible — overflow-y: scroll below), light <video> controls and a white
+   pre-CSS flash against the #0d1424 background. */
+:root { color-scheme: light dark; }
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -134,9 +139,13 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 /* Sticky footer: on short routes (the 404 view, an empty list) the footer
    used to float mid-viewport with bare --bg below it. The app renders
    header/main/footer inside #root; letting main flex-grow pins the footer to
-   the bottom and changes nothing on pages taller than the viewport. */
+   the bottom and changes nothing on pages taller than the viewport.
+   width: 100% is load-bearing: main's own margin: 0 auto (below) disables
+   flexbox cross-axis stretch, so without an explicit width a SHORT route's
+   main would shrink-to-fit its longest line instead of holding the 1100px
+   measure — drifting out of alignment with the fixed-width header/footer. */
 #root { min-height: 100vh; display: flex; flex-direction: column; }
-main { flex: 1 0 auto; }
+main { flex: 1 0 auto; width: 100%; }
 
 /* No-JS fallback note (shown only inside <noscript>). Centered, readable, and
    independent of the app shell so it stands alone when nothing hydrates. */
@@ -294,8 +303,8 @@ main {
   font-size: 14px;
   font-weight: 500;
   /* A button label never wraps: on narrow screens the flexed hero buttons
-     would otherwise break "Download CV" onto two lines and sit taller than
-     their row siblings. */
+     would otherwise break "View publications" onto two lines and sit taller
+     than their row siblings. */
   white-space: nowrap;
   /* Explicit property list (not `all`): `all` also animated the 2px
      :focus-visible outline in from 0, so rapid keyboard tabbing never showed
@@ -972,6 +981,18 @@ section.block {
   }
 }
 .article-body p { margin: 0 0 22px; }
+/* Real lists (grouped from the authored "• " entries in components/news.jsx):
+   left-aligned — justification stretches short list lines badly — with a
+   hanging indent so wrapped lines align under the text, not the marker. */
+.article-body ul {
+  margin: 0 0 22px;
+  padding-left: 1.25em;
+}
+.article-body li {
+  text-align: left;
+  margin: 0 0 12px;
+}
+.article-body li::marker { color: var(--ink); }
 /* Bold emphasis in article prose: same navy weight + marker-style accent
    band as .about-paragraph strong (kept in sync by hand). */
 .article-body strong {
@@ -1605,8 +1626,13 @@ section.block {
     background: #fff;
     color: #000;
   }
-  main {
-    flex: none;
+  /* Neutralize the sticky-footer flex layout for paged media: fragmenting a
+     flex CONTAINER across page boxes is the weakest-supported part of print
+     layout (WebKit clips after the first page), and 100vh means one page box
+     here. Plain block flow prints correctly. */
+  #root {
+    display: block;
+    min-height: 0;
   }
   .article-body a[href^="http"]::after,
   .article-sources a[href^="http"]::after,

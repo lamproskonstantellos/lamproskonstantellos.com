@@ -14,7 +14,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const { start, stop, request } = require("./helper");
+const { start, stop, request, matchGolden } = require("./helper");
 const { VALID_ARTICLE_SLUGS } = require("../server.js");
 const { buildStatic, MUST_BE_ABSENT, assertNoExcluded } = require("../build-static.js");
 
@@ -89,9 +89,12 @@ for (const [routePath, buildRel] of FEEDS) {
 }
 
 test("build feed.json matches the committed golden", () => {
+  // Through matchGolden, not a raw read: characterization.test.js owns the
+  // same golden through the helper, and under UPDATE_GOLDEN=1 the two files
+  // run in parallel processes — a raw read here raced the helper's rewrite
+  // and failed the documented refresh command nondeterministically.
   const built = fs.readFileSync(path.join(BUILD, "feed.json"), "utf8");
-  const golden = fs.readFileSync(path.join(__dirname, "golden", "feed.json"), "utf8");
-  assert.strictEqual(built, golden);
+  matchGolden("feed.json", built);
 });
 
 // buildStatic's own assertNoExcluded already swept MUST_BE_ABSENT during

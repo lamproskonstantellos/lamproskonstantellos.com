@@ -14,7 +14,7 @@
     "watch": "node scripts/build.js --watch"
   },
   "engines": {
-    "node": ">=18.17"
+    "node": ">=20.9"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",
