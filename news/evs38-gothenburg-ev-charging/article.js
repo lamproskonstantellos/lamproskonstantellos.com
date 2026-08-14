@@ -20,6 +20,12 @@ defineArticle({
     "machine learning",
   ],
   articleSection: "Research",
+  // JSON-LD `about` entities: sameAs points each topic at its canonical page
+  // so search engines resolve the CONCEPT, not just the keyword string.
+  topics: [
+    { name: "Charging station", sameAs: "https://en.wikipedia.org/wiki/Charging_station" },
+    { name: "Recurrent neural network", sameAs: "https://en.wikipedia.org/wiki/Recurrent_neural_network" },
+  ],
   cover: "news/evs38-gothenburg-ev-charging/cover.jpg",
   body: [
     "From **15–18 June 2025**, the **38th International Electric Vehicle Symposium & Exhibition (EVS38)** took place in **Gothenburg, Sweden**. Our paper, **\"Financial Impact Analysis of Electric Vehicle Charging Behavior with RNN Model and Validation Against Real-World Data\"**, was presented there by my co-author **Deniz Pekmezci**. As **first author**, I developed this work during my internship at the **Fraunhofer Institute for Solar Energy Systems ISE**.",
