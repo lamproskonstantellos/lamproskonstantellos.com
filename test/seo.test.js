@@ -35,13 +35,17 @@ test("/index.html → 301 redirect to /", async () => {
   assert.equal(res.headers["location"], "/");
 });
 
-// ---- SEO2: unknown route is 404 with a non-reflecting canonical ------------
+// ---- SEO2: unknown route is 404, noindex, no canonical, non-reflecting -----
 
-test("unknown route: 404 + canonical/og:url point at home, not the path", async () => {
+test("unknown route: 404 + noindex, no canonical, og:url points at home", async () => {
   const res = await request(base, "/no-such-page");
   assert.equal(res.status, 404);
   const html = res.body.toString("utf8");
-  assert.match(html, /<link rel="canonical" href="https:\/\/lamproskonstantellos\.com\/"/);
+  // noindex plus a canonical to a DIFFERENT URL is a conflicting-signal
+  // anti-pattern (the noindex can consolidate onto the canonical target), so
+  // the 404 page must emit no rel=canonical at all.
+  assert.ok(!html.includes('rel="canonical"'), "404 must not emit a canonical");
+  assert.match(html, /<meta name="robots" content="noindex,follow"/);
   assert.match(html, /<meta property="og:url" content="https:\/\/lamproskonstantellos\.com\/"/);
   assert.ok(!html.includes("no-such-page"), "404 must not reflect the requested path");
 });

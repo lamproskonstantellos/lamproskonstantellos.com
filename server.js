@@ -506,16 +506,19 @@ function computePageMeta(pathname) {
   }
 
   // Unknown route — used by the SPA NotFound page (served with HTTP 404) and by
-  // the static 404.html. Canonical/og:url point at the home root rather than
-  // reflecting the requested (attacker-controllable) pathname back into shared
-  // metadata. robots is noindex (an error page must not ask to be indexed) and
-  // jsonLd is null (no structured-data block emitted at all — an empty
+  // the static 404.html. og:url points at the home root rather than reflecting
+  // the requested (attacker-controllable) pathname back into shared metadata.
+  // canonical is null — no rel=canonical tag at all: noindex plus a canonical
+  // to a different URL is a conflicting-signal anti-pattern. robots is noindex
+  // (an error page must not ask to be indexed) and jsonLd is null (no
+  // structured-data block emitted at all — an empty
   // <script type="application/ld+json"></script> is invalid JSON that
   // rich-results validators flag).
   return {
     title: pageTitle(route, titleCtx),
     description: DEFAULT_DESCRIPTION,
     url: `${SITE_CFG.url}/`,
+    canonical: null,
     image: DEFAULT_IMAGE,
     imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
     imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
@@ -664,6 +667,14 @@ function injectMeta(html, meta) {
     __META_TITLE__: () => escapeHtml(meta.title),
     __META_DESCRIPTION__: () => escapeHtml(meta.description),
     __META_URL__: () => escapeHtml(meta.url),
+    // rel=canonical is omitted entirely when meta.canonical is null (the 404
+    // page): a noindex page that nominates a DIFFERENT URL as canonical sends
+    // conflicting signals — search engines may consolidate the noindex onto
+    // the canonical target. og:url keeps pointing at home for share safety.
+    __META_CANONICAL__: () =>
+      meta.canonical === null
+        ? ""
+        : `<link rel="canonical" href="${escapeHtml(meta.url)}" />`,
     __META_IMAGE__: () => escapeHtml(meta.image),
     __META_IMAGE_DIMS__: () =>
       meta.imageWidth && meta.imageHeight

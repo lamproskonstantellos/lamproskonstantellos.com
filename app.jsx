@@ -546,12 +546,19 @@ function App() {
   // Move focus to the main region on a full page change so keyboard and
   // screen-reader users land in the new content. Skipped on first render and
   // during in-page section scrolls (which manage their own scroll position).
+  // "In-page" means the page itself did not change: a section target alone is
+  // not enough — every nav/back link targets { page: "home", section }, so a
+  // cross-page navigation (say /publications → /#publications) unmounts the
+  // focused element and must still move focus to the new main region.
+  const prevFocusPage = useRef(route.page);
   useEffect(() => {
+    const pageChanged = route.page !== prevFocusPage.current;
+    prevFocusPage.current = route.page;
     if (firstRender.current) {
       firstRender.current = false;
       return;
     }
-    if (route.page === "home" && route.section) return;
+    if (!pageChanged && route.page === "home" && route.section) return;
     // preventScroll: the page components manage their own scroll-to-top.
     if (mainRef.current) mainRef.current.focus({ preventScroll: true });
   }, [route]);
