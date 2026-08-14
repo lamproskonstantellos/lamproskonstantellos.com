@@ -21,19 +21,12 @@
 
 "use strict";
 
-const { compareByDateDesc, plainBody } = require("./article-schema.js");
-
-// Local copy of server.js's escapeHtml so this module stays self-contained
-// (no require cycle with server.js). Deliberately byte-identical to that one:
-// the RSS feed must escape exactly as the served HTML does.
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+// escapeHtml comes from the shared dual module (no require cycle with
+// server.js — server.js imports it from the same place), so the RSS feed
+// escapes EXACTLY as the served HTML does by construction. The two modules
+// used to carry hand-synchronized copies whose byte-identity was enforced
+// only by a comment.
+const { compareByDateDesc, plainBody, escapeHtml } = require("./article-schema.js");
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 

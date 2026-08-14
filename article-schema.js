@@ -201,6 +201,20 @@
     return article;
   }
 
+  // HTML/XML escaping for the five markup characters. Lives HERE — the one
+  // module both server.js and feeds.js already require — because the two used
+  // to carry hand-synchronized copies whose "deliberately byte-identical"
+  // contract was enforced only by a comment. The RSS feed must escape exactly
+  // as the served HTML does, so there is exactly one implementation.
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   // Newest first, by ISO date string. Stable for equal dates (returns 0).
   function compareByDateDesc(a, b) {
     if (a.date < b.date) return 1;
@@ -216,14 +230,16 @@
     return (Array.isArray(body) ? body.join("\n\n") : "").replace(/\*\*/g, "");
   }
 
-  const api = { validateArticle, compareByDateDesc, plainBody };
+  const api = { validateArticle, compareByDateDesc, plainBody, escapeHtml };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
   }
   if (typeof window !== "undefined") {
-    // The same three names module.exports carries — every browser consumer
-    // (data.js, the components) uses these bare globals.
-    Object.assign(window, { validateArticle, compareByDateDesc, plainBody });
+    // Only the names the browser actually consumes: data.js uses
+    // validateArticle (defineArticle) and compareByDateDesc (sortedNews).
+    // plainBody and escapeHtml are Node-side concerns (JSON-LD/feeds/meta) —
+    // no component references them, so they are not put on window.
+    Object.assign(window, { validateArticle, compareByDateDesc });
   }
 })();

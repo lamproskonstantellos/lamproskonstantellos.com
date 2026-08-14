@@ -61,6 +61,7 @@ const NOT_FOUND_ROUTE = "/this-route-does-not-exist";
 const MUST_BE_ABSENT = [
   "server.js",
   "build-static.js",
+  "build.config.js",
   "feeds.js",
   "package.json",
   "package-lock.json",
@@ -301,7 +302,11 @@ function buildStatic({ outDir = DEFAULT_OUT } = {}) {
   return { outDir, htmlRoutes, slugs };
 }
 
-module.exports = { buildStatic, DEPLOY_VERSION };
+// MUST_BE_ABSENT / assertNoExcluded are exported for the parity test, which
+// consumes the SAME list this module enforces (a hand copy there could drift)
+// and asserts the guard actually throws on a planted private file.
+// DEPLOY_VERSION is deliberately not re-exported — server.js is its one home.
+module.exports = { buildStatic, MUST_BE_ABSENT, assertNoExcluded };
 
 if (require.main === module) {
   buildStatic();

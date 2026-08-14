@@ -230,7 +230,16 @@ test("intended-public files are served", async () => {
 
 // ---- HEAD requests ----------------------------------------------------------
 
-test("HEAD request on home", async () => {
+test("HEAD on home: 200, no body, same Content-Length as GET", async () => {
+  // ([200, 404] was accepted here before — an assertion no regression short
+  // of a 5xx could ever fail.)
   const res = await request(base, "/", { method: "HEAD" });
-  assert.ok([200, 404].includes(res.status));
+  assert.equal(res.status, 200);
+  assert.equal(res.body.length, 0, "HEAD must not carry a body");
+  const get = await request(base, "/");
+  assert.equal(
+    res.headers["content-length"],
+    get.headers["content-length"],
+    "HEAD must advertise the same entity length as GET"
+  );
 });

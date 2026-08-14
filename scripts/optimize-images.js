@@ -1,12 +1,26 @@
 /**
  * Image optimization pipeline.
  *
- * Walks the configured source directories, finds JPG/PNG images, and emits
- * sibling .webp and .avif files. Idempotent: skips images whose outputs are
- * already newer than the source.
+ * Walks the configured source directories, finds JPG/PNG images, and emits,
+ * per image:
+ *   - a capped full-size .webp and .avif sibling (max IMAGE_MAX_WIDTH px)
+ *   - a -<w>.webp and -<w>.avif pair per IMAGE_WIDTH_VARIANTS width
+ *   - for article covers (news/<slug>/cover.*) additionally a 1200x630
+ *     smart-cropped cover-og.jpg social card
+ * Brand/social assets at the repo root (favicon-*, icon-*, apple-touch-icon,
+ * og-image) are copied verbatim by the build and rendered at fixed sizes, so
+ * they get NO variants — nothing references them, and a 16px favicon upscaled
+ * to 960px was pure dead weight in the deploy.
+ *
+ * Idempotent: skips images whose outputs are already newer than the source.
+ * The freshness check also covers the encoder settings themselves (via a
+ * settings stamp): editing a quality constant regenerates everything, where
+ * the mtime check alone silently kept every stale variant.
  *
  * Run by `npm run build` before esbuild, so every deploy ships with fresh
- * optimized variants without ever committing them to git.
+ * optimized variants without ever committing them to git. Exits non-zero if
+ * any image fails: Cloudflare Pages runs no tests, so a silent sharp failure
+ * here would ship a site whose preloads and og:images 404.
  */
 
 const fs = require("fs");
@@ -23,6 +37,9 @@ const EXTENSIONS = [".jpg", ".jpeg", ".png"];
 // "build" (the static deploy output) and "scratch" are generated trees — never
 // re-encode inside them.
 const SKIP_DIRS = new Set(["node_modules", "dist", "build", "scratch", ".git", "vendor", "scripts"]);
+// Root brand/social assets rendered at fixed sizes — no <Picture>, no srcset,
+// so no variants.
+const NO_VARIANT_BASES = /^(favicon-|icon-|apple-touch-icon$|og-image$)/;
 const WEBP_QUALITY = 80;
 const AVIF_QUALITY = 65;
 // The widest display slot on the site is the 1100px content column, so 2200px
@@ -46,6 +63,30 @@ const OG_HEIGHT = 630;
 const OG_QUALITY = 82;
 const OG_SUFFIX = "-og.jpg";
 
+// Freshness is mtime-based, which cannot see a changed encoder setting: after
+// editing a quality/width constant every existing variant still looked
+// "fresh" and the change was a silent no-op until the variants were deleted
+// by hand. The current settings are stamped to a sidecar file; a mismatch
+// forces one full regeneration pass.
+const SETTINGS_KEY = JSON.stringify({
+  WEBP_QUALITY,
+  AVIF_QUALITY,
+  MAX_VARIANT_SIZE,
+  IMAGE_WIDTH_VARIANTS,
+  OG_WIDTH,
+  OG_HEIGHT,
+  OG_QUALITY,
+});
+const STAMP_FILE = path.join(__dirname, "..", ".optimize-images-stamp.json");
+
+function settingsChanged() {
+  try {
+    return fs.readFileSync(STAMP_FILE, "utf8") !== SETTINGS_KEY;
+  } catch {
+    return true;
+  }
+}
+
 function* walk(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
@@ -57,7 +98,7 @@ function* walk(dir) {
   }
 }
 
-async function optimize(srcPath) {
+async function optimize(srcPath, { force = false } = {}) {
   const dir = path.dirname(srcPath);
   const base = path.basename(srcPath, path.extname(srcPath));
   const out = (suffix, ext) => path.join(dir, base + suffix + ext);
@@ -67,7 +108,7 @@ async function optimize(srcPath) {
   const srcMtime = fs.statSync(srcPath).mtimeMs;
   const fresh = (p) => fs.existsSync(p) && fs.statSync(p).mtimeMs >= srcMtime;
 
-  if (outputs.every(([suffix, ext]) => fresh(out(suffix, ext)))) return false;
+  if (!force && outputs.every(([suffix, ext]) => fresh(out(suffix, ext)))) return false;
 
   console.log(`Optimizing ${srcPath}`);
   // Full-size variant: capped, never enlarged (its srcset descriptor may
@@ -95,14 +136,14 @@ async function optimize(srcPath) {
 // Only files whose base name is exactly "cover" get one; the crop itself is
 // skipped as a source in the loop below so it is never re-cropped or turned
 // into webp/avif. Idempotent via the same mtime freshness check as optimize().
-async function socialCrop(srcPath) {
+async function socialCrop(srcPath, { force = false } = {}) {
   const dir = path.dirname(srcPath);
   const base = path.basename(srcPath, path.extname(srcPath));
   if (base !== "cover") return false;
 
   const og = path.join(dir, base + OG_SUFFIX);
   const srcMtime = fs.statSync(srcPath).mtimeMs;
-  if (fs.existsSync(og) && fs.statSync(og).mtimeMs >= srcMtime) return false;
+  if (!force && fs.existsSync(og) && fs.statSync(og).mtimeMs >= srcMtime) return false;
 
   console.log(`Social crop ${srcPath} -> ${og}`);
   await sharp(srcPath)
@@ -112,20 +153,45 @@ async function socialCrop(srcPath) {
   return true;
 }
 
-(async () => {
+// Process every image under `dirs`. Returns { processed, failed }; the CLI
+// wrapper turns failed > 0 into a non-zero exit. `stamp: false` (tests) skips
+// the settings-stamp bookkeeping so runs over fixture dirs stay independent.
+async function run(dirs = SOURCE_DIRS, { stamp = true } = {}) {
+  const force = stamp ? settingsChanged() : false;
+  if (force) console.log("Encoder settings changed — regenerating all variants.");
   let processed = 0;
-  for (const dir of SOURCE_DIRS) {
+  let failed = 0;
+  for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
     for (const file of walk(dir)) {
-      // The generated social crop is an output, never a source.
+      // The generated social crop is an output, never a source; the root
+      // brand/social assets get no variants at all.
       if (file.toLowerCase().endsWith(OG_SUFFIX)) continue;
+      if (NO_VARIANT_BASES.test(path.basename(file, path.extname(file)))) continue;
       try {
-        if (await optimize(file)) processed++;
-        if (await socialCrop(file)) processed++;
+        if (await optimize(file, { force })) processed++;
+        if (await socialCrop(file, { force })) processed++;
       } catch (e) {
         console.error(`Failed ${file}: ${e.message}`);
+        failed++;
       }
     }
   }
-  console.log(`Image optimization complete (${processed} processed).`);
-})();
+  if (stamp && failed === 0) fs.writeFileSync(STAMP_FILE, SETTINGS_KEY);
+  console.log(
+    `Image optimization complete (${processed} processed${failed ? `, ${failed} FAILED` : ""}).`
+  );
+  return { processed, failed };
+}
+
+module.exports = { run, optimize, socialCrop };
+
+if (require.main === module) {
+  run().then(({ failed }) => {
+    // A failed image must fail the build: Cloudflare Pages runs
+    // `npm run build && npm run build:static` with no test step, so a green
+    // exit here despite a sharp failure shipped a site whose hero preload and
+    // article og:images 404'd.
+    if (failed > 0) process.exitCode = 1;
+  });
+}

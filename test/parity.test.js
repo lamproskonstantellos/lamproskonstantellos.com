@@ -15,8 +15,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const { start, stop, request } = require("./helper");
-const { discoverArticleSlugs } = require("../server.js");
-const { buildStatic } = require("../build-static.js");
+const { VALID_ARTICLE_SLUGS } = require("../server.js");
+const { buildStatic, MUST_BE_ABSENT, assertNoExcluded } = require("../build-static.js");
 
 const BUILD = path.join(__dirname, "..", "build");
 
@@ -27,7 +27,10 @@ function stripVersion(s) {
 }
 
 let base;
-const SLUGS = discoverArticleSlugs();
+// The VALIDATED slugs — the ones the server routes on AND the build renders.
+// (Using discoverArticleSlugs here would silently re-admit the divergence the
+// build fix removed: folders whose article failed validation.)
+const SLUGS = VALID_ARTICLE_SLUGS;
 
 before(async () => {
   // Regenerate the static build from the current sources so the test is
@@ -49,6 +52,10 @@ const HTML_ROUTES = [
 for (const [routePath, buildRel] of HTML_ROUTES) {
   test(`byte-parity HTML: ${routePath}`, async () => {
     const res = await request(base, routePath);
+    // Status parity too: every page the build ships must be one the server
+    // answers 200 (a build file for a route the server 404s would be served
+    // as a soft-404 by Cloudflare).
+    assert.equal(res.status, 200);
     assert.equal(res.headers["content-type"], "text/html; charset=utf-8");
     const served = stripVersion(res.body.toString("utf8"));
     const built = stripVersion(fs.readFileSync(path.join(BUILD, buildRel), "utf8"));
@@ -87,20 +94,27 @@ test("build feed.json matches the committed golden", () => {
   assert.strictEqual(built, golden);
 });
 
-test("no private/excluded file leaked into build/", () => {
-  const mustBeAbsent = [
-    "server.js", "build-static.js", "feeds.js",
-    "package.json", "package-lock.json",
-    ".gitignore", "LICENSE",
-    "README.md", "PUBLICATIONS.md", "news/README.md",
-    "scripts", "test", "node_modules", "dist/manifest.json",
-    "app.jsx", "icons.jsx", "components",
-  ];
-  for (const rel of mustBeAbsent) {
-    assert.ok(!fs.existsSync(path.join(BUILD, rel)), `private file leaked into build/: ${rel}`);
+// buildStatic's own assertNoExcluded already swept MUST_BE_ABSENT during
+// before() — re-running the existence checks here could never fail. What CAN
+// regress silently is the guard itself, so assert it actually throws on a
+// planted private file (and stays quiet once the file is gone).
+test("assertNoExcluded catches a planted private file in build/", () => {
+  assert.ok(MUST_BE_ABSENT.includes("server.js"), "canary entry missing from MUST_BE_ABSENT");
+  const planted = path.join(BUILD, "server.js");
+  fs.writeFileSync(planted, "// planted by parity test");
+  try {
+    assert.throws(() => assertNoExcluded(BUILD), /server\.js/, "planted private file not detected");
+  } finally {
+    fs.unlinkSync(planted);
   }
-  for (const entry of fs.readdirSync(BUILD)) {
-    assert.ok(!entry.startsWith("."), `dotfile leaked into build/: ${entry}`);
+  assert.doesNotThrow(() => assertNoExcluded(BUILD));
+  // Root dotfiles are swept by the same guard.
+  const dotfile = path.join(BUILD, ".env");
+  fs.writeFileSync(dotfile, "");
+  try {
+    assert.throws(() => assertNoExcluded(BUILD), /\.env/, "planted dotfile not detected");
+  } finally {
+    fs.unlinkSync(dotfile);
   }
 });
 

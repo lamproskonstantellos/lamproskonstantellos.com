@@ -12,3 +12,8 @@ Thumbs.db
 *.avif
 # Generated per-article social share crop (og:image), built by optimize-images.
 cover-og.jpg
+# Backstop for test fixtures: fixture articles live in OS temp dirs, but if a
+# crashed run ever leaves one under news/, it must not get committed.
+news/__*__/
+# optimize-images encoder-settings stamp (regeneration trigger, machine-local).
+.optimize-images-stamp.json

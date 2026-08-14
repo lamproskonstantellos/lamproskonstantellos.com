@@ -6,7 +6,7 @@ const crypto = require("crypto");
 const { URL } = require("url");
 const SITE_CFG = require("./site.config.js");
 const { parseRoute, isValidSpaRoute: routeIsValidSpa, pageTitle } = require("./routes.js");
-const { validateArticle, plainBody } = require("./article-schema.js");
+const { validateArticle, plainBody, escapeHtml } = require("./article-schema.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
 // Shared responsive-image vocabulary (same module the browser loads), so the
 // preload's imagesrcset/imagesizes can never drift from what <Picture> renders.
@@ -173,8 +173,13 @@ const PROFILE_JSONLD = {
 // through the SAME validateArticle the browser uses, so a field the client
 // would reject is logged and skipped here instead of silently shipping into
 // the RSS / JSON-LD / sitemap output.
-function loadArticleMeta(slug) {
-  const file = path.join(PUBLIC_DIR, "news", slug, "article.js");
+// baseDir is the parent of the news/ tree (PUBLIC_DIR in production). Tests
+// pass their own temp directory so fixture articles never touch the real
+// news/ folder — `node --test` runs test FILES in parallel, and a fixture
+// folder existing for even a moment desynchronised any concurrently running
+// discovery (parity's static build, the slug-consistency sweep).
+function loadArticleMeta(slug, baseDir = PUBLIC_DIR) {
+  const file = path.join(baseDir, "news", slug, "article.js");
   if (!fs.existsSync(file)) return null;
   try {
     const code = fs.readFileSync(file, "utf8");
@@ -321,15 +326,6 @@ function currentAssetMap() {
     COMPRESSION_CACHE.clear();
   }
   return liveAssetMap;
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 // Default robots directive for real, indexable routes: allow indexing and give

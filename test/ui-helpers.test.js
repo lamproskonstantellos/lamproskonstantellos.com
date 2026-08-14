@@ -10,6 +10,7 @@ const { test } = require("node:test");
 const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
+const { loadDataWindow } = require("./helper");
 
 const {
   shareLinks,
@@ -125,18 +126,9 @@ test("ui-helpers.js assigns its API to window in the browser", () => {
 // ---- PUB_FILTERS (publications filter pills) ----------------------------------
 
 test("PUB_FILTERS splits real publications into journals / conferences / reports", () => {
-  // Reproduce the component's predicates against the real data via the data.js
-  // shim (the same technique the news preview cap test uses in ux.test.js).
-  const SITE = require("../site.config.js");
-  const schema = require("../article-schema.js");
-  const window = {
-    SITE,
-    validateArticle: schema.validateArticle,
-    compareByDateDesc: schema.compareByDateDesc,
-  };
-  // eslint-disable-next-line no-new-func
-  new Function("window", fs.readFileSync(path.join(__dirname, "../data.js"), "utf8"))(window);
-  const pubs = window.getRecentPublications();
+  // Reproduce the component's predicates against the real data via the shared
+  // data.js shim (test/helper.js loadDataWindow).
+  const pubs = loadDataWindow().getRecentPublications();
 
   const byId = Object.fromEntries(PUB_FILTERS.map((f) => [f.id, f]));
   assert.deepEqual(Object.keys(byId), ["all", "journals", "conferences", "reports"]);

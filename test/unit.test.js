@@ -9,6 +9,7 @@ const { test } = require("node:test");
 const assert = require("node:assert");
 const fs = require("fs");
 const path = require("path");
+const { loadDataWindow } = require("./helper");
 
 const {
   escapeHtml,
@@ -16,6 +17,7 @@ const {
   cacheHeaderFor,
   isValidSpaRoute,
   computePageMeta,
+  isPrivatePath,
   DEPLOY_VERSION,
 } = require("../server.js");
 
@@ -63,6 +65,46 @@ test("cacheHeaderFor classes", () => {
   assert.match(cacheHeaderFor(req("/styles.css"), "text/css"), /max-age=86400/);
 });
 
+// ---- isPrivatePath ----------------------------------------------------------
+// The exported symbol had no direct test: security.test.js exercises it only
+// end-to-end through HTTP. In a deny-by-default design, this corpus is the
+// direct contract.
+
+test("isPrivatePath corpus: private stays private, public stays public", () => {
+  const privates = [
+    "/server.js", "/SERVER.JS",             // denylist, case-insensitive
+    "/feeds.js", "/build-static.js", "/build.config.js",
+    "/package.json", "/package-lock.json", "/LICENSE",
+    "/dist/manifest.json",
+    "/scripts/optimize-images.js", "/test/unit.test.js", "/node_modules/x.js",
+    "/components/news.jsx", "/build/index.html", "/scratch/notes.txt",
+    "/.gitignore", "/.git/config", "/.env",
+    "/news/some-slug/.DS_Store",            // nested dotfile
+    "/README.md", "/news/README.md", "/app.jsx",
+    "/unknown-root-file.txt", "/env.local", // deny-by-default root
+  ];
+  for (const p of privates) {
+    assert.equal(isPrivatePath(p), true, `${p} must be private`);
+  }
+  const publics = [
+    "/", "/index.html", "/styles.css", "/data.js", "/routes.js",
+    "/site.config.js", "/article-schema.js", "/ui-helpers.js",
+    "/robots.txt", "/site.webmanifest", "/sitemap.xml", "/rss.xml", "/feed.json",
+    "/favicon.ico", "/favicon.svg", "/favicon-32x32.png", "/icon-512.png",
+    "/apple-touch-icon.png", "/og-image.jpg",
+    "/lampros-konstantellos-picture.jpg", "/lampros-konstantellos-picture.avif",
+    "/lampros-konstantellos-picture-480.webp",
+    "/lampros-konstantellos-cv.pdf",
+    "/news", "/publications",               // clean URLs (SPA fallback)
+    "/news/some-slug/article.js", "/news/some-slug/cover.jpg",
+    "/dist/app-ABCDEFGH.js", "/vendor/react.production.min.js",
+    "/vendor/fonts/inter-latin.woff2",
+  ];
+  for (const p of publics) {
+    assert.equal(isPrivatePath(p), false, `${p} must be public`);
+  }
+});
+
 // ---- isValidSpaRoute --------------------------------------------------------
 
 test("isValidSpaRoute corpus", () => {
@@ -102,22 +144,7 @@ test("computePageMeta unknown route → not-found meta", () => {
   assert.equal(m.jsonLd, null);
 });
 
-// ---- defineArticle validation (data.js via window shim) --------------------
-
-function loadDataWindow() {
-  const code = fs.readFileSync(path.join(__dirname, "../data.js"), "utf8");
-  // data.js relies on the same globals the browser loads before it: SITE
-  // (site.config.js) and validateArticle/compareByDateDesc (article-schema.js).
-  const schema = require("../article-schema.js");
-  const window = {
-    SITE: require("../site.config.js"),
-    validateArticle: schema.validateArticle,
-    compareByDateDesc: schema.compareByDateDesc,
-  };
-  // eslint-disable-next-line no-new-func
-  new Function("window", code)(window);
-  return window;
-}
+// ---- defineArticle validation (data.js via the shared helper shim) ---------
 
 function loadDefineArticle() {
   return loadDataWindow().defineArticle;

@@ -5,10 +5,18 @@ on:
     branches: ["**"]
   pull_request:
 
+# The job only reads the repo (checkout, build, test) - keep the GITHUB_TOKEN
+# at least privilege rather than inheriting the repository default.
+permissions:
+  contents: read
+
 # A push to a branch with an open PR fires both triggers; cancel the
-# superseded run instead of building the same commit twice.
+# superseded run instead of building the same commit twice. The group must be
+# keyed by the BRANCH for that to work: github.ref is refs/heads/<branch> on
+# push but refs/pull/<n>/merge on pull_request, so keying on it alone put the
+# two runs for the same commit in different groups and cancelled neither.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
