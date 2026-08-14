@@ -234,11 +234,14 @@ function Hero({ navigate }) {
 function EmailContactCard({ contact, BrandIcon, tint }) {
   const [copied, setCopied] = React.useState(false);
   const copyTimer = React.useRef(null);
-  React.useEffect(() => () => clearTimeout(copyTimer.current), []);
+  // Guard against the clipboard promise resolving after unmount (see
+  // ArticleShare) — it would otherwise arm a timer with no cleanup left.
+  const mounted = React.useRef(true);
+  React.useEffect(() => () => { mounted.current = false; clearTimeout(copyTimer.current); }, []);
 
   const copyEmail = () => {
     copyTextToClipboard(contact.href.replace(/^mailto:/, "")).then((ok) => {
-      if (!ok) return;
+      if (!ok || !mounted.current) return;
       setCopied(true);
       clearTimeout(copyTimer.current);
       copyTimer.current = setTimeout(() => setCopied(false), 1800);
@@ -469,7 +472,16 @@ function NotFound({ navigate }) {
 const HOME_SECTION_IDS = ["about", "publications", "news", "contact"];
 
 function App() {
-  const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
+  // route carries an optional `from` (which page linked here — drives the
+  // article Back link) so components read it as a prop instead of pulling
+  // window.history.state during render: a render-time read of mutable
+  // external state is not tearing-safe under concurrent rendering and only
+  // worked because navigate() happened to pushState before setRoute. The
+  // initial value picks up history.state so a reload keeps its Back target.
+  const [route, setRoute] = useState(() => ({
+    ...parseRoute(window.location.pathname),
+    from: (window.history.state || {}).from,
+  }));
   const [activeSection, setActiveSection] = useState(null);
   const mainRef = useRef(null);
   const firstRender = useRef(true);
@@ -479,6 +491,10 @@ function App() {
   // scroll collapses to the top. Instead we tag every history entry with a `key`,
   // remember each entry's latest scroll position, and re-apply it after the new
   // view has rendered. Fresh (push) navigations still start at the top.
+  // Bounded: every navigation mints a new entry, and entries for history
+  // slots destroyed by pushState truncation are never revisited — without a
+  // cap the map grew for the whole session.
+  const SCROLL_POSITIONS_MAX = 50;
   const scrollPositions = useRef(new Map());
   const currentKey = useRef(0);
   const keyCounter = useRef(0);
@@ -529,11 +545,11 @@ function App() {
         const key = ++keyCounter.current;
         window.history.replaceState({ ...(state || {}), key }, "");
         currentKey.current = key;
-        setRoute(parseRoute(window.location.pathname));
+        setRoute({ ...parseRoute(window.location.pathname), from: state && state.from });
         return;
       }
       currentKey.current = state.key;
-      setRoute(parseRoute(window.location.pathname));
+      setRoute({ ...parseRoute(window.location.pathname), from: state.from });
       restoreScroll(scrollPositions.current.get(state.key) || 0, restoreCtl.current);
     };
     window.addEventListener("popstate", onPop);
@@ -612,16 +628,22 @@ function App() {
       });
       setActiveSection(pickActiveSection(observations, HOME_SECTION_IDS));
     };
-    const io = new IntersectionObserver(recompute, { rootMargin: "-15% 0px -80% 0px" });
-    sections.forEach((el) => io.observe(el));
+    // Feature-detected: a constructor throw inside an effect would unmount
+    // the whole root (blank page) for a purely decorative highlight. The
+    // passive scroll listener below drives recompute on its own regardless.
+    const io = typeof IntersectionObserver === "function"
+      ? new IntersectionObserver(recompute, { rootMargin: "-15% 0px -80% 0px" })
+      : null;
+    if (io) sections.forEach((el) => io.observe(el));
     let raf = 0;
     const onScroll = () => {
       if (raf) return;
       raf = requestAnimationFrame(() => { raf = 0; recompute(); });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
+    recompute();
     return () => {
-      io.disconnect();
+      if (io) io.disconnect();
       window.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(raf);
     };
@@ -698,6 +720,11 @@ function App() {
     if (window.location.pathname !== targetPathname) {
       // Remember where we were before leaving, then start a freshly-keyed entry.
       scrollPositions.current.set(currentKey.current, window.scrollY);
+      // Evict the oldest entries beyond the cap (Map preserves insertion
+      // order; keys for truncated history slots are never read again anyway).
+      while (scrollPositions.current.size > SCROLL_POSITIONS_MAX) {
+        scrollPositions.current.delete(scrollPositions.current.keys().next().value);
+      }
       const key = ++keyCounter.current;
       window.history.pushState({ ...fromState, key }, "", desiredUrl);
       currentKey.current = key;
@@ -706,7 +733,9 @@ function App() {
       // for in-page section jumps. Keep the current entry's key.
       window.history.replaceState({ ...fromState, key: currentKey.current }, "", desiredUrl);
     }
-    setRoute(next);
+    // Mirror `from` onto the route so consumers get it as a prop (the history
+    // entry keeps carrying it for reload/Back-Forward restoration).
+    setRoute(opts.from !== undefined ? { ...next, from: opts.from } : next);
 
     if (next.page === "home" && next.section) {
       requestAnimationFrame(() => {
@@ -735,7 +764,7 @@ function App() {
         {route.page === "home" && <HomePage navigate={navigate} />}
         {route.page === "news-list" && <NewsListPage navigate={navigate} />}
         {route.page === "publications-list" && <PublicationsListPage navigate={navigate} />}
-        {route.page === "article" && <Article slug={route.slug} navigate={navigate} />}
+        {route.page === "article" && <Article slug={route.slug} from={route.from} navigate={navigate} />}
         {route.page === "not-found" && <NotFound navigate={navigate} />}
       </main>
       <Footer navigate={navigate} />

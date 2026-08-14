@@ -112,10 +112,13 @@
   // sizes attributes shared between the components and the server-side
   // preloads (they MUST match, or the browser preloads one candidate and
   // renders another — a double download).
-  // Hero portrait: the 96px mobile intro card below 820px, ~44vw of the
-  // desktop hero grid above it. Article cover: the full column width up to
-  // the 720px article measure.
-  const HERO_IMG_SIZES = "(max-width: 820px) 96px, 44vw";
+  // Hero portrait: the 96px mobile intro card below 820px; above it ~44vw of
+  // the hero grid, but never more than the 360px the CSS caps .hero-photo at
+  // — a bare 44vw claimed up to ~700px on wide desktops and made DPR-1
+  // screens (and the preload) fetch the 960w candidate where 480w suffices,
+  // on the LCP path. Article cover: the full column width up to the 720px
+  // article measure.
+  const HERO_IMG_SIZES = "(max-width: 820px) 96px, min(44vw, 360px)";
   const ARTICLE_COVER_SIZES = "(max-width: 776px) 100vw, 720px";
 
   const api = {

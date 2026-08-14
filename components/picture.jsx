@@ -24,13 +24,12 @@ function Picture({
   loading = "lazy",
   decoding = "async",
   fetchPriority,
-  className,
 }) {
   if (!src) return null;
   if (!/\.(jpe?g|png)$/i.test(src)) {
     return <img src={src} alt={alt} width={width} height={height}
                 loading={loading} decoding={decoding}
-                fetchPriority={fetchPriority} className={className} />;
+                fetchPriority={fetchPriority} />;
   }
   const base = src.replace(/\.(jpe?g|png)$/i, "");
   const srcSetFor = (ext) => (sizes ? imageSrcset(src, ext) : `${base}.${ext}`);
@@ -47,7 +46,6 @@ function Picture({
         loading={loading}
         decoding={decoding}
         fetchPriority={fetchPriority}
-        className={className}
       />
     </picture>
   );
