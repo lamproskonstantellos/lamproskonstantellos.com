@@ -18,6 +18,9 @@ The static build (`build-static.js`) discovers `news/` at build time and injects
 defineArticle({
   slug: "my-article-slug",
   date: "2026-05-12",                        // YYYY-MM-DD, used for sorting
+  // dateUpdated: "2026-06-01",              // optional: set (≥ date) when you materially edit a
+  //                                         // PUBLISHED article — feeds dateModified, the sitemap
+  //                                         // <lastmod> and the JSON Feed so engines re-crawl it
   dateLabel: "May 12, 2026",                 // human-readable, shown on the card
   location: "Athens",                        // optional, shown after the date
   title: "Title of the article",
@@ -63,6 +66,7 @@ defineArticle({
 |-------|----------|------|----------|
 | `slug` | ✅ | string | URL `/news/<slug>`; must equal the folder name (lowercase letters, digits and hyphens only) |
 | `date` | ✅ | `YYYY-MM-DD` | Sorting (newest first), sitemap/RSS/feed dates |
+| `dateUpdated` | optional | `YYYY-MM-DD` | Post-publication edit date (must be ≥ `date`): JSON-LD `dateModified`, `article:modified_time`, sitemap `<lastmod>`, JSON Feed `date_modified` |
 | `dateLabel` | ✅ | string | Human-readable date on the card/article |
 | `title` | ✅ | string | Heading, `<title>`, JSON-LD headline |
 | `excerpt` | ✅ | string | Card preview, RSS/feed summary, and the meta description when `seoDescription` is absent |
@@ -108,8 +112,17 @@ build time — you only supply good inputs:
 2. **`seoDescription`** — add it when the excerpt runs past ~160 characters, so
    Google shows a clean snippet instead of truncating.
 3. **`keywords` / `articleSection` / `topics`** — power JSON-LD rich results
-   and feed tags; `topics` entries should point `sameAs` at a canonical page
-   (e.g. Wikipedia).
+   and feed tags. `topics` entries become `Article.about` entities: point
+   `sameAs` at the canonical English Wikipedia page for the concept (e.g.
+   `https://en.wikipedia.org/wiki/Vehicle-to-grid`) so engines and AI systems
+   resolve what the article is *about* as a knowledge-graph entity, not a
+   keyword string. Two or three per article, only where a clear canonical
+   page exists — validation rejects anything that is not `{ name, sameAs }`
+   with an http(s) URL.
+3b. **`dateUpdated`** — set it (≥ `date`) whenever you materially edit a
+   published article. It drives `dateModified`, `article:modified_time`, the
+   sitemap `<lastmod>` and the JSON Feed's `date_modified` — without it an
+   edit is invisible to crawlers.
 4. **`cover.jpg`** — commit the raw image; the build derives the 1200×630
    `cover-og.jpg` social card (smart-cropped) that LinkedIn/WhatsApp show on
    shares, plus the `.webp`/`.avif` variants the page serves.
@@ -118,7 +131,7 @@ build time — you only supply good inputs:
 
 ### Body formatting
 
-`body` is an array of strings, each rendered as one `<p>`. The only inline formatting is **`**bold**`** (double asterisks) — there is no Markdown link or list syntax. For a bulleted list, make each bullet its own `body` entry beginning with a literal `• ` (see `renewable-energytech-expo-thessaloniki/article.js`).
+`body` is an array of strings, each rendered as one `<p>`. The only inline formatting is **`**bold**`** (double asterisks) — there is no Markdown link or list syntax. For a bulleted list, make each bullet its own `body` entry beginning with a literal `• ` (see `renewable-energytech-expo-thessaloniki/article.js`); consecutive bullet entries render as one real `<ul>` list (proper screen-reader semantics, left-aligned with a hanging indent) while the machine-readable body text (JSON-LD, feeds) keeps the literal bullets.
 
 Validation lives in `article-schema.js` (`validateArticle`) and runs in **both**
 the browser (`defineArticle`, throwing a clear console error) and the server

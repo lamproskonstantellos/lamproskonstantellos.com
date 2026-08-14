@@ -5,12 +5,12 @@
 [![Deployed on Cloudflare Pages](https://img.shields.io/badge/deployed%20on-Cloudflare%20Pages-F38020?logo=cloudflarepages&logoColor=white)](https://pages.cloudflare.com/)
 [![Live site](https://img.shields.io/badge/live-lamproskonstantellos.com-0a66c2)](https://lamproskonstantellos.com)
 
-The personal website of **Lampros Konstantellos**, Electrical & Computer Engineer. A single-page application presenting bio, publications, and articles on renewable energy, battery storage, grid flexibility, and electricity markets.
+The personal website of **Lampros Konstantellos**, Electrical & Computer Engineer. A fully pre-rendered React site (static HTML per route, hydrating into a single-page application) presenting bio, publications, and articles on renewable energy, battery storage, grid flexibility, and electricity markets.
 
 ## Stack
 
 - **Frontend:** React 18 loaded via self-hosted UMD builds (`vendor/`). JSX is compiled to plain JavaScript at build time with [esbuild](https://esbuild.github.io/); no in-browser Babel. Plain CSS. Inter is self-hosted as subsetted woff2 (`vendor/fonts/`, preloaded, `font-display: swap`); monospace falls back to the system stack — no third-party font requests.
-- **Build / pre-render:** A dependency-free Node build step (`build-static.js`) pre-renders every route to a static `build/` directory: per-route `<title>` / meta / Open Graph / Twitter / canonical / JSON-LD, the auto-discovered per-article scripts, `sitemap.xml` / `rss.xml` / `feed.json`, a route-independent `404.html`, and the security-header + cache rules as Cloudflare `_headers` / `_redirects`. It reuses the same `renderHtml` and `feeds.js` builders as the local preview server, so the static output is byte-identical to what `server.js` serves (proven by `test/parity.test.js`). A per-deploy version query string on local CSS/JS busts browser caches on every deploy.
+- **Build / pre-render:** A Node build step (`build-static.js`) pre-renders every route to a static `build/` directory — the **full page body included**: `ssr.js` renders the React app per route (`react-dom/server`, pinned to the vendored React version) and the markup is baked into `#root`, so search engines, AI crawlers, reader modes and JS-off visitors see the real content; the client bundle hydrates it and the site behaves as an SPA from there. Alongside the body: per-route `<title>` / meta / Open Graph / Twitter / canonical / JSON-LD, the auto-discovered per-article scripts, `sitemap.xml` / `rss.xml` / `feed.json`, a route-independent `404.html`, and the security-header + cache rules as Cloudflare `_headers` / `_redirects`. It reuses the same `renderHtml` and `feeds.js` builders as the local preview server, so the static output is byte-identical to what `server.js` serves (proven by `test/parity.test.js`). A per-deploy version query string on local CSS/JS busts browser caches on every deploy.
 - **Local preview:** The original dependency-free Node.js HTTP server (`server.js`, `npm start`) is retained for local preview. It serves the same per-route meta and feeds at request time, with cached brotli/gzip compression, security headers + CSP, class-appropriate `Cache-Control`, and malformed-request guards (no request can crash the process).
 - **Hosting:** [Cloudflare Pages](https://pages.cloudflare.com/). Builds and deploys the static `build/` output on every git push: build command `npm run build && npm run build:static`, output directory `build`, `NODE_VERSION=22`.
 
@@ -65,12 +65,14 @@ tooling and config never are.
 ├── styles.css             Global stylesheet
 ├── index.html             Single HTML entry with __META_*__ placeholders
 ├── feeds.js               sitemap.xml / rss.xml / feed.json builders (shared by server + build)
-├── build-static.js        Pre-render every route to build/ for Cloudflare Pages
+├── ssr.js                 Node-side React pre-render (fills #root for server + build)
+├── build-static.js        Pre-render every route (full body + meta) to build/ for Cloudflare Pages
+├── build.config.js        esbuild entry list + options (shared by build, watch, and tests)
 ├── server.js              Local preview server: per-route meta, sitemap/rss/feed, compression, security
 ├── scripts/               Build tooling (build.js, optimize-images.js)
-├── vendor/                Self-hosted React 18 UMD builds + Inter woff2 subsets (vendor/fonts/)
-├── test/                  node:test suite + golden files (test/golden/)
-├── .github/workflows/     CI (npm ci → build → test)
+├── vendor/                Self-hosted React 18 UMD builds + Inter woff2 subsets (+ license texts)
+├── test/                  node:test suite + golden files (test/golden/) + browser e2e smoke
+├── .github/workflows/     CI (npm ci → build → test) + IndexNow ping on deploy
 ├── robots.txt             Search-engine directives
 ├── dist/                  Built JS (gitignored; produced by `npm run build`)
 ├── build/                 Static Cloudflare Pages output (gitignored; `npm run build:static`)
@@ -93,14 +95,17 @@ diverge on routes, titles, validation, sort order or identity.
 npm run build && npm test
 ```
 
-`node:test` (zero extra dependencies) boots the real `server.js` on an ephemeral
-port and checks served status/headers/meta, the feeds, security and hostile-input
-handling, cross-module consistency, SEO/accessibility, and the image pipeline.
+`node:test` boots the real `server.js` on an ephemeral port and checks served
+status/headers/meta, the feeds, security and hostile-input handling,
+cross-module consistency, SEO/accessibility, and the image pipeline.
 A byte-parity suite (`test/parity.test.js`) additionally renders the static
 `build/` and asserts every route and feed is byte-identical to what `server.js`
-serves. Golden snapshots live in `test/golden/`; a deliberate output change is
-refreshed with `UPDATE_GOLDEN=1 npm test`. CI runs the same `build` + `test` on
-every push.
+serves. A browser smoke suite (`test/e2e.test.js`, Playwright driving a local
+Chromium/Chrome when one is available — always on CI) verifies the page
+hydrates without console errors, client-side navigation keeps the head in
+sync, and the site stays fully readable with JavaScript disabled. Golden
+snapshots live in `test/golden/`; a deliberate output change is refreshed with
+`UPDATE_GOLDEN=1 npm test`. CI runs the same `build` + `test` on every push.
 
 ## Adding content
 
@@ -120,17 +125,17 @@ first — nothing else changes.
 
 ### SEO checklist for new content
 
-- **Articles:** fill `excerpt` (and `seoDescription` when the excerpt runs past ~160 characters), plus `keywords` and `articleSection` for rich results (`topics` is also supported for JSON-LD `about` entities — optional, currently unused by the published articles); commit a `cover.jpg` — the build derives the 1200×630 `cover-og.jpg` social card automatically. `<title>`, meta description, canonical, Open Graph/Twitter tags, `Article` JSON-LD, `sitemap.xml`, `rss.xml`, and `feed.json` all update automatically at build time.
-- **Publications:** no extra steps — page-level meta and JSON-LD are already in place (details in [`PUBLICATIONS.md`](./PUBLICATIONS.md)).
+- **Articles:** fill `excerpt` (and `seoDescription` when the excerpt runs past ~160 characters), `keywords` and `articleSection` for rich results, and — for the pieces with a clear subject — `topics` entries pointing `sameAs` at the canonical Wikipedia page, so engines resolve the *concept*, not the keyword string. Commit a `cover.jpg`; the build derives the 1200×630 `cover-og.jpg` social card automatically. When you materially edit a **published** article, set `dateUpdated` — it feeds `dateModified`, `article:modified_time`, the sitemap `<lastmod>` and the JSON Feed, which is what makes engines re-crawl the page. `<title>`, meta description, canonical, Open Graph/Twitter tags, `Article` JSON-LD, `sitemap.xml`, `rss.xml`, and `feed.json` all update automatically at build time. The full field-by-field guide is [`news/README.md`](./news/README.md).
+- **Publications:** supply an accurate IEEE-style `citation` **ending with the DOI** (`… doi: 10.xxxx/yyyy.`) — the `/publications` page emits a `ScholarlyArticle`/`Thesis`/`Report` JSON-LD node per entry and extracts the DOI from exactly that position. Details and pitfalls in [`PUBLICATIONS.md`](./PUBLICATIONS.md).
 
 ## SEO
 
-- Per-route `<title>`, `<meta description>`, Open Graph, Twitter Card, and canonical URL are pre-rendered at build time into one static HTML file per route.
-- Article pages include `Article` schema JSON-LD with author, date, headline, and image. The home page includes `ProfilePage` / `Person` JSON-LD.
-- `sitemap.xml` is generated at build time and includes every static page plus every auto-discovered article.
+- Every route is pre-rendered at build time into one static HTML file — the full visible body (`ssr.js`) plus `<title>`, `<meta description>`, Open Graph, Twitter Card, and canonical URL — so non-JS crawlers (most AI/LLM crawlers included) index the real content.
+- Article pages include `Article` schema JSON-LD with author, dates, headline, image, full text, and (when set) `topics` as `about` entities. The home page includes `ProfilePage` / `Person` JSON-LD; `/publications` carries a typed `ItemList` with a DOI-bearing node per publication.
+- `sitemap.xml` is generated at build time and includes every static page plus every auto-discovered article; `lastmod` follows `dateUpdated` when an article is edited.
 - `robots.txt` allows all crawlers and points to the sitemap.
-- `rss.xml` is generated at build time from the auto-discovered articles, newest first.
-- `feed.json` is generated at build time alongside the RSS feed, conforming to JSON Feed 1.1.
+- `rss.xml` and `feed.json` (JSON Feed 1.1) are generated at build time from the auto-discovered articles, newest first.
+- On every push to `main`, the IndexNow workflow (`.github/workflows/indexnow.yml`) submits the live sitemap's URLs to Bing/Yandex/etc. so new content is crawled immediately; the ownership key file is served from the site root.
 
 ## License
 
