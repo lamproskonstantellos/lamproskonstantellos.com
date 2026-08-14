@@ -74,6 +74,7 @@ defineArticle({
 | `seoDescription` | optional | string | Shorter (≤~160 char) meta/OG/Twitter/JSON-LD description; falls back to `excerpt` when omitted |
 | `location` | optional | string | Shown after the date |
 | `cover` | optional | path | Card thumbnail + article cover (`og:image` for the article) |
+| `coverWidth` / `coverHeight` | optional | number | The cover **source file's** natural pixels (set both) — lets the responsive `srcset` advertise the real width of the full-size variant instead of the 2200px cap, so browsers stop over-fetching. Read them off the file (e.g. `npx sharp-cli metadata` or any image viewer) |
 | `coverAlign` | optional | `"top"` | Crop the cover + card thumbnail from the top instead of the centre |
 | `photos` | optional | (string \| `{ src, align?, after?, caption?, width?, height? }`)[] | Article photos — see [Photos](#photos) below |
 | `video` | optional | path | Self-hosted `<video>` embed (e.g. `news/<slug>/video.mp4`) |
@@ -91,7 +92,7 @@ defineArticle({
 
 Each entry in `photos` is either a bare path string or an object `{ src, align?, after?, caption?, width?, height? }`:
 
-- **`after`** (number) — render the photo **inline**, right after the `body` paragraph at that (0-based) index, instead of in the end gallery. Inline photos show whole, at their natural aspect ratio (portrait or landscape), capped in size.
+- **`after`** (number) — render the photo **inline**, right after the `body` paragraph at that (0-based) index, instead of in the end gallery. Inline photos show whole, at their natural aspect ratio (portrait or landscape), capped in size. Anchoring to a bullet paragraph in the middle of a list renders the photo **inside that bullet's list item** — the list stays one list for assistive tech.
 - **`caption`** (string) — a short caption shown beneath an inline photo (also used as its alt text).
 - **`align: "top"`** — for a **gallery** photo (one without `after`), crop from the top instead of the centre when the subject sits high in the frame. Gallery photos are shown in a 4:3 grid.
 - **`width` / `height`** (numbers, set both) — the photo's intrinsic pixel size. Worth adding on **inline** photos: the browser then reserves the figure's space before the image loads, so the article doesn't jump mid-read. (Gallery tiles are fixed 4:3 and don't need it.)
@@ -132,6 +133,8 @@ build time — you only supply good inputs:
 ### Body formatting
 
 `body` is an array of strings, each rendered as one `<p>`. The only inline formatting is **`**bold**`** (double asterisks) — there is no Markdown link or list syntax. For a bulleted list, make each bullet its own `body` entry beginning with a literal `• ` (see `renewable-energytech-expo-thessaloniki/article.js`); consecutive bullet entries render as one real `<ul>` list (proper screen-reader semantics, left-aligned with a hanging indent) while the machine-readable body text (JSON-LD, feeds) keeps the literal bullets.
+
+A paragraph that is **entirely** bold (`"**Key points:**"` — the section-heading idiom every article already uses) renders as a real `<h2>` styled like the old bold paragraph, so screen-reader users can jump between sections with heading navigation. Partially-bold paragraphs render as normal `<p>` text.
 
 Validation lives in `article-schema.js` (`validateArticle`) and runs in **both**
 the browser (`defineArticle`, throwing a clear console error) and the server
