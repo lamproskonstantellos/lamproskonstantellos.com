@@ -9,7 +9,6 @@
   "background_color": "#f4f6f9",
   "theme_color": "#0a1f44",
   "icons": [
-    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "/favicon-48x48.png", "sizes": "48x48", "type": "image/png", "purpose": "any" },
     { "src": "/favicon-64x64.png", "sizes": "64x64", "type": "image/png", "purpose": "any" },
     { "src": "/favicon-96x96.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },

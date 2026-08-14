@@ -366,19 +366,11 @@ function Article({ slug, from, navigate }) {
     </a>
   );
 
-  if (!article) {
-    // Every route renders exactly one h1; the unknown-slug view is no
-    // exception (the server already answers it with a 404 status).
-    return (
-      <div className="page article">
-        {backLink}
-        <h1>Article not found</h1>
-        <p className="muted-note">
-          This article may have moved, or never existed.
-        </p>
-      </div>
-    );
-  }
+  // Unknown slugs never reach this component: App routes them to the shared
+  // NotFound view (the static host serves the one 404.html for every
+  // unmatched URL, so a distinct per-article not-found body could never
+  // hydrate cleanly). The guard is defensive only.
+  if (!article) return null;
 
   // A photo is a path string or { src, align?, after?, caption? }. Photos with
   // an integer `after` render inline right after that body paragraph (with an
@@ -388,6 +380,11 @@ function Article({ slug, from, navigate }) {
     typeof p === "string" ? { src: p } : p
   );
   const photoAlt = (photo) => photo.caption || `Photo from “${article.title}”`;
+  // Captions are authored as sentences ("What the photo shows." per the
+  // docs' own template) — strip the trailing punctuation when composing the
+  // opener label, or a screen reader announces "…Munich). in full screen"
+  // as broken mid-sentence punctuation.
+  const openLabel = (alt) => `Open ${String(alt).replace(/[.!?…]\s*$/, "")} in full screen`;
   // Flat list of every openable photo, in author order, that the lightbox pages
   // through with prev/next + Arrow keys. Each figure/gallery tile opens at its
   // own index into this list.
@@ -422,7 +419,7 @@ function Article({ slug, from, navigate }) {
           className={"figure-frame" + (photo.align === "top" ? " photo-align-top" : "")}
           role="button"
           tabIndex={0}
-          aria-label={`Open ${alt} in full screen`}
+          aria-label={openLabel(alt)}
           onClick={open}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(e); }
@@ -558,7 +555,7 @@ function Article({ slug, from, navigate }) {
                 key={index}
                 role="button"
                 tabIndex={0}
-                aria-label={`Open ${alt} in full screen`}
+                aria-label={openLabel(alt)}
                 onClick={open}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {

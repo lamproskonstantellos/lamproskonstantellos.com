@@ -40,16 +40,19 @@ const {
   // drift. The ?v= token is the one allowed difference vs server output; the
   // parity test normalizes it on both sides.
   DEPLOY_VERSION,
-  // The public root surface, declared once in server.js: the server's
-  // allowlist (isPrivatePath) and the deploy contents both derive from these,
-  // so publishing a new root file is a single edit that updates both. Brand
-  // images copy plain (no variants exist for them); picture images pull
-  // their optimize-images siblings.
+} = require("./server.js");
+// The public root surface (dependency-free leaf, shared with server.js and
+// scripts/optimize-images.js): the served allowlist and the deploy contents
+// derive from the same lists, so publishing a new root file is a single
+// edit that updates both. Brand images copy plain (no variants exist for
+// them); picture images pull their optimize-images siblings.
+const {
   ROOT_PLAIN_FILES,
   ROOT_BRAND_IMAGES,
   ROOT_PICTURE_IMAGES,
-} = require("./server.js");
+} = require("./public-files.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
+const { createSsrRenderer } = require("./ssr.js");
 const { IMAGE_WIDTH_VARIANTS } = require("./ui-helpers.js");
 
 const ROOT = __dirname;
@@ -219,12 +222,30 @@ function buildHeadersFile(securityHeaders, htmlPathnames) {
   return lines.join("\n");
 }
 
+// The build's OWN SSR renderer, pinned to the same ASSET_MAP snapshot the
+// script tags are rewritten from — so the pre-rendered body and the bundles
+// that hydrate it can never come from different builds, even if a watch
+// rebuild lands mid-build. createSsrRenderer THROWS when the compiled
+// bundles are missing: for the dev server that degrades to an empty #root,
+// but a DEPLOY artifact without its body would silently lose the whole
+// point of the pre-render, so here the build must fail loudly instead.
+// Created inside buildStatic (not at module load) so merely requiring this
+// module — the parity test imports MUST_BE_ABSENT — needs no built bundles.
+let ssr = null;
+
 function render(pathname) {
-  return renderHtml(fs.readFileSync(path.join(ROOT, "index.html"), "utf8"), pathname, {
+  const html = renderHtml(fs.readFileSync(path.join(ROOT, "index.html"), "utf8"), pathname, {
     deployVersion: DEPLOY_VERSION,
     articleScripts: ARTICLE_SCRIPTS,
     assetMap: ASSET_MAP,
+    renderApp: ssr.renderApp,
   });
+  // Belt-and-braces: a page whose #root came back empty (a per-route render
+  // throw is swallowed into "" on the server path) must not ship.
+  if (!html.includes('<div id="root"><')) {
+    throw new Error(`build: pre-rendered body missing for ${pathname}`);
+  }
+  return html;
 }
 
 function assertNoExcluded(outDir) {
@@ -242,6 +263,10 @@ function assertNoExcluded(outDir) {
 }
 
 function buildStatic({ outDir = DEFAULT_OUT } = {}) {
+  // SSR renderer first: with no compiled bundles this throws immediately —
+  // a deploy artifact must never ship with empty page bodies.
+  ssr = createSsrRenderer({ assetMap: ASSET_MAP, articleSlugs: VALID_ARTICLE_SLUGS });
+
   // Clean slate so a removed article/asset never lingers in the output.
   fs.rmSync(outDir, { recursive: true, force: true });
   ensureDir(outDir);
@@ -275,7 +300,19 @@ function buildStatic({ outDir = DEFAULT_OUT } = {}) {
 
   // --- 3. Cloudflare config ------------------------------------------------
   writeFile(outDir, "_headers", buildHeadersFile(SECURITY_HEADERS, htmlRoutes.map((r) => r.pathname)));
-  writeFile(outDir, "_redirects", "/index.html  /  301\n");
+  // Every flat HTML file 301s to its clean URL, so the pre-rendered bodies
+  // are never reachable under a second (.html) address — a direct hit on
+  // /news.html used to serve a real page that the client router then tore
+  // down as a 404 view. (Cloudflare already 308s /foo/ → /foo itself.)
+  writeFile(
+    outDir,
+    "_redirects",
+    "/index.html  /  301\n" +
+      htmlRoutes
+        .filter((r) => r.out !== "index.html")
+        .map((r) => `/${r.out}  ${r.pathname}  301\n`)
+        .join("")
+  );
 
   // --- 4. Public assets ----------------------------------------------------
   for (const rel of ROOT_PLAIN_FILES) copyFile(outDir, rel);

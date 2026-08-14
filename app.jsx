@@ -500,6 +500,16 @@ function App() {
   // back-link. The mount effect below restores it from history.state right
   // after hydration instead.
   const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
+  // The route the page was SERVED for — the head's JSON-LD block belongs to
+  // it and is removed on the first client-side navigation away (see the
+  // head-sync effect).
+  const initialRouteKey = useRef(null);
+  if (initialRouteKey.current === null) {
+    initialRouteKey.current = `${route.page}:${route.slug || ""}`;
+  }
+  // Set when a route update must NOT move focus (the mount-time `from`
+  // restore — a data patch, not a navigation).
+  const skipNextFocus = useRef(false);
   const [activeSection, setActiveSection] = useState(null);
   const mainRef = useRef(null);
   const firstRender = useRef(true);
@@ -533,8 +543,12 @@ function App() {
     keyCounter.current = Math.max(keyCounter.current, currentKey.current);
     // Restore `from` (the article Back-link target) from the reloaded
     // history entry AFTER hydration — it is kept out of the initial state so
-    // the first client render matches the pre-rendered markup.
+    // the first client render matches the pre-rendered markup. The update is
+    // a data patch, not a navigation: without the skip flag its new route
+    // identity re-ran the focus effect and stole focus to <main> on every
+    // reload of an article reached through an in-app link.
     if (st.from !== undefined) {
+      skipNextFocus.current = true;
       setRoute((r) => ({ ...r, from: st.from }));
     }
     return () => { if (supported) window.history.scrollRestoration = prev; };
@@ -638,6 +652,34 @@ function App() {
     setContent('meta[name="twitter:description"]', description);
     setContent('meta[name="robots"]', found ? ROBOTS_INDEX : ROBOTS_NOINDEX);
     setContent('meta[property="og:type"]', route.page === "article" && article ? "article" : "website");
+
+    // article:* OG tags: removed, then rebuilt from the article data on
+    // article routes — leaving the previous page's timestamps/tags in the
+    // head was the same staleness this effect exists to remove.
+    document.head.querySelectorAll('meta[property^="article:"]').forEach((el) => el.remove());
+    if (route.page === "article" && article) {
+      const addMeta = (property, content) => {
+        const el = document.createElement("meta");
+        el.setAttribute("property", property);
+        el.setAttribute("content", content);
+        document.head.appendChild(el);
+      };
+      addMeta("article:published_time", `${article.date}T00:00:00+00:00`);
+      addMeta("article:modified_time", `${article.dateUpdated || article.date}T00:00:00+00:00`);
+      addMeta("article:author", `${SITE.url}/`);
+      if (article.articleSection) addMeta("article:section", article.articleSection);
+      for (const tag of article.keywords || []) addMeta("article:tag", tag);
+    }
+    // The JSON-LD block describes the INITIALLY served route, and the client
+    // cannot rebuild it faithfully (it lacks the versioned social-crop image
+    // URLs — the same reason og:image is left alone). A stale graph
+    // describing the wrong page is worse than none, so it is removed once
+    // the route changes; crawlers fetch each URL fresh and get the full
+    // server-rendered graph.
+    if (initialRouteKey.current !== `${route.page}:${route.slug || ""}`) {
+      const ld = document.head.querySelector('script[type="application/ld+json"]');
+      if (ld) ld.remove();
+    }
   }, [route]);
 
   // Move focus to the main region on a full page change so keyboard and
@@ -651,6 +693,12 @@ function App() {
   useEffect(() => {
     const pageChanged = route.page !== prevFocusPage.current;
     prevFocusPage.current = route.page;
+    if (skipNextFocus.current) {
+      // A data-only route patch (the mount-time `from` restore), not a
+      // navigation — focus must stay where the browser put it on load.
+      skipNextFocus.current = false;
+      return;
+    }
     if (firstRender.current) {
       firstRender.current = false;
       return;
@@ -836,7 +884,15 @@ function App() {
         {route.page === "home" && <HomePage navigate={navigate} />}
         {route.page === "news-list" && <NewsListPage navigate={navigate} />}
         {route.page === "publications-list" && <PublicationsListPage navigate={navigate} />}
-        {route.page === "article" && <Article slug={route.slug} from={route.from} navigate={navigate} />}
+        {/* An UNKNOWN slug renders the same NotFound view as any unknown
+            path: on the static host every unmatched URL is served the one
+            404.html, so a distinct "Article not found" view could never
+            match the served body — a guaranteed hydration mismatch on
+            exactly the URLs broken external links point at. */}
+        {route.page === "article" &&
+          (getArticle(route.slug)
+            ? <Article slug={route.slug} from={route.from} navigate={navigate} />
+            : <NotFound navigate={navigate} />)}
         {route.page === "not-found" && <NotFound navigate={navigate} />}
       </main>
       <Footer navigate={navigate} />
