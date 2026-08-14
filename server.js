@@ -1260,6 +1260,11 @@ const ROOT_PLAIN_FILES = [
   "favicon.svg",
   // The header CV chip's target (site.config.js cvPath).
   "lampros-konstantellos-cv.pdf",
+  // IndexNow ownership proof: the key file must be served at the site root
+  // (.github/workflows/indexnow.yml POSTs the sitemap URLs with this key on
+  // every push to main so Bing/Yandex/etc. re-crawl immediately). The key is
+  // public BY DESIGN — serving it is what proves domain ownership.
+  "4f944816acc54986697c161e20f28a2d.txt",
 ];
 // Root images in two classes with different pipelines:
 // - BRAND images (favicons, app icons, the og:image card) render at fixed
