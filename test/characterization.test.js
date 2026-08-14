@@ -122,17 +122,12 @@ test("asset content types and cache classes", async () => {
 test("security header set", async () => {
   const res = await request(base, "/");
   const picked = {};
-  for (const k of [
-    "x-content-type-options",
-    "referrer-policy",
-    "x-frame-options",
-    "strict-transport-security",
-    "permissions-policy",
-    "cross-origin-opener-policy",
-    "cross-origin-resource-policy",
-    "content-security-policy",
-  ]) {
-    picked[k] = res.headers[k];
+  // Derived from the server's OWN header list, not a hardcoded copy: a
+  // header ADDED to SECURITY_HEADERS is snapshotted (and locked) the moment
+  // it exists — a literal name list here silently ignored new headers.
+  const { SECURITY_HEADERS } = require("../server.js");
+  for (const name of Object.keys(SECURITY_HEADERS)) {
+    picked[name.toLowerCase()] = res.headers[name.toLowerCase()];
   }
   matchGolden("security-headers.json", JSON.stringify(picked, null, 2) + "\n");
 });

@@ -65,16 +65,25 @@ function ruleColorRgba(selector) {
 }
 
 test("footer text (rgba on navy) meets WCAG AA", () => {
-  const INK = cssVar("--ink"); // the .site-footer background
-  // The only footer heading text; regressing its alpha must fail the suite.
+  // The footer's ACTUAL background token. It happens to equal --ink in the
+  // light theme today, but --ink is redefined per theme while --footer-bg
+  // deliberately stays navy in both — compositing over --ink measured a
+  // background the footer does not use, and would keep passing if
+  // --footer-bg were lightened into a real contrast failure.
+  const FOOTER_BG = cssVar("--footer-bg");
+  // Every translucent footer text rule, including the two lowest-alpha ones
+  // (.footer-col a links, the 13px © line); regressing any alpha must fail
+  // the suite.
   const pairs = [
     [".footer-col-title", 4.5],
     [".footer-role", 4.5],
     [".footer-tagline", 4.5],
+    [".footer-col a", 4.5],
+    [".footer-bottom", 4.5],
   ];
   for (const [sel, min] of pairs) {
-    const r = ratio(composite(ruleColorRgba(sel), INK), INK);
-    assert.ok(r >= min, `${sel} is ${r.toFixed(2)}:1 on ${INK} (needs ${min}:1)`);
+    const r = ratio(composite(ruleColorRgba(sel), FOOTER_BG), FOOTER_BG);
+    assert.ok(r >= min, `${sel} is ${r.toFixed(2)}:1 on ${FOOTER_BG} (needs ${min}:1)`);
   }
 });
 
@@ -133,9 +142,18 @@ test("no content is gated behind entrance-reveal machinery", () => {
   // The entrance-reveal system was removed outright: nothing may reintroduce
   // opacity/observer gating that could hide content (reveal classes in
   // components, or data-reveal hooks) without also restoring its safeguards.
+  // app.jsx and icons.jsx are in the sweep too — app.jsx owns Hero, Footer
+  // and the App-level IntersectionObserver, i.e. the most likely home for a
+  // reintroduction, and scanning only components/ left it unchecked.
   const componentDir = path.join(__dirname, "../components");
-  for (const f of fs.readdirSync(componentDir)) {
-    const src = fs.readFileSync(path.join(componentDir, f), "utf8");
+  const files = [
+    ...fs.readdirSync(componentDir).map((f) => path.join(componentDir, f)),
+    path.join(__dirname, "../app.jsx"),
+    path.join(__dirname, "../icons.jsx"),
+  ];
+  for (const file of files) {
+    const f = path.basename(file);
+    const src = fs.readFileSync(file, "utf8");
     assert.ok(!src.includes("data-reveal"), `${f} reintroduces data-reveal gating`);
     assert.ok(!/className=\{?[^}\n]*\breveal\b/.test(src), `${f} reintroduces a reveal class`);
   }

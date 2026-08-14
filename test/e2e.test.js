@@ -96,13 +96,16 @@ function launchFailed(t) {
 }
 
 // Collect console errors/warnings and page crashes — a hydration mismatch
-// surfaces here and nowhere else. The 404 page's own document status is the
-// one expected "Failed to load resource" entry.
-function watch(page) {
+// surfaces here and nowhere else. `allow404` is opt-in for the unknown-route
+// test only, whose own DOCUMENT is the one expected "Failed to load
+// resource" entry; on every other page a 404 console error means a missing
+// bundle/font/variant, exactly what this gate exists to catch (a global
+// filter silently waived all of those).
+function watch(page, { allow404 = false } = {}) {
   const problems = [];
   page.on("console", (m) => {
     if (m.type() !== "error" && m.type() !== "warning") return;
-    if (/the server responded with a status of 404/.test(m.text())) return;
+    if (allow404 && /the server responded with a status of 404/.test(m.text())) return;
     problems.push(`console.${m.type()}: ${m.text()}`);
   });
   page.on("pageerror", (e) => problems.push(`pageerror: ${e}`));
@@ -148,7 +151,7 @@ test("home hydrates cleanly and navigates to an article and back", { skip }, asy
 test("unknown route renders the friendly 404 with noindex", { skip }, async (t) => {
   if (launchFailed(t)) return;
   const page = await (await browser.newContext()).newPage();
-  const problems = watch(page);
+  const problems = watch(page, { allow404: true });
   const res = await page.goto(base + "/this-route-does-not-exist", { waitUntil: "networkidle" });
   assert.equal(res.status(), 404);
   assert.equal(await page.textContent("h1"), "Page not found");

@@ -202,6 +202,54 @@ test("validateArticle rejects a non-string cover (path.join would kill the boot)
   assert.doesNotThrow(() => schema.validateArticle({ ...base, cover: "news/x/cover.jpg" }));
 });
 
+test("validateArticle enforces the documented rules the corpus previously missed", () => {
+  const base = { slug: "x", date: "2026-01-01", dateLabel: "d", title: "t", excerpt: "e", body: ["b"] };
+  // Asset paths must stay inside the article's own folder, lowercase charset.
+  assert.throws(() => schema.validateArticle({ ...base, cover: "news/other/cover.jpg" }), /invalid cover path/);
+  assert.throws(() => schema.validateArticle({ ...base, cover: "news/x/../../etc/passwd" }), /invalid cover path/);
+  assert.throws(() => schema.validateArticle({ ...base, cover: "news/x/IMG_1234.JPG" }), /invalid cover path/);
+  // sources shape + scheme.
+  assert.throws(() => schema.validateArticle({ ...base, sources: [{ href: "javascript:alert(1)", label: "x" }] }), /not http/);
+  assert.throws(() => schema.validateArticle({ ...base, sources: ["https://a.example"] }), /invalid sources entry/);
+  // Control characters — now including body paragraphs and keywords (they
+  // reach the feeds and the article:* meta).
+  assert.throws(() => schema.validateArticle({ ...base, title: "a\x0Bb" }), /control character/);
+  assert.throws(() => schema.validateArticle({ ...base, body: ["ok", "bad\x01"] }), /control character in body\[1\]/);
+  assert.throws(() => schema.validateArticle({ ...base, keywords: ["ok", "bad\x02"] }), /control character in a keyword/);
+  // videoWidth/videoHeight and coverWidth/coverHeight: positive, set together.
+  assert.throws(() => schema.validateArticle({ ...base, videoWidth: 1280 }), /together/);
+  assert.throws(() => schema.validateArticle({ ...base, coverWidth: 100 }), /together/);
+  assert.throws(() => schema.validateArticle({ ...base, coverWidth: -5, coverHeight: 10 }), /invalid coverWidth/);
+  assert.doesNotThrow(() => schema.validateArticle({ ...base, coverWidth: 2048, coverHeight: 1536 }));
+  // Placement indices must land on a real paragraph.
+  assert.throws(() => schema.validateArticle({ ...base, videoAfter: 1, video: "news/x/video.mp4" }), /videoAfter/);
+  assert.throws(
+    () => schema.validateArticle({ ...base, photos: [{ src: "news/x/p.jpg", after: 7 }] }),
+    /after/
+  );
+});
+
+// ---- C14: publications obey the rules PUBLICATIONS.md promises --------------
+// The doc long claimed links/year/award-vs-type rules that nothing enforced;
+// validatePublications now throws at boot/build, and this corpus locks it.
+
+test("validatePublications enforces the PUBLICATIONS.md rules", () => {
+  const { validatePublications } = server;
+  const good = {
+    kind: "journal", venue: "V", year: "2026", title: "T", authors: "A, B.",
+    citation: "c", links: [{ label: "DOI", href: "https://doi.org/10.1/x" }],
+  };
+  assert.doesNotThrow(() => validatePublications([good]));
+  assert.throws(() => validatePublications([{ ...good, links: [] }]), /non-empty array/);
+  assert.throws(() => validatePublications([{ ...good, links: [{ label: "x", href: "http://a" }] }]), /https/);
+  assert.throws(() => validatePublications([{ ...good, year: 2026 }]), /STRING/);
+  assert.throws(() => validatePublications([{ ...good, award: "Best", type: "Thesis" }]), /mutually exclusive/);
+  assert.throws(() => validatePublications([{ ...good, title: "" }]), /title/);
+  // And the REAL data passes (it already loaded at require time — this makes
+  // the guarantee explicit).
+  assert.doesNotThrow(() => validatePublications(loadDataWindow().PROFILE.publications));
+});
+
 test("loadArticleMeta skips an invalid article (returns null, fails loudly)", () => {
   // Same temp-dir isolation as the divergent-slug case above.
   const base = fs.mkdtempSync(path.join(os.tmpdir(), "consistency-"));
@@ -261,6 +309,13 @@ test("IndexNow key file, content, allowlist and workflow agree", async () => {
   );
   const wf = fs.readFileSync(path.join(ROOT, ".github", "workflows", "indexnow.yml"), "utf8");
   assert.ok(wf.includes(`KEY = "${key}"`), "indexnow.yml KEY drifted from the key file");
+  // The workflow's HOST is the fifth hardcoded copy of a fact site.config.js
+  // owns — a domain move that misses it would poll the OLD domain's sitemap
+  // forever and ping IndexNow for the wrong site.
+  assert.ok(
+    wf.includes(`HOST = "${new URL(SITE.url).host}"`),
+    "indexnow.yml HOST drifted from site.config.js url"
+  );
   // And the wiring end-to-end: the live server serves the proof.
   const res = await request(base, `/${keyFiles[0]}`);
   assert.equal(res.status, 200);
