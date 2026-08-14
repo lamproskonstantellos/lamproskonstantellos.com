@@ -254,9 +254,10 @@ function jsonLdScript(obj) {
     .replace(/\u2029/g, "\\u2029");
 }
 
-// Built once at startup. Article folders and the esbuild asset map only change
-// between deploys, and every deploy starts a fresh process - so there is no
-// need to hit the filesystem on each request.
+// Article/meta state is built once at startup: article folders only change
+// between deploys, and every deploy starts a fresh process. The ONE deliberate
+// per-request filesystem touch is currentAssetMap()'s fs.stat of the esbuild
+// manifest (per HTML render, for `npm run watch` freshness — see below).
 const ARTICLE_SLUGS = discoverArticleSlugs();
 // Prototype-less maps: these are looked up with an attacker-controlled key
 // (the URL slug), and on a plain object literal ARTICLE_META["__proto__"] /

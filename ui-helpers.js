@@ -1,10 +1,13 @@
 /* ============================================================
    ui-helpers.js — shared UI logic (share links, scroll-spy,
-   publications filters/grouping, hero joiner)
+   publications filters/grouping, hero joiner, responsive image
+   variants: widths, cap, srcset builder, sizes attributes)
    ------------------------------------------------------------
    Pure functions behind the article share row, the homepage
    scroll-spy nav, the /publications filter pills + year groups,
-   and the hero headline joiners. No React, no DOM, no Node APIs
+   the hero headline joiners, and the responsive-image vocabulary
+   shared by <Picture>, the server's preloads, the static build
+   and scripts/optimize-images.js. No React, no DOM, no Node APIs
    — so the logic loads identically in the browser (window
    globals) and in Node (require) and is unit-testable without
    compiling JSX, exactly like routes.js / site.config.js.

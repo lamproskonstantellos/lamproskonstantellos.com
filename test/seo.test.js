@@ -1,7 +1,8 @@
 "use strict";
 
-// SEO / meta / feed correctness against the relevant specs, plus the status
-// and canonical truth fixes from Phase 4.
+// SEO / meta / feed correctness against the relevant specs, plus route
+// status/canonical truth: every route must serve the status its metadata
+// claims (200 with a self-canonical, or 404 with noindex and no canonical).
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert");

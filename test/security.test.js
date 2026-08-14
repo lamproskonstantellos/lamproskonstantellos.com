@@ -1,8 +1,10 @@
 "use strict";
 
 // Security & availability: hostile requests must get a clean status code and
-// must never crash the process. Each case below crashed or could corrupt
-// output before the Phase 3 fixes (proven in scratch/).
+// must never crash the process. Each case locks a once-real failure mode —
+// e.g. decodeURIComponent("/%zz") threw and killed the process, a malformed
+// Host header crashed `new URL`, and encoded traversals that re-entered the
+// root reached private files.
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert");
