@@ -8,6 +8,8 @@
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert");
+const fs = require("node:fs");
+const path = require("node:path");
 const { start, stop, request, rawRequest } = require("./helper");
 
 let base, port;
@@ -194,6 +196,28 @@ test("an unlisted root path is not served", async () => {
   for (const p of ["/tmp-audit-stray.txt", "/notes.txt", "/deploy.sh", "/backup.sql"]) {
     const res = await request(base, p);
     assert.equal(res.status, 404, `${p} must 404`);
+  }
+});
+
+// The extensionless variant exercises the OTHER half of the defense: an
+// extensionless root path passes the path screen (it could be a clean SPA
+// URL like /news), so if a real file with that name exists at the root, only
+// the serve branch's allowlist check stands between it and the response.
+// The fixture is a real throwaway file at the repo root — gitignored as
+// tmp-audit-*, and outside every directory the parity build copies, so it
+// cannot race the static-build tests.
+test("an existing but unlisted extensionless root file is not served", async () => {
+  const fixture = path.join(__dirname, "..", "tmp-audit-rootfile");
+  fs.writeFileSync(fixture, "MUST-NEVER-BE-SERVED\n");
+  try {
+    const res = await request(base, "/tmp-audit-rootfile");
+    assert.equal(res.status, 404, "an unlisted real root file must 404");
+    assert.ok(
+      !res.body.toString("utf8").includes("MUST-NEVER-BE-SERVED"),
+      "the file's contents leaked into the response"
+    );
+  } finally {
+    fs.rmSync(fixture, { force: true });
   }
 });
 

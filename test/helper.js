@@ -12,12 +12,20 @@ const { server } = require("../server.js");
 
 const GOLDEN_DIR = path.join(__dirname, "golden");
 
-// Content-hashed dist names and the per-boot ?v= cache-buster are not stable
-// across builds/boots, so mask them before snapshotting structure.
+// Content-hashed dist names, the per-boot ?v= cache-buster, and the footer's
+// current copyright year are not stable across builds/boots/years, so mask
+// them before snapshotting structure. (Without the year mask every golden
+// expired at midnight on Jan 1 — a guaranteed red CI on the first push of the
+// year, for a change nobody made. React separates the adjacent text nodes
+// with a <!-- --> marker, hence the optional comment in the pattern.)
+// The >< line-breaking puts each tag on its own line so a golden mismatch
+// diff points at the tag that changed instead of one multi-kilobyte line.
 function normalizeHtml(s) {
   return String(s)
     .replace(/(\/dist\/[^"?]*?)-[A-Z0-9]{8}(\.js)/g, "$1-HASH$2")
-    .replace(/\?v=[^"'&\s]*/g, "?v=V");
+    .replace(/\?v=[^"'&\s]*/g, "?v=V")
+    .replace(/(©\s*(?:<!-- -->)?\s*)\d{4}\b/g, "$1YEAR")
+    .replace(/></g, ">\n<");
 }
 
 // Compare `actual` against test/golden/<name>. UPDATE_GOLDEN=1 (re)writes the
@@ -74,6 +82,10 @@ function start() {
 }
 
 function stop() {
+  // Reset the memoized listen promise: a later start() in the same process
+  // (another test file sharing the module cache) must re-listen instead of
+  // resolving to a port the server no longer listens on.
+  listening = null;
   return new Promise((resolve) => server.close(resolve));
 }
 

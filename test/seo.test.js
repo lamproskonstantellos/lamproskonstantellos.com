@@ -69,6 +69,24 @@ test("trailing-slash URLs redirect to the slash-less form", async () => {
   assert.equal((await request(base, "/")).status, 200);
 });
 
+// The ENCODED-slash forms of the same URLs. The redirect guard fires on the
+// DECODED path, so stripping the encoded pathname string missed %2F: for
+// GET /news%2F nothing was stripped and Location echoed the request target
+// itself — a permanently-cacheable 301 self-loop. The Location must land on
+// the slash-less canonical form, decoded.
+test("encoded trailing slash (%2F) redirects land on the slash-less form", async () => {
+  for (const [from, to] of [
+    ["/news%2F", "/news"],
+    ["/news/%2F", "/news"],
+    [`/news/${ARTICLE}%2F`, `/news/${ARTICLE}`],
+    ["/%2F", "/"],
+  ]) {
+    const res = await request(base, from);
+    assert.equal(res.status, 301, `${from} should 301`);
+    assert.equal(res.headers["location"], to, `${from} should point at ${to}`);
+  }
+});
+
 // ---- Every 200 route is self-consistent (title/canonical/og:url) -----------
 
 test("200 routes have self-consistent canonical, og:url, title", async () => {

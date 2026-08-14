@@ -14,23 +14,61 @@ permissions:
 # superseded run instead of building the same commit twice. Both refs are
 # normalized to the BARE branch name so the two events share one group:
 # github.head_ref is the PR's head branch (empty on push), github.ref_name is
-# the bare branch on push. (github.ref alone is refs/heads/<branch> vs
-# refs/pull/<n>/merge, and pull_request.head.ref vs github.ref mixes bare and
-# refs/-prefixed forms — both earlier keys split the pair into two groups.)
+# the bare branch on push. The head-repo segment keeps a fork PR whose branch
+# happens to share a name with an in-repo branch (or with another fork's) in
+# its own group instead of cancelling a stranger's run. main never
+# self-cancels: a queued run on main always represents a newer commit worth
+# testing to completion, and a cancelled main run would leave a red X on the
+# default branch for a build that was never actually broken.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # Backstop for a hung step (a wedged browser launch, a stuck network
+    # call): the whole pipeline normally finishes in ~3 minutes.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
+      # The sharp encode pass (webp/avif/og variants for every image) is by
+      # far the slowest build step. All of its outputs are pure functions of
+      # (source image bytes, encoder settings), so they are cached under a
+      # key hashed from exactly those inputs. Exact-key hits only - NO
+      # restore-keys: a partial restore plus the freshen step below would
+      # pass stale variants off as fresh.
+      - name: Cache optimized image variants
+        id: image-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/*.webp
+            **/*.avif
+            news/*/cover-og.jpg
+            .optimize-images-stamp.json
+          key: image-variants-v1-${{ hashFiles('**/*.jpg', '**/*.jpeg', '**/*.png', 'ui-helpers.js', 'scripts/optimize-images.js') }}
+
+      # optimize-images decides freshness by mtime (variant >= source), but a
+      # fresh checkout stamps every source with "now" while the cache restores
+      # the variants with their archived (older) mtimes - so a restored cache
+      # would be regenerated from scratch anyway. On an exact key hit the
+      # variant contents are known to match the sources byte-for-byte (the key
+      # hashes the sources and settings), so re-stamping them newer is safe.
+      - name: Freshen cached image variants
+        if: steps.image-cache.outputs.cache-hit == 'true'
+        run: >
+          find . -path ./node_modules -prune -o
+          \( -name '*.webp' -o -name '*.avif' -o -name 'cover-og.jpg' \)
+          -type f -print0 | xargs -0 -r touch
+
       - uses: actions/setup-node@v4
         with:
-          # Active LTS. Keep in step with the Cloudflare Pages NODE_VERSION
-          # env var (README, "Cloudflare Pages settings").
-          node-version: "22"
+          # Single source of truth for the Node major: .nvmrc. Keep it in
+          # step with the Cloudflare Pages NODE_VERSION env var (README,
+          # "Cloudflare Pages settings").
+          node-version-file: ".nvmrc"
           cache: "npm"
       - run: npm ci
       - run: npm run build

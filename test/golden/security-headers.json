@@ -5,5 +5,6 @@
   "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
   "permissions-policy": "camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=()",
   "cross-origin-opener-policy": "same-origin",
+  "cross-origin-resource-policy": "same-origin",
   "content-security-policy": "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'"
 }
