@@ -21,6 +21,13 @@ defineArticle({
     "Greece",
   ],
   articleSection: "Renewable Energy",
+  // JSON-LD `about` entities: sameAs points each topic at its canonical page
+  // so search engines resolve the CONCEPT, not just the keyword string.
+  topics: [
+    { name: "Grid energy storage", sameAs: "https://en.wikipedia.org/wiki/Grid_energy_storage" },
+    { name: "Photovoltaics", sameAs: "https://en.wikipedia.org/wiki/Photovoltaics" },
+    { name: "Curtailment (electricity)", sameAs: "https://en.wikipedia.org/wiki/Curtailment_(electricity)" },
+  ],
   cover: "news/intersolar-europe-2026/cover.jpg",
   body: [
     "From 23–25 June 2026, I attended **Intersolar Europe** and the wider **The smarter E Europe** in Munich, the umbrella event that brings together four co-located exhibitions: **Intersolar Europe** for solar, **ees Europe** for energy storage, **Power2Drive Europe** for charging infrastructure and e-mobility, and **EM-Power Europe** for energy management. According to the organisers, the event gathered around 105,000 trade visitors from 163 countries and 2,650 exhibitors from 52 countries, under the theme \"Renewables 24/7: Secure Energy for a Changing World\".",

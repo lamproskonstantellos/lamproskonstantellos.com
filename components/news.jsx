@@ -30,7 +30,11 @@ function NewsCard({ article, navigate, from, headingLevel = "h3" }) {
               height="400"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
-          : <div className="ph">[ news/{article.slug}/cover.jpg ]</div>}
+          : /* Cover-less fallback: purely decorative hatch (aria-hidden and
+               empty — the card's accessible name is the title). The old
+               "[ news/<slug>/cover.jpg ]" text put an internal filesystem
+               path in front of visitors. */
+            <div className="ph" aria-hidden="true" />}
       </div>
       <div className="body">
         <div className="meta">
@@ -267,7 +271,12 @@ function ArticleShare({ article }) {
   // the mounted guard markCopied armed a fresh 1.8s timer nothing would clear.
   const mounted = React.useRef(true);
 
-  React.useEffect(() => () => { mounted.current = false; clearTimeout(copyTimer.current); }, []);
+  React.useEffect(() => {
+    // Body re-arms the flag: a cleanup+re-run cycle (StrictMode
+    // double-invoke, future reusable state) must not leave it stuck false.
+    mounted.current = true;
+    return () => { mounted.current = false; clearTimeout(copyTimer.current); };
+  }, []);
 
   const markCopied = () => {
     if (!mounted.current) return;
@@ -282,7 +291,14 @@ function ArticleShare({ article }) {
     copyTextToClipboard(url).then((ok) => { if (ok) markCopied(); });
   };
 
-  const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
+  // Mount-gated, not a render-time capability read: the pre-rendered markup
+  // is built where navigator does not exist, so deciding during render would
+  // make hydration disagree with the server HTML on share-capable devices.
+  // The button appearing right after hydration is the standard trade.
+  const [canNativeShare, setCanNativeShare] = React.useState(false);
+  React.useEffect(() => {
+    if (navigator.share) setCanNativeShare(true);
+  }, []);
   const nativeShare = () => {
     // Rejects with AbortError when the user dismisses the sheet — not an error.
     navigator.share({ title: article.title, url }).catch(() => {});
@@ -297,17 +313,17 @@ function ArticleShare({ article }) {
         rel="noopener noreferrer"
         aria-label="Share on LinkedIn"
       >
-        <Icon.brandLinkedin style={{ width: 14, height: 14 }} /> LinkedIn
+        <Icon.brandLinkedin /> LinkedIn
       </a>
       <button type="button" className={copied ? "copied" : ""} onClick={copyUrl}>
         {copied
-          ? <Icon.check style={{ width: 14, height: 14 }} />
-          : <Icon.link style={{ width: 14, height: 14 }} />}
+          ? <Icon.check />
+          : <Icon.link />}
         {copied ? "Copied!" : "Copy link"}
       </button>
       {canNativeShare && (
         <button type="button" onClick={nativeShare}>
-          <Icon.arrowUR style={{ width: 14, height: 14 }} /> Share
+          <Icon.arrowUR /> Share
         </button>
       )}
       <span className="sr-only" aria-live="polite">
@@ -357,7 +373,7 @@ function Article({ slug, from, navigate }) {
       <div className="page article">
         {backLink}
         <h1>Article not found</h1>
-        <p style={{ color: "var(--muted)" }}>
+        <p className="muted-note">
           This article may have moved, or never existed.
         </p>
       </div>
@@ -484,15 +500,51 @@ function Article({ slug, from, navigate }) {
         </div>
       )}
       <div className="article-body">
-        {article.body.map((p, i) => (
-          <React.Fragment key={i}>
-            <p>{renderInline(p)}</p>
-            {(inlineAfter.get(i) || []).map((photo, j) =>
-              renderInlineFigure(photo, `fig-${i}-${j}`)
-            )}
-            {article.video && videoAfter === i && renderVideo()}
-          </React.Fragment>
-        ))}
+        {/* Consecutive "• " entries render as ONE real <ul> so assistive
+            tech announces "list, N items" instead of N bare paragraphs (the
+            authored body keeps the literal bullets — see news/README.md; the
+            glyph is stripped here and the list marker takes over). A figure
+            or the video anchored to an index INSIDE a run splits the list
+            there: "after paragraph i" placement wins. */}
+        {(() => {
+          const isBullet = (s) => typeof s === "string" && s.startsWith("• ");
+          const attachedAt = (i) =>
+            (inlineAfter.get(i) || []).length > 0 || (article.video && videoAfter === i);
+          const blocks = [];
+          for (let i = 0; i < article.body.length; i++) {
+            if (isBullet(article.body[i])) {
+              const items = [i];
+              while (
+                i + 1 < article.body.length &&
+                isBullet(article.body[i + 1]) &&
+                !attachedAt(i)
+              ) {
+                i += 1;
+                items.push(i);
+              }
+              blocks.push({ list: items, last: i });
+            } else {
+              blocks.push({ index: i, last: i });
+            }
+          }
+          return blocks.map((b) => (
+            <React.Fragment key={b.list ? `ul-${b.list[0]}` : `p-${b.index}`}>
+              {b.list ? (
+                <ul>
+                  {b.list.map((i) => (
+                    <li key={i}>{renderInline(article.body[i].slice(2))}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>{renderInline(article.body[b.index])}</p>
+              )}
+              {(inlineAfter.get(b.last) || []).map((photo, j) =>
+                renderInlineFigure(photo, `fig-${b.last}-${j}`)
+              )}
+              {article.video && videoAfter === b.last && renderVideo()}
+            </React.Fragment>
+          ));
+        })()}
       </div>
       {article.video && videoAfter === null && renderVideo()}
       {galleryPhotos.length > 0 && (

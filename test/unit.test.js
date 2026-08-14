@@ -18,6 +18,7 @@ const {
   isValidSpaRoute,
   computePageMeta,
   isPrivatePath,
+  checkRealPathContained,
   DEPLOY_VERSION,
 } = require("../server.js");
 
@@ -73,7 +74,7 @@ test("cacheHeaderFor classes", () => {
 test("isPrivatePath corpus: private stays private, public stays public", () => {
   const privates = [
     "/server.js", "/SERVER.JS",             // denylist, case-insensitive
-    "/feeds.js", "/build-static.js", "/build.config.js",
+    "/ssr.js", "/feeds.js", "/build-static.js", "/build.config.js",
     "/package.json", "/package-lock.json", "/LICENSE",
     "/dist/manifest.json",
     "/scripts/optimize-images.js", "/test/unit.test.js", "/node_modules/x.js",
@@ -102,6 +103,37 @@ test("isPrivatePath corpus: private stays private, public stays public", () => {
   ];
   for (const p of publics) {
     assert.equal(isPrivatePath(p), false, `${p} must be public`);
+  }
+});
+
+// ---- checkRealPathContained -------------------------------------------------
+// Symlink containment on a throwaway temp tree: a symlink whose target
+// resolves OUTSIDE the root must be refused, links and files inside it must
+// pass. (The request handler wires a false result to a 403.)
+
+test("checkRealPathContained: symlinks cannot escape the root", async (t) => {
+  const os = require("os");
+  const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "contain-")));
+  const root = path.join(base, "root");
+  const outside = path.join(base, "outside.txt");
+  fs.mkdirSync(path.join(root, "sub"), { recursive: true });
+  fs.writeFileSync(outside, "secret");
+  fs.writeFileSync(path.join(root, "inside.txt"), "public");
+  const check = (p) => new Promise((r) => checkRealPathContained(p, root, r));
+  try {
+    try {
+      fs.symlinkSync(outside, path.join(root, "sub", "escape.txt"));
+      fs.symlinkSync(path.join(root, "inside.txt"), path.join(root, "sub", "alias.txt"));
+    } catch {
+      return t.skip("cannot create symlinks here");
+    }
+    assert.equal(await check(path.join(root, "inside.txt")), true, "regular file must pass");
+    assert.equal(await check(path.join(root, "sub", "alias.txt")), true, "in-root symlink must pass");
+    assert.equal(await check(path.join(root, "sub", "escape.txt")), false, "escaping symlink must fail");
+    assert.equal(await check(path.join(root, "missing.txt")), false, "unresolvable path must fail");
+    assert.equal(await check(outside), false, "path outside the root must fail");
+  } finally {
+    fs.rmSync(base, { recursive: true, force: true });
   }
 });
 

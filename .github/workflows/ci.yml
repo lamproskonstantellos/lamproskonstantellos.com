@@ -11,12 +11,14 @@ permissions:
   contents: read
 
 # A push to a branch with an open PR fires both triggers; cancel the
-# superseded run instead of building the same commit twice. The group must be
-# keyed by the BRANCH for that to work: github.ref is refs/heads/<branch> on
-# push but refs/pull/<n>/merge on pull_request, so keying on it alone put the
-# two runs for the same commit in different groups and cancelled neither.
+# superseded run instead of building the same commit twice. Both refs are
+# normalized to the BARE branch name so the two events share one group:
+# github.head_ref is the PR's head branch (empty on push), github.ref_name is
+# the bare branch on push. (github.ref alone is refs/heads/<branch> vs
+# refs/pull/<n>/merge, and pull_request.head.ref vs github.ref mixes bare and
+# refs/-prefixed forms — both earlier keys split the pair into two groups.)
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:

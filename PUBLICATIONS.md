@@ -102,8 +102,8 @@ Two optional fields drive everything: **`type`** and **`kind`**.
 | `kind` | optional | `"journal"` / `"conference"` | Files a peer-reviewed entry under the **Journal articles** or **Conference papers** filter; without it a peer-reviewed entry counts as a conference paper. Ignored on typed entries |
 | `type` | optional | string | Navy badge text **and** what files the entry under **Theses & reports** (see above) |
 | `award` | optional | string | Gold badge text (e.g. an award); use instead of `type`, never together |
-| `citation` | optional | string | The exact IEEE-style reference the **Cite** button copies (pages, DOI, venue as published); when omitted the button falls back to a line assembled from the fields above |
-| `description` | optional | string | One-line summary under the authors |
+| `citation` | optional | string | The exact IEEE-style reference the **Cite** button copies (pages, DOI, venue as published) — **end it with the DOI** (`… doi: 10.xxxx/yyyy.`): the `/publications` JSON-LD extracts the DOI from exactly that tail position (see SEO notes). When omitted the button falls back to a line assembled from the fields above |
+| `description` | optional | string | One-line summary under the authors (also the place to explain e.g. an online-first year vs the printed issue year) |
 
 ## Where and how entries render
 
@@ -133,13 +133,28 @@ Two optional fields drive everything: **`type`** and **`kind`**.
 
 ## SEO notes
 
-- Publications have **no dedicated URL**, so there is no per-publication
-  JSON-LD or sitemap entry to maintain — nothing to do per entry.
+- **Every entry emits structured data.** The `/publications` page carries a
+  JSON-LD `ItemList` with one node per entry (built in `server.js` →
+  `PUBLICATIONS_ITEMLIST`), typed from your fields: `type` containing
+  "thesis" → `Thesis`, any other `type` → `Report`, otherwise
+  `ScholarlyArticle`. Getting the fields right is what keeps this block
+  truthful:
+  - **DOI** — extracted from the **tail** of `citation`
+    (`… doi: 10.xxxx/yyyy.` — trailing punctuation is stripped). A citation
+    without a DOI at the end, or a missing `citation`, silently drops the
+    `identifier`/`sameAs` from that entry's node (the first `links` href is
+    used as `sameAs` instead). Keep the DOI last, as the template shows.
+  - **Authors** — parsed from the visible `authors` line into one `Person`
+    node per author, so keep it in the `Surname, I., Surname, I., &
+    Surname, I. (YYYY)` shape the template uses. The full list ships to the
+    schema; never list fewer authors than the DOI registration.
+  - **Title** — must be unique across entries (a consistency test enforces
+    it; the list rows and the schema both key on it).
 - The `/publications` page's `<title>`, meta description, canonical URL, and
   breadcrumb JSON-LD are pre-rendered automatically. The meta description text
-  lives in `server.js` → `computePageMeta` (the `publications-list` branch);
-  refresh it only if the character of the list changes materially (e.g. a new
-  publication domain).
+  lives in `routes.js` (`PUBLICATIONS_DESCRIPTION` — shared by the server
+  render and the client head-sync); refresh it only if the character of the
+  list changes materially (e.g. a new publication domain).
 - Accurate titles/venues matter more than markup here: Google Scholar and the
   contact-section profile links (Scholar, ORCID, IEEE) are the canonical
   discovery surface for the papers themselves.

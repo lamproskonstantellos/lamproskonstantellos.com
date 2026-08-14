@@ -115,6 +115,25 @@
     if (article.topics && !Array.isArray(article.topics)) {
       throw new Error(`[article] "${article.slug}" has non-array topics`);
     }
+    // Each topic becomes a JSON-LD `about` entity ({ name, sameAs }) with no
+    // other consumer to catch a malformed entry — a bare string (the natural
+    // mistake, since the neighbouring `keywords` IS a string array) would
+    // silently ship nameless Thing nodes, and a null entry would throw at
+    // REQUEST time inside computePageMeta instead of loudly at load.
+    if (Array.isArray(article.topics)) {
+      for (const t of article.topics) {
+        if (!t || typeof t !== "object" || typeof t.name !== "string" || typeof t.sameAs !== "string") {
+          throw new Error(
+            `[article] "${article.slug}" has an invalid topics entry (expected { name, sameAs })`
+          );
+        }
+        if (!/^https?:\/\//.test(t.sameAs)) {
+          throw new Error(
+            `[article] "${article.slug}" has a topics sameAs that is not http(s): "${t.sameAs}"`
+          );
+        }
+      }
+    }
     // The cover path is joined with the article folder on the server, so a
     // non-string value would throw in path.join at require time and kill the
     // whole process instead of skipping the one bad article.

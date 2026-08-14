@@ -128,9 +128,13 @@ test("og:image is a per-article 1200x630 social crop, not the raw cover", async 
   );
   assert.match(article, /<meta property="og:image:width" content="1200" \/>/);
   assert.match(article, /<meta property="og:image:height" content="630" \/>/);
+  // Scoped to <head>: the pre-rendered BODY legitimately renders the raw
+  // cover as the on-page <img> — only the share metadata must never point
+  // at it.
+  const head = article.slice(0, article.indexOf("</head>"));
   assert.ok(
-    !article.includes(`/news/${ARTICLE}/cover.jpg`),
-    "article shell must not reference the raw cover as a share image"
+    !head.includes(`/news/${ARTICLE}/cover.jpg`),
+    "article head must not reference the raw cover as a share image"
   );
 });
 
@@ -322,8 +326,13 @@ test("og:title is the bare headline; <title> keeps the site-name suffix", async 
   const news = (await request(base, "/news")).body.toString("utf8");
   assert.match(news, /<meta property="og:type" content="website"/);
   assert.match(news, /<meta property="og:title" content="News" \/>/);
+  // Home's og:title is the JOB TITLE: og:site_name already renders the name
+  // as its own card line, so name-as-og:title printed it twice.
   const home = (await request(base, "/")).body.toString("utf8");
-  assert.match(home, /<meta property="og:title" content="Lampros Konstantellos" \/>/);
+  assert.match(home, /<meta property="og:title" content="Electrical &amp; Computer Engineer" \/>/);
+  const siteName = home.match(/<meta property="og:site_name" content="([^"]+)"/)[1];
+  const ogTitle = home.match(/<meta property="og:title" content="([^"]+)"/)[1];
+  assert.notEqual(ogTitle, siteName, "home og:title must not duplicate og:site_name");
 });
 
 // ---- Sitemap loc set exactness ----------------------------------------------
@@ -342,7 +351,7 @@ test("sitemap <loc> set is exactly the three pages plus every valid article", as
 
 // ---- /publications structured data ------------------------------------------
 
-test("/publications emits a ScholarlyArticle ItemList with DOIs", async () => {
+test("/publications emits a typed ItemList with DOIs and full author lists", async () => {
   const html = (await request(base, "/publications")).body.toString("utf8");
   const block = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1];
   const graph = JSON.parse(block.replace(/\\u003c/g, "<"))["@graph"];
@@ -353,5 +362,21 @@ test("/publications emits a ScholarlyArticle ItemList with DOIs", async () => {
     .map((e) => e.item.identifier && e.item.identifier.value)
     .filter(Boolean);
   assert.ok(doi.includes("10.30420/566656006"), "IEEE PESS DOI missing from ItemList");
-  assert.ok(doi.every((d) => /^10\.\S+$/.test(d) && !d.endsWith(".")), "malformed DOI in ItemList");
+  // Registrant/suffix shape and NO trailing punctuation of any kind — a
+  // comma- or paren-suffixed capture 404s at doi.org.
+  assert.ok(
+    doi.every((d) => /^10\.\d{4,9}\/\S+$/.test(d) && !/[.,;)\]]$/.test(d)),
+    "malformed DOI in ItemList"
+  );
+  // Co-authored papers carry their FULL author list (sole-author nodes
+  // contradicted the visible page and the DOI registration), and the
+  // non-peer-reviewed entries are typed by their category, not as articles.
+  const pess = list.itemListElement.find(
+    (e) => e.item.identifier && e.item.identifier.value === "10.30420/566656006"
+  ).item;
+  assert.equal(pess["@type"], "ScholarlyArticle");
+  assert.ok(Array.isArray(pess.author) && pess.author.length === 5, "PESS paper has 5 authors");
+  const types = list.itemListElement.map((e) => e.item["@type"]);
+  assert.ok(types.includes("Thesis"), "Master's thesis must be typed Thesis");
+  assert.ok(types.includes("Report"), "internship report must be typed Report");
 });

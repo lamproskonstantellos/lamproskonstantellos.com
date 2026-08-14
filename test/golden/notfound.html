@@ -52,18 +52,19 @@
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
-<!-- Fallback for clients that do not run JavaScript: the visible page is
-     rendered client-side, so without this a JS-off visitor sees a blank body.
-     Kept identity-free (the name lives only in site.config.js). Only the
-     feeds are promised — the HTML routes render empty without JavaScript. -->
+<!-- The page content is pre-rendered into #root (ssr.js), so a JS-off
+     visitor sees and can navigate the full site — every link is a real
+     href the server answers. Only the interactive extras need JavaScript.
+     Kept identity-free (the name lives only in site.config.js). -->
 <noscript>
   <div class="noscript-note">
-    <p>This site needs JavaScript to display its pages. Without it, the news
-    articles are still available through the
-    <a href="/rss.xml">RSS feed</a> or the <a href="/feed.json">JSON feed</a>.</p>
+    <p>JavaScript is off — the site is still fully readable. Interactive
+    extras (the photo viewer, copy buttons, and list filters) need
+    JavaScript; the news are also available as an
+    <a href="/rss.xml">RSS feed</a> or a <a href="/feed.json">JSON feed</a>.</p>
   </div>
 </noscript>
-<div id="root"></div>
+<div id="root"><header class="site-header"><div class="site-header-inner"><a class="brand" href="/" aria-label="Lampros Konstantellos — home"><img class="brand-logo" src="/icon-192.png" alt="" width="36" height="36"/><span class="brand-text"><span class="brand-name">Lampros Konstantellos</span><span class="brand-role">Electrical &amp; Computer Engineer</span></span></a><nav class="nav"><a class="" href="/#about">About</a><a class="" href="/#publications">Publications</a><a class="" href="/#news">News</a><a class="" href="/#contact">Contact</a><a class="nav-cv" href="/lampros-konstantellos-cv.pdf" target="_blank" rel="noopener noreferrer" aria-label="Open CV (PDF, new tab)">CV</a></nav></div></header><main id="main-content" tabindex="-1"><div class="page notfound"><div class="notfound-code" aria-hidden="true">404</div><h1>Page not found</h1><p class="notfound-sub">This page may have moved, or never existed.</p><div class="notfound-actions"><a class="btn btn-primary" href="/">Home</a><a class="btn btn-ghost" href="/news">News</a><a class="btn btn-ghost" href="/publications">Publications</a><a class="btn btn-ghost" href="/#contact">Contact</a></div></div></main><footer class="site-footer"><div class="site-footer-inner"><div class="footer-top"><div class="footer-brand"><a class="footer-brand-link" href="/" aria-label="Lampros Konstantellos — home"><img class="footer-logo" src="/icon-192.png" alt="" width="40" height="40"/><span class="footer-brand-text"><span class="footer-name">Lampros Konstantellos</span><span class="footer-role">Electrical &amp; Computer Engineer</span></span></a><p class="footer-tagline">Exploring renewable energy, battery storage, grid flexibility, and electricity markets through engineering, modelling, and applied research.</p></div><nav class="footer-col" aria-label="Site map"><h2 class="footer-col-title">Explore</h2><a href="/#about">About</a><a href="/publications">Publications</a><a href="/news">News</a><a href="/#contact">Contact</a></nav><nav class="footer-col" aria-label="Connect"><h2 class="footer-col-title">Connect</h2><a href="https://www.linkedin.com/in/lampros-konstantellos/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a href="https://github.com/lamproskonstantellos" target="_blank" rel="noopener noreferrer">GitHub</a><a href="mailto:info@lamproskonstantellos.com" rel="noopener noreferrer">Email</a><a href="/rss.xml">RSS</a></nav></div><div class="footer-bottom"><span class="copy">© <!-- -->2026<!-- --> <!-- -->Lampros Konstantellos</span></div></div></footer></div>
 
 <script src="/vendor/react.production.min.js?v=V"></script>
 <script src="/vendor/react-dom.production.min.js?v=V"></script>

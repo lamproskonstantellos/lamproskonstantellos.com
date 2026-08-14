@@ -19,7 +19,13 @@ const WATCH = process.argv.includes("--watch");
 
 function writeManifest(metafile) {
   fs.mkdirSync(path.join(ROOT, "dist"), { recursive: true });
-  fs.writeFileSync(path.join(ROOT, "dist", "manifest.json"), JSON.stringify(metafile));
+  // Atomic replace (write + rename on the same filesystem): the dev server
+  // re-reads this file on an mtime change mid-request, and a plain truncating
+  // write left a window where it read half-written JSON.
+  const target = path.join(ROOT, "dist", "manifest.json");
+  const tmp = target + ".tmp";
+  fs.writeFileSync(tmp, JSON.stringify(metafile));
+  fs.renameSync(tmp, target);
 }
 
 (async () => {

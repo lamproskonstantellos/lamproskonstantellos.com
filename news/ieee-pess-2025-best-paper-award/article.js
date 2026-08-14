@@ -20,6 +20,12 @@ defineArticle({
     "Greece",
   ],
   articleSection: "Conferences and Awards",
+  // JSON-LD `about` entities: sameAs points each topic at its canonical page
+  // so search engines resolve the CONCEPT, not just the keyword string.
+  topics: [
+    { name: "Vehicle-to-grid", sameAs: "https://en.wikipedia.org/wiki/Vehicle-to-grid" },
+    { name: "Photovoltaic system", sameAs: "https://en.wikipedia.org/wiki/Photovoltaic_system" },
+  ],
   cover: "news/ieee-pess-2025-best-paper-award/cover.jpg",
   photos: [
     {

@@ -75,7 +75,64 @@
     }
   }
 
-  const api = { parseRoute, routeToPath, isValidSpaRoute, pageTitle };
+  // og:title / twitter:title — the bare social headline, WITHOUT the
+  // "- <site name>" suffix pageTitle carries (social cards render
+  // og:site_name on its own line, so a suffixed og:title printed the name
+  // twice). Home uses the JOB TITLE for the same reason: og:site_name
+  // already shows the name. Shared by computePageMeta (served HTML) and the
+  // client head-sync on SPA navigation. ctx: { jobTitle, articleTitle }.
+  function pageSocialTitle(route, ctx) {
+    switch (route && route.page) {
+      case "home":
+        return ctx.jobTitle;
+      case "news-list":
+        return "News";
+      case "publications-list":
+        return "Publications";
+      case "article":
+        return ctx.articleTitle || "Page not found";
+      default:
+        return "Page not found";
+    }
+  }
+
+  // Per-route meta description. Same dual consumers as pageSocialTitle.
+  // ctx: { defaultDescription, articleDescription }.
+  const NEWS_DESCRIPTION =
+    "Reflections from conferences, forums, awards, and projects in renewable energy, battery storage, grid flexibility, and electricity markets.";
+  // Covers ALL of the page's categories — the filter pills split into
+  // journals / conferences / theses & reports.
+  const PUBLICATIONS_DESCRIPTION =
+    "Journal and conference papers, theses, and reports on renewable energy, battery storage, PV, V2G, and grid simulation.";
+  function pageDescription(route, ctx) {
+    switch (route && route.page) {
+      case "news-list":
+        return NEWS_DESCRIPTION;
+      case "publications-list":
+        return PUBLICATIONS_DESCRIPTION;
+      case "article":
+        return ctx.articleDescription || ctx.defaultDescription;
+      default:
+        return ctx.defaultDescription;
+    }
+  }
+
+  // Robots directives — declared here (the shared route-truth module) so the
+  // client head-sync emits byte-identical values to the served HTML.
+  const ROBOTS_INDEX =
+    "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1";
+  const ROBOTS_NOINDEX = "noindex,follow";
+
+  const api = {
+    parseRoute,
+    routeToPath,
+    isValidSpaRoute,
+    pageTitle,
+    pageSocialTitle,
+    pageDescription,
+    ROBOTS_INDEX,
+    ROBOTS_NOINDEX,
+  };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

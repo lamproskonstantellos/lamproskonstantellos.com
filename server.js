@@ -5,9 +5,18 @@ const zlib = require("zlib");
 const crypto = require("crypto");
 const { URL } = require("url");
 const SITE_CFG = require("./site.config.js");
-const { parseRoute, isValidSpaRoute: routeIsValidSpa, pageTitle } = require("./routes.js");
+const {
+  parseRoute,
+  isValidSpaRoute: routeIsValidSpa,
+  pageTitle,
+  pageSocialTitle,
+  pageDescription,
+  ROBOTS_INDEX,
+  ROBOTS_NOINDEX,
+} = require("./routes.js");
 const { validateArticle, plainBody, escapeHtml } = require("./article-schema.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
+const { createSsrRenderer } = require("./ssr.js");
 // Shared responsive-image vocabulary (same module the browser loads), so the
 // preload's imagesrcset/imagesizes can never drift from what <Picture> renders.
 const { imageSrcset, HERO_IMG_SIZES, ARTICLE_COVER_SIZES, IMAGE_WIDTH_VARIANTS } = require("./ui-helpers.js");
@@ -313,22 +322,63 @@ const ARTICLES = ARTICLE_SLUGS.map((slug) => ARTICLE_META[slug]).filter(Boolean)
 const PUBLICATIONS = loadPublications();
 const PUBLICATION_YEARS = PUBLICATIONS.map((p) => Number(p.year)).filter(Number.isFinite);
 
+// The display form is "**Konstantellos, L.**, Vazakas, A., & Papadopoulos,
+// N.-A. (2026)" — strip the bold markers and the year, then split into
+// "Surname, I." pairs. A plain split(",") would cut between each surname and
+// its own initials; the reliable boundary is a comma-space followed by a NEW
+// surname — an uppercase letter with at least one lowercase letter after it
+// (initials like "L." or "N.-A." have none). Unicode classes so Kamacı /
+// Köpfer split correctly.
+function parsePublicationAuthors(authorsField) {
+  const plain = String(authorsField || "")
+    .replace(/\*\*/g, "")
+    .replace(/\s*\(\d{4}\)\s*$/, "")
+    .trim();
+  if (!plain) return [];
+  const parts = [];
+  for (const chunk of plain.split(/\s*&\s*/)) {
+    const names = chunk.split(/,\s*(?=\p{Lu}\p{Ll}[\p{L}'’-]*,\s)/u);
+    for (const n of names) {
+      const name = n.trim().replace(/,\s*$/, "");
+      if (name) parts.push(name);
+    }
+  }
+  return parts;
+}
+
 // /publications JSON-LD: the page carries the site's richest machine-readable
 // dataset (DOI-bearing peer-reviewed entries), so it is exposed as an
-// ItemList of ScholarlyArticle nodes rather than a bare BreadcrumbList.
-// Static data — built once at startup like PROFILE_JSONLD.
+// ItemList rather than a bare BreadcrumbList. Types follow the entry's own
+// category (the UI's badge distinction, kept in the machine-readable claim):
+// Thesis / Report for the non-peer-reviewed entries, ScholarlyArticle
+// otherwise. Static data — built once at startup like PROFILE_JSONLD.
 const PUBLICATIONS_ITEMLIST = {
   "@type": "ItemList",
   "itemListElement": PUBLICATIONS.map((p, i) => {
     // The DOI lives at the tail of the IEEE-style citation string
-    // ("… doi: 10.xxxx/yyyy."); the trailing period is citation punctuation,
-    // not part of the DOI.
-    const doiMatch = typeof p.citation === "string" && p.citation.match(/\bdoi:\s*(10\.\S+?)\.?\s*$/i);
+    // ("… doi: 10.xxxx/yyyy."); trailing punctuation of any kind is citation
+    // punctuation, not part of the DOI (a comma- or paren-suffixed capture
+    // would 404 at doi.org).
+    const doiMatch =
+      typeof p.citation === "string" && p.citation.match(/\bdoi:\s*(10\.\S+?)[.,;)\]]*\s*$/i);
+    // The full author list from the visible authors line — asserting sole
+    // authorship of co-authored, DOI-registered papers would contradict both
+    // the rendered page and the Crossref/Zenodo record.
+    const authors = parsePublicationAuthors(p.authors).map((name) => {
+      const node = { "@type": "Person", "name": name };
+      // Only the site owner's entry links back to this site.
+      if (name.toLowerCase().startsWith("konstantellos")) node.url = HOME_URL;
+      return node;
+    });
     const item = {
-      "@type": "ScholarlyArticle",
+      "@type": p.type
+        ? (/thesis/i.test(p.type) ? "Thesis" : "Report")
+        : "ScholarlyArticle",
       "headline": p.title,
       "datePublished": String(p.year),
-      "author": { "@type": "Person", "name": SITE_CFG.name, "url": HOME_URL },
+      "author": authors.length
+        ? authors
+        : { "@type": "Person", "name": SITE_CFG.name, "url": HOME_URL },
     };
     if (doiMatch) {
       item.identifier = { "@type": "PropertyValue", "propertyID": "DOI", "value": doiMatch[1] };
@@ -369,19 +419,53 @@ function assetManifestMtime() {
 function currentAssetMap() {
   const mtime = assetManifestMtime();
   if (mtime !== liveAssetMapMtime) {
-    liveAssetMapMtime = mtime;
-    liveAssetMap = loadAssetMap();
-    COMPRESSION_CACHE.clear();
+    // Commit BOTH fields only on a successful, non-empty load: committing the
+    // mtime first latched a failed read (loadAssetMap degrades to {}) as the
+    // current state, and the un-rewritten /dist/*.js references then 404'd on
+    // every render until the mtime changed AGAIN. scripts/build.js writes the
+    // manifest atomically (write + rename), so a torn read is already rare;
+    // this makes a failed one retry on the next render instead of sticking.
+    const next = loadAssetMap();
+    if (Object.keys(next).length > 0) {
+      liveAssetMap = next;
+      liveAssetMapMtime = mtime;
+      COMPRESSION_CACHE.clear();
+      // New bundles → the SSR renderer compiled over the old ones is stale.
+      ssrRenderer = undefined;
+    }
   }
   return liveAssetMap;
 }
 
-// Default robots directive for real, indexable routes: allow indexing and give
-// crawlers the large image/snippet previews. The not-found route overrides this
-// with a noindex directive (below) — an error page must not ask to be indexed.
-const ROBOTS_INDEX =
-  "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1";
-const ROBOTS_NOINDEX = "noindex,follow";
+// Lazy SSR renderer over the current bundles. `undefined` = not built yet
+// (or invalidated by a watch rebuild); `null` = unavailable (no compiled
+// bundles — e.g. `npm start` before any build), in which case pages serve
+// with an empty #root and the client bundle renders fresh, exactly the
+// pre-SSR behavior.
+let ssrRenderer;
+function ssrAppHtml(pathname) {
+  if (ssrRenderer === undefined) {
+    try {
+      ssrRenderer = createSsrRenderer({
+        assetMap: currentAssetMap(),
+        articleSlugs: VALID_ARTICLE_SLUGS,
+      });
+    } catch (e) {
+      console.error(`SSR pre-render unavailable — serving empty #root (${e.message})`);
+      ssrRenderer = null;
+    }
+  }
+  if (!ssrRenderer) return "";
+  try {
+    return ssrRenderer.renderApp(pathname);
+  } catch (e) {
+    console.error(`SSR render failed for ${pathname} — serving empty #root (${e.message})`);
+    return "";
+  }
+}
+
+// Robots directives live in routes.js (shared with the client head-sync);
+// ROBOTS_INDEX is the default for real routes, ROBOTS_NOINDEX the 404's.
 
 function computePageMeta(pathname) {
   // parseRoute is the shared route table (routes.js) — same matcher the client
@@ -399,10 +483,9 @@ function computePageMeta(pathname) {
       imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `${SITE_CFG.name} - ${SITE_CFG.jobTitle}`,
       ogType: "website",
-      // og:title without the "- <site name>" suffix pageTitle appends for the
-      // browser tab: social cards render og:site_name on its own line, so the
-      // suffixed form printed the name twice and truncated the headline.
-      socialTitle: SITE_CFG.name,
+      // Bare social headline (pageSocialTitle: the job title on home —
+      // og:site_name already renders the name as its own card line).
+      socialTitle: pageSocialTitle(route, titleCtx),
       jsonLd: PROFILE_JSONLD,
       preloadImage: HERO_PRELOAD_IMAGE,
       preloadImageSrcset: imageSrcset(SITE_CFG.heroImage, "avif"),
@@ -413,15 +496,14 @@ function computePageMeta(pathname) {
   if (route.page === "news-list") {
     return {
       title: pageTitle(route, titleCtx),
-      description:
-        "Reflections from conferences, forums, awards, and projects in renewable energy, battery storage, grid flexibility, and electricity markets.",
+      description: pageDescription(route, { defaultDescription: DEFAULT_DESCRIPTION }),
       url: `${SITE_CFG.url}/news`,
       image: DEFAULT_IMAGE,
       imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
       imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `News from ${SITE_CFG.name}`,
       ogType: "website",
-      socialTitle: "News",
+      socialTitle: pageSocialTitle(route, titleCtx),
       jsonLd: {
         "@context": "https://schema.org",
         "@graph": [
@@ -440,15 +522,14 @@ function computePageMeta(pathname) {
   if (route.page === "publications-list") {
     return {
       title: pageTitle(route, titleCtx),
-      description:
-        "Peer-reviewed journal and conference papers on renewable energy, battery storage, PV systems, V2G integration, grid simulation, and EV charging.",
+      description: pageDescription(route, { defaultDescription: DEFAULT_DESCRIPTION }),
       url: `${SITE_CFG.url}/publications`,
       image: DEFAULT_IMAGE,
       imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
       imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
       imageAlt: `Publications by ${SITE_CFG.name}`,
       ogType: "website",
-      socialTitle: "Publications",
+      socialTitle: pageSocialTitle(route, titleCtx),
       jsonLd: {
         "@context": "https://schema.org",
         "@graph": [
@@ -547,7 +628,7 @@ function computePageMeta(pathname) {
         ogType: "article",
         // Social cards want the bare headline: og:site_name already carries
         // the author's name on its own line.
-        socialTitle: article.title,
+        socialTitle: pageSocialTitle(route, { ...titleCtx, articleTitle: article.title }),
         // article:* Open Graph properties (published/modified time, author,
         // section, tags) let LinkedIn/Facebook/Slack surface the publish date
         // and topic on shares. All derived from already-validated article
@@ -591,7 +672,7 @@ function computePageMeta(pathname) {
     description: DEFAULT_DESCRIPTION,
     url: HOME_URL,
     canonical: null,
-    socialTitle: "Page not found",
+    socialTitle: pageSocialTitle(route, titleCtx),
     image: DEFAULT_IMAGE,
     imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
     imageHeight: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.height,
@@ -882,37 +963,55 @@ function renderHtml(templateHtml, pathname, { deployVersion, articleScripts, ass
     /((?:src|href)=")(\/(?!dist\/)[^"?]+\.(?:css|js))(")/g,
     `$1$2?v=${deployVersion}$3`
   );
-  return versioned;
+  // Full-body pre-render: <App /> for this pathname baked into #root (ssr.js)
+  // so non-JS consumers see the real page; the client hydrates it. Injected
+  // LAST — the app markup must not pass through the rewrites above — and via
+  // a function replacement (article prose can contain $-sequences). An empty
+  // string (SSR unavailable) leaves the shell exactly as before.
+  const appHtml = ssrAppHtml(pathname);
+  return appHtml
+    ? versioned.replace('<div id="root"></div>', () => `<div id="root">${appHtml}</div>`)
+    : versioned;
 }
 
 function serveIndex(req, res, filePath, pathname, statusCode = 200) {
   fs.readFile(filePath, "utf8", (err, html) => {
-    if (err) {
-      res.writeHead(404, {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
+    // Same rule as the request handler's stat callback: a throw in an async
+    // callback would unwind to uncaughtException with the response never
+    // written, silently hanging the socket until the request timeout. This
+    // callback runs the whole meta/render chain, so it answers 500 instead.
+    try {
+      if (err) {
+        res.writeHead(404, {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+        });
+        res.end("404 Not Found");
+        return;
+      }
+      const versioned = renderHtml(html, pathname, {
+        deployVersion: DEPLOY_VERSION,
+        articleScripts: ARTICLE_SCRIPTS,
+        assetMap: currentAssetMap(),
       });
-      res.end("404 Not Found");
-      return;
+      const contentType = "text/html; charset=utf-8";
+      // Cache compressed variants by CONTENT, not by path: a path key served
+      // stale compressed bytes after a template/data edit during `npm run
+      // watch` (identity clients got the fresh render, gzip/brotli clients
+      // the cached one), and gave every unknown 404 path its own entry
+      // although the rendered not-found page is identical for all of them.
+      // Hashing the rendered string keys equal bytes together and can never
+      // go stale.
+      const contentKey = crypto.createHash("sha1").update(versioned).digest("hex").slice(0, 16);
+      writeCompressed(req, res, {
+        "Content-Type": contentType,
+        "Cache-Control": cacheHeaderFor(req, contentType),
+        __status: statusCode,
+      }, versioned, `html:${contentKey}`);
+    } catch (e) {
+      console.error("serveIndex error:", (e && e.message) || e);
+      sendStatus(res, 500, "500 Internal Server Error");
     }
-    const versioned = renderHtml(html, pathname, {
-      deployVersion: DEPLOY_VERSION,
-      articleScripts: ARTICLE_SCRIPTS,
-      assetMap: currentAssetMap(),
-    });
-    const contentType = "text/html; charset=utf-8";
-    // Cache compressed variants by CONTENT, not by path: a path key served
-    // stale compressed bytes after a template/data edit during `npm run watch`
-    // (identity clients got the fresh render, gzip/brotli clients the cached
-    // one), and gave every unknown 404 path its own entry although the
-    // rendered not-found page is identical for all of them. Hashing the
-    // rendered string keys equal bytes together and can never go stale.
-    const contentKey = crypto.createHash("sha1").update(versioned).digest("hex").slice(0, 16);
-    writeCompressed(req, res, {
-      "Content-Type": contentType,
-      "Cache-Control": cacheHeaderFor(req, contentType),
-      __status: statusCode,
-    }, versioned, `html:${contentKey}`);
   });
 }
 
@@ -957,6 +1056,8 @@ function sendFile(req, res, filePath) {
   // brotli/gzip path below.
   if (!isCompressible(contentType)) {
     fs.stat(filePath, (err, stats) => {
+      // try/catch for the same socket-hang reason as serveIndex.
+      try {
       if (err || !stats.isFile()) {
         res.writeHead(404, {
           "Content-Type": "text/plain; charset=utf-8",
@@ -1041,6 +1142,10 @@ function sendFile(req, res, filePath) {
       stream.on("error", () => res.destroy());
       res.on("close", () => stream.destroy());
       stream.pipe(res);
+      } catch (e) {
+        console.error("sendFile error:", (e && e.message) || e);
+        sendStatus(res, 500, "500 Internal Server Error");
+      }
     });
     return;
   }
@@ -1049,40 +1154,50 @@ function sendFile(req, res, filePath) {
   // edit during `npm run watch` kept serving the stale compressed bytes while
   // identity clients saw the fresh file. The mtime changes on every write.
   fs.stat(filePath, (statErr, stats) => {
-    const mtime = statErr ? 0 : stats.mtimeMs;
-    // Same conditional-request handling as the streaming branch: text assets
-    // in the 86400 class revalidate to a 304 instead of a full re-download.
-    if (!statErr && stats.isFile()) {
-      const etag = entityTag(stats);
-      if (isNotModified(req, etag, stats.mtimeMs)) {
-        res.writeHead(304, {
-          "Cache-Control": cacheHeaderFor(req, contentType),
-          "ETag": etag,
-          "Last-Modified": stats.mtime.toUTCString(),
-          "Vary": "Accept-Encoding",
-        });
-        res.end();
-        return;
+    try {
+      const mtime = statErr ? 0 : stats.mtimeMs;
+      // Same conditional-request handling as the streaming branch: text assets
+      // in the 86400 class revalidate to a 304 instead of a full re-download.
+      if (!statErr && stats.isFile()) {
+        const etag = entityTag(stats);
+        if (isNotModified(req, etag, stats.mtimeMs)) {
+          res.writeHead(304, {
+            "Cache-Control": cacheHeaderFor(req, contentType),
+            "ETag": etag,
+            "Last-Modified": stats.mtime.toUTCString(),
+            "Vary": "Accept-Encoding",
+          });
+          res.end();
+          return;
+        }
       }
+      fs.readFile(filePath, (err, data) => {
+        try {
+          if (err) {
+            res.writeHead(404, {
+              "Content-Type": "text/plain; charset=utf-8",
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+            });
+            res.end("404 Not Found");
+            return;
+          }
+          const validators = statErr || !stats.isFile()
+            ? null
+            : { "ETag": entityTag(stats), "Last-Modified": stats.mtime.toUTCString() };
+          writeCompressed(req, res, {
+            "Content-Type": contentType,
+            "Cache-Control": cacheHeaderFor(req, contentType),
+            ...(validators || {}),
+          }, data, `file:${filePath}:${mtime}`);
+        } catch (e) {
+          console.error("sendFile error:", (e && e.message) || e);
+          sendStatus(res, 500, "500 Internal Server Error");
+        }
+      });
+    } catch (e) {
+      console.error("sendFile error:", (e && e.message) || e);
+      sendStatus(res, 500, "500 Internal Server Error");
     }
-    fs.readFile(filePath, (err, data) => {
-      if (err) {
-        res.writeHead(404, {
-          "Content-Type": "text/plain; charset=utf-8",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-        });
-        res.end("404 Not Found");
-        return;
-      }
-      const validators = statErr || !stats.isFile()
-        ? null
-        : { "ETag": entityTag(stats), "Last-Modified": stats.mtime.toUTCString() };
-      writeCompressed(req, res, {
-        "Content-Type": contentType,
-        "Cache-Control": cacheHeaderFor(req, contentType),
-        ...(validators || {}),
-      }, data, `file:${filePath}:${mtime}`);
-    });
   });
 }
 
@@ -1143,12 +1258,22 @@ const ROOT_PLAIN_FILES = [
   "robots.txt",
   "favicon.ico",
   "favicon.svg",
-  // The hero's "Download CV" target (site.config.js cvPath).
+  // The header CV chip's target (site.config.js cvPath).
   "lampros-konstantellos-cv.pdf",
+  // IndexNow ownership proof: the key file must be served at the site root
+  // (.github/workflows/indexnow.yml POSTs the sitemap URLs with this key on
+  // every push to main so Bing/Yandex/etc. re-crawl immediately). The key is
+  // public BY DESIGN — serving it is what proves domain ownership.
+  "4f944816acc54986697c161e20f28a2d.txt",
 ];
-// Root images: served/copied along with their optimize-images siblings
-// (.webp/.avif plus the -480/-960 width variants).
-const ROOT_IMAGE_BASES = [
+// Root images in two classes with different pipelines:
+// - BRAND images (favicons, app icons, the og:image card) render at fixed
+//   sizes via <link>/manifest/og tags — nothing references responsive
+//   variants for them, so optimize-images skips them and neither the server
+//   nor the build advertises variant paths.
+// - PICTURE images go through <Picture>/preload srcsets and ship with their
+//   optimize-images siblings (.webp/.avif plus the -480/-960 widths).
+const ROOT_BRAND_IMAGES = [
   "favicon-16x16.png",
   "favicon-32x32.png",
   "favicon-48x48.png",
@@ -1163,6 +1288,8 @@ const ROOT_IMAGE_BASES = [
   "icon-512-maskable.png",
   "apple-touch-icon.png",
   "og-image.jpg",
+];
+const ROOT_PICTURE_IMAGES = [
   "lampros-konstantellos-picture.jpg",
 ];
 
@@ -1178,7 +1305,10 @@ const PUBLIC_ROOT_PATHS = new Set(
     "/rss.xml",
     "/feed.json",
     ...ROOT_PLAIN_FILES.map((f) => `/${f}`),
-    ...ROOT_IMAGE_BASES.flatMap((f) => {
+    // Brand images: the bare file only — the pipeline generates no variants
+    // for them, and an allowlist must not advertise paths that cannot exist.
+    ...ROOT_BRAND_IMAGES.map((f) => `/${f}`),
+    ...ROOT_PICTURE_IMAGES.flatMap((f) => {
       const noExt = f.replace(/\.[^.]+$/, "");
       return [
         `/${f}`,
@@ -1197,6 +1327,7 @@ const PUBLIC_ROOT_PATHS = new Set(
 const PRIVATE_PATHS = new Set(
   [
     "/server.js",
+    "/ssr.js",
     "/feeds.js",
     "/build-static.js",
     "/package.json",
@@ -1204,6 +1335,9 @@ const PRIVATE_PATHS = new Set(
     "/.gitignore",
     "/LICENSE",
     "/dist/manifest.json",
+    // Transient sibling of the manifest during scripts/build.js's atomic
+    // write+rename — same sensitivity, must not be servable in its window.
+    "/dist/manifest.json.tmp",
   ].map((p) => p.toLowerCase())
 );
 
@@ -1243,6 +1377,18 @@ function isPrivatePath(rawPathname) {
 
 const ALLOWED_METHODS = "GET, HEAD, OPTIONS";
 
+// Symlink containment: resolve filePath and test that the REAL path still
+// lives under rootReal. cb(true) = safe to serve. Exported so the logic is
+// unit-testable against throwaway temp trees — an HTTP-level fixture would
+// have to plant a symlink inside the live repo, racing the parity build's
+// directory copies.
+function checkRealPathContained(filePath, rootReal, cb) {
+  fs.realpath(filePath, (err, realPath) => {
+    if (err) return cb(false);
+    cb(realPath === rootReal || realPath.startsWith(rootReal + path.sep));
+  });
+}
+
 function sendStatus(res, code, message, extraHeaders) {
   if (res.headersSent) return;
   res.writeHead(code, {
@@ -1280,8 +1426,14 @@ const server = http.createServer((req, res) => {
     // parses the second segment as an AUTHORITY: "//news" yields pathname "/",
     // so GET //news answered 200 with the home page (and //x/foo with /foo) —
     // a request-line/content mismatch that desyncs caches and diverges from
-    // the static deploy. Reject rather than guess.
-    if ((req.url || "/").startsWith("//")) {
+    // the static deploy. Reject rather than guess. A RAW backslash in the
+    // target is the same class: the WHATWG parser folds "\" to "/" for
+    // special schemes, so "/\news" ALSO parses "news" as the authority (and
+    // the later decoded-path backslash guard never sees it — the character
+    // was consumed into the host). No legitimate request target for this
+    // site contains a backslash anywhere.
+    const rawTarget = req.url || "/";
+    if (rawTarget.startsWith("//") || rawTarget.includes("\\")) {
       sendStatus(res, 400, "400 Bad Request");
       return;
     }
@@ -1302,9 +1454,15 @@ const server = http.createServer((req, res) => {
       sendStatus(res, 400, "400 Bad Request");
       return;
     }
-    // A NUL byte (%00) is never valid in a served path and would make the fs
-    // layer throw; reject it cleanly as a bad request.
-    if (urlPathname.includes("\x00")) {
+    // No CONTROL character is ever valid in a served path. Beyond the NUL
+    // (which would make the fs layer throw), the decoded path flows into the
+    // trailing-slash redirect's Location header below — Node accepts HTAB in
+    // a header value, and browsers strip tab/CR/LF from URLs before parsing,
+    // so "GET /%09/evil.com/" would have emitted "Location: /<TAB>/evil.com",
+    // which a browser reads as the scheme-relative //evil.com — an open
+    // redirect. (A %0d%0a in the path would instead throw on writeHead — a
+    // 500 for what is really a bad request.) Reject the whole class.
+    if (/[\x00-\x1f\x7f]/.test(urlPathname)) {
       sendStatus(res, 400, "400 Bad Request");
       return;
     }
@@ -1331,11 +1489,16 @@ const server = http.createServer((req, res) => {
     // URL paths are POSIX, so normalize with POSIX rules (path.sep-independent).
     urlPathname = path.posix.normalize(urlPathname);
 
-    // /index.html is the home page under a second URL. Redirect to "/" so there
-    // is one canonical home (previously it served 200 with "Page not found"
-    // meta and a self-canonical to /index.html — a duplicate-content bug).
+    // /index.html is the home page under a second URL. Redirect to "/" so
+    // there is one canonical home (previously it served 200 with "Page not
+    // found" meta and a self-canonical to /index.html — a duplicate-content
+    // bug). The query string is preserved, matching the _redirects rule the
+    // static deploy uses (Cloudflare keeps it by default).
     if (urlPathname === "/index.html") {
-      res.writeHead(301, { "Location": "/", "Content-Type": "text/plain; charset=utf-8" });
+      res.writeHead(301, {
+        "Location": "/" + (parsedUrl.search || ""),
+        "Content-Type": "text/plain; charset=utf-8",
+      });
       res.end("Moved Permanently");
       return;
     }
@@ -1344,10 +1507,15 @@ const server = http.createServer((req, res) => {
     // Pages (which 308s /foo/ → /foo for the flat foo.html layout). The dev
     // server used to answer /news/<slug>/ with a 200 of the full article — a
     // duplicate-content URL the deploy redirects, i.e. a status-code parity
-    // break between the two environments.
+    // break between the two environments. Location is built from the
+    // still-ENCODED pathname (parsedUrl.pathname), never the decoded form:
+    // a header must not carry bytes that decoding surprises smuggled in (the
+    // control-character rejection above closes today's case; the encoded
+    // form removes the class).
     if (urlPathname !== "/" && urlPathname.endsWith("/")) {
       res.writeHead(301, {
-        "Location": urlPathname.replace(/\/+$/, "") + (parsedUrl.search || ""),
+        "Location":
+          (parsedUrl.pathname.replace(/\/+$/, "") || "/") + (parsedUrl.search || ""),
         "Content-Type": "text/plain; charset=utf-8",
       });
       res.end("Moved Permanently");
@@ -1421,11 +1589,8 @@ const server = http.createServer((req, res) => {
       // createReadStream FOLLOW them, so a link committed or dropped anywhere
       // under the root whose target lies outside it would be served with a
       // 200. Re-apply the containment test against the RESOLVED path.
-      fs.realpath(requestedPath, (rpErr, realPath) => {
-        if (
-          rpErr ||
-          (realPath !== PUBLIC_DIR_REAL && !realPath.startsWith(PUBLIC_DIR_REAL + path.sep))
-        ) {
+      checkRealPathContained(requestedPath, PUBLIC_DIR_REAL, (contained) => {
+        if (!contained) {
           sendStatus(res, 403, "403 Forbidden");
           return;
         }
@@ -1496,6 +1661,7 @@ module.exports = {
   discoverArticleSlugs,
   SECURITY_HEADERS,
   isPrivatePath,
+  checkRealPathContained,
   // Build-time reuse: the static build (build-static.js) renders and writes the
   // exact bytes the server serves by reusing this already-loaded state.
   DEPLOY_VERSION,
@@ -1507,7 +1673,9 @@ module.exports = {
   ASSET_MAP,
   SITE_CFG,
   // The declared public root surface — build-static.js copies exactly these
-  // (so server allowlist and deploy contents cannot drift apart).
+  // (so server allowlist and deploy contents cannot drift apart), and
+  // scripts/optimize-images.js skips variant generation for the brand list.
   ROOT_PLAIN_FILES,
-  ROOT_IMAGE_BASES,
+  ROOT_BRAND_IMAGES,
+  ROOT_PICTURE_IMAGES,
 };

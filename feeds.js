@@ -39,8 +39,16 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 function buildSitemap({ articles, siteCfg, publicationYears }) {
   const list = Array.isArray(articles) ? articles : [];
 
+  // The EFFECTIVE date of an article: its post-publication edit date when
+  // set, else the publish date. <lastmod> is the signal crawlers use to
+  // schedule a re-crawl, so an edit must surface here — dateUpdated feeding
+  // only JSON-LD dateModified left the edit invisible to exactly the
+  // consumer the field exists for.
+  const effectiveDate = (a) =>
+    a && ISO_DATE.test(a.dateUpdated) ? a.dateUpdated : a && a.date;
+
   const articleDates = list
-    .map((a) => a && a.date)
+    .map(effectiveDate)
     .filter((d) => d && ISO_DATE.test(d))
     .sort()
     .reverse();
@@ -73,9 +81,10 @@ function buildSitemap({ articles, siteCfg, publicationYears }) {
   ];
 
   for (const a of list) {
+    const eff = effectiveDate(a);
     entries.push({
       path: `/news/${a.slug}`,
-      lastmod: a && ISO_DATE.test(a.date) ? a.date : latestContentDate,
+      lastmod: eff && ISO_DATE.test(eff) ? eff : latestContentDate,
     });
   }
 
@@ -162,7 +171,9 @@ function buildFeed({ articles, siteCfg, socialImages }) {
     description: siteCfg.defaultDescription,
     language: "en",
     authors: [
-      { name: siteCfg.name, url: siteCfg.url }
+      // Trailing slash: the one home spelling every canonical/JSON-LD/sitemap
+      // reference uses.
+      { name: siteCfg.name, url: `${siteCfg.url}/` }
     ],
     items: items.map((a) => {
       const url = `${siteCfg.url}/news/${a.slug}`;
@@ -176,6 +187,11 @@ function buildFeed({ articles, siteCfg, socialImages }) {
         summary: a.excerpt || "",
         date_published: new Date(`${a.date}T00:00:00Z`).toISOString(),
       };
+      // JSON Feed 1.1 date_modified — set only when the article was actually
+      // edited after publication (mirrors JSON-LD dateModified).
+      if (a.dateUpdated && ISO_DATE.test(a.dateUpdated)) {
+        item.date_modified = new Date(`${a.dateUpdated}T00:00:00Z`).toISOString();
+      }
       // Prefer the same optimized, cache-busted 1200x630 social crop og:image
       // serves; the raw cover (multi-MB, unversioned) is the fallback only.
       const socialPath = Object.prototype.hasOwnProperty.call(social, a.slug)

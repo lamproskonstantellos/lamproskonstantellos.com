@@ -26,10 +26,13 @@ function Picture({
   fetchPriority,
 }) {
   if (!src) return null;
+  // fetchpriority is spelled LOWERCASE on the DOM elements: React 18 does
+  // not know the camelCase prop and silently dropped it, so the browser
+  // never saw the priority hint at all (React 19 adds the camelCase form).
   if (!/\.(jpe?g|png)$/i.test(src)) {
     return <img src={src} alt={alt} width={width} height={height}
                 loading={loading} decoding={decoding}
-                fetchPriority={fetchPriority} />;
+                fetchpriority={fetchPriority} />;
   }
   const base = src.replace(/\.(jpe?g|png)$/i, "");
   const srcSetFor = (ext) => (sizes ? imageSrcset(src, ext) : `${base}.${ext}`);
@@ -45,7 +48,7 @@ function Picture({
         height={height}
         loading={loading}
         decoding={decoding}
-        fetchPriority={fetchPriority}
+        fetchpriority={fetchPriority}
       />
     </picture>
   );

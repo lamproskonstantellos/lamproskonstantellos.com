@@ -1,0 +1,57 @@
+name: IndexNow
+
+# Tell IndexNow-participating engines (Bing, Yandex, Seznam, Naver) which
+# URLs changed, right after a deploy — instead of waiting for the next
+# scheduled crawl. Google does not support IndexNow; it discovers changes via
+# the sitemap advertised in robots.txt (its ping endpoint was retired).
+#
+# The key file (<key>.txt at the site root, listed in server.js
+# ROOT_PLAIN_FILES) is the ownership proof; the key being public is by
+# design, so no repository secret is involved.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Only the newest push matters — a superseded ping would advertise stale URLs.
+concurrency:
+  group: indexnow
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      # Cloudflare Pages builds and deploys on the same push; give it time to
+      # go live so the engines fetch the NEW sitemap and key file. (If the
+      # deploy is slower one day, the engines still crawl the pinged URLs
+      # later — IndexNow is a hint, not a transaction.)
+      - name: Wait for the Cloudflare Pages deploy
+        run: sleep 150
+
+      - name: Submit the live sitemap URLs to IndexNow
+        run: |
+          node --input-type=module -e '
+          const HOST = "lamproskonstantellos.com";
+          const KEY = "4f944816acc54986697c161e20f28a2d";
+          const sitemap = await fetch(`https://${HOST}/sitemap.xml`);
+          if (!sitemap.ok) throw new Error(`sitemap fetch failed: ${sitemap.status}`);
+          const xml = await sitemap.text();
+          const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+          if (urls.length === 0) throw new Error("no URLs found in the sitemap");
+          const res = await fetch("https://api.indexnow.org/indexnow", {
+            method: "POST",
+            headers: { "Content-Type": "application/json; charset=utf-8" },
+            body: JSON.stringify({
+              host: HOST,
+              key: KEY,
+              keyLocation: `https://${HOST}/${KEY}.txt`,
+              urlList: urls,
+            }),
+          });
+          console.log(`IndexNow: submitted ${urls.length} URLs — HTTP ${res.status}`);
+          if (res.status >= 400) process.exit(1);
+          '

@@ -186,8 +186,32 @@ test("optimize-images: processes, is idempotent, and reports per-image failure",
     fs.utimesSync(good, future, future);
     const third = await run([dir], { stamp: false });
     assert.ok(third.processed >= 1, "touched source must be re-processed");
+
+    // force:true regenerates even FRESH outputs — the settings-stamp path
+    // resolves to exactly this flag, so this is what keeps "edit a quality
+    // constant → everything regenerates" testable (the stamp comparison
+    // itself is covered below).
+    const forced = await run([dir], { stamp: false, force: true });
+    assert.ok(forced.processed >= 1, "force must re-process fresh outputs");
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("optimize-images: settings stamp flags a changed encoder configuration", () => {
+  const { settingsChanged, STAMP_FILE, SETTINGS_KEY } = require("../scripts/optimize-images.js");
+  const had = fs.existsSync(STAMP_FILE);
+  const before = had ? fs.readFileSync(STAMP_FILE, "utf8") : null;
+  try {
+    fs.writeFileSync(STAMP_FILE, SETTINGS_KEY);
+    assert.equal(settingsChanged(), false, "matching stamp must read as unchanged");
+    fs.writeFileSync(STAMP_FILE, SETTINGS_KEY + "-stale");
+    assert.equal(settingsChanged(), true, "mismatched stamp must force regeneration");
+    fs.rmSync(STAMP_FILE);
+    assert.equal(settingsChanged(), true, "missing stamp must force regeneration");
+  } finally {
+    if (had) fs.writeFileSync(STAMP_FILE, before);
+    else fs.rmSync(STAMP_FILE, { force: true });
   }
 });
 

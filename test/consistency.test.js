@@ -162,6 +162,15 @@ test("validateArticle rejects a slug with URL-unsafe characters", () => {
 
 // ---- C10: contact links never diverge from site.config socialLinks ---------
 
+// PublicationRow uses the title as its React key, and the /publications
+// ScholarlyArticle ItemList treats each title as one work — both assume
+// titles are unique, which nothing else enforces.
+test("publication titles are unique", () => {
+  const pubs = loadDataWindow().PROFILE.publications;
+  const titles = pubs.map((p) => p.title);
+  assert.equal(new Set(titles).size, titles.length, "duplicate publication title");
+});
+
 test("PROFILE.contact hrefs (minus email) are exactly site.config.socialLinks", () => {
   const social = loadDataWindow().PROFILE.contact
     .filter((c) => c.id !== "email")

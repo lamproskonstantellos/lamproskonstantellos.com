@@ -1,5 +1,6 @@
 /* global React, ReactDOM, SITE, PROFILE, Icon, SectionHeader, Picture,
-   parseRoute, routeToPath, pageTitle, getArticle, handleAnchorClick,
+   parseRoute, routeToPath, pageTitle, pageSocialTitle, pageDescription,
+   ROBOTS_INDEX, ROBOTS_NOINDEX, getArticle, handleAnchorClick,
    pickActiveSection, headlineJoiner, copyTextToClipboard, HERO_IMG_SIZES,
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
@@ -127,13 +128,15 @@ function Header({ route, navigate, activeSection }) {
             );
           })}
           {/* The CV chip: the one filled action among the text links. Plain
-              browser navigation — the PDF opens like any document link. */}
+              browser navigation — the PDF opens like any document link. The
+              label says "Open", not "Download": target=_blank opens the PDF
+              in a viewer tab rather than saving it. */}
           <a
             className="nav-cv"
             href={SITE.cvPath}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Download CV (PDF)"
+            aria-label="Open CV (PDF, new tab)"
           >
             CV
           </a>
@@ -231,13 +234,18 @@ function Hero({ navigate }) {
 // visitors without a configured mailto handler. The button cannot nest inside
 // the anchor (interactive-inside-interactive), so a wrapper positions it where
 // the other cards show their external-link mark.
-function EmailContactCard({ contact, BrandIcon, tint }) {
+function EmailContactCard({ contact, BrandIcon }) {
   const [copied, setCopied] = React.useState(false);
   const copyTimer = React.useRef(null);
   // Guard against the clipboard promise resolving after unmount (see
   // ArticleShare) — it would otherwise arm a timer with no cleanup left.
   const mounted = React.useRef(true);
-  React.useEffect(() => () => { mounted.current = false; clearTimeout(copyTimer.current); }, []);
+  React.useEffect(() => {
+    // Body re-arms the flag: a cleanup+re-run cycle (StrictMode
+    // double-invoke, future reusable state) must not leave it stuck false.
+    mounted.current = true;
+    return () => { mounted.current = false; clearTimeout(copyTimer.current); };
+  }, []);
 
   const copyEmail = () => {
     copyTextToClipboard(contact.href.replace(/^mailto:/, "")).then((ok) => {
@@ -251,14 +259,14 @@ function EmailContactCard({ contact, BrandIcon, tint }) {
   return (
     <div className="contact-card-wrap">
       <a className="contact-card" href={contact.href}>
-        <span className="ico-badge" style={{ background: tint }}>
-          <BrandIcon style={{ width: 22, height: 22 }} />
+        <span className={`ico-badge ico-badge-${contact.id}`}>
+          <BrandIcon />
         </span>
         <span className="label">{contact.label}</span>
         {/* Same hover arrow as every other card — here it reads "opens your
             mail app". Positioned absolutely (styles.css) so the copy button
             outside the anchor can sit immediately to its left. */}
-        <Icon.external className="ext" style={{ width: 13, height: 13 }} />
+        <Icon.external className="ext" />
       </a>
       <button
         type="button"
@@ -266,9 +274,7 @@ function EmailContactCard({ contact, BrandIcon, tint }) {
         aria-label="Copy email address"
         onClick={copyEmail}
       >
-        {copied
-          ? <Icon.check style={{ width: 15, height: 15 }} />
-          : <Icon.copy style={{ width: 15, height: 15 }} />}
+        {copied ? <Icon.check /> : <Icon.copy />}
       </button>
       <span className="sr-only" aria-live="polite">
         {copied ? "Email address copied to clipboard" : ""}
@@ -278,16 +284,19 @@ function EmailContactCard({ contact, BrandIcon, tint }) {
 }
 
 function Contact() {
+  // Per-brand badge tints live in styles.css as .ico-badge-<id> classes, NOT
+  // style props: the markup is pre-rendered now, a serialized style attribute
+  // is inline CSS, and the CSP deliberately allows none.
   const map = {
-    linkedin:     { I: Icon.brandLinkedin,     tint: "rgba(10,102,194,0.10)" },
-    scholar:      { I: Icon.brandScholar,      tint: "rgba(66,133,244,0.10)" },
-    ieee:         { I: Icon.brandIeee,         tint: "rgba(0,98,155,0.10)"   },
-    orcid:        { I: Icon.brandOrcid,        tint: "rgba(166,206,57,0.15)" },
-    zenodo:       { I: Icon.brandZenodo,       tint: "rgba(31,71,152,0.10)"  },
-    researchgate: { I: Icon.brandResearchgate, tint: "rgba(0,204,187,0.12)"  },
-    scopus:       { I: Icon.brandScopus,       tint: "rgba(233,113,28,0.10)" },
-    github:       { I: Icon.brandGithub,       tint: "rgba(23,23,23,0.08)"   },
-    email:        { I: Icon.brandEmail,        tint: "rgba(10,31,68,0.08)"   },
+    linkedin:     Icon.brandLinkedin,
+    scholar:      Icon.brandScholar,
+    ieee:         Icon.brandIeee,
+    orcid:        Icon.brandOrcid,
+    zenodo:       Icon.brandZenodo,
+    researchgate: Icon.brandResearchgate,
+    scopus:       Icon.brandScopus,
+    github:       Icon.brandGithub,
+    email:        Icon.brandEmail,
   };
   return (
     <section className="block" id="contact">
@@ -296,11 +305,10 @@ function Contact() {
         {PROFILE.contact.map((c) => {
           // A data.js contact id with no icon here must degrade to "not
           // shown", not crash the whole homepage render on a destructure.
-          const entry = map[c.id];
-          if (!entry) return null;
-          const { I, tint } = entry;
+          const I = map[c.id];
+          if (!I) return null;
           if (c.id === "email") {
-            return <EmailContactCard key={c.id} contact={c} BrandIcon={I} tint={tint} />;
+            return <EmailContactCard key={c.id} contact={c} BrandIcon={I} />;
           }
           return (
             <a
@@ -310,11 +318,11 @@ function Contact() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <span className="ico-badge" style={{ background: tint }}>
-                <I style={{ width: 22, height: 22 }} />
+              <span className={`ico-badge ico-badge-${c.id}`}>
+                <I />
               </span>
               <span className="label">{c.label}</span>
-              <Icon.external className="ext" style={{ width: 13, height: 13 }} />
+              <Icon.external className="ext" />
             </a>
           );
         })}
@@ -328,8 +336,13 @@ function Contact() {
    ============================================================ */
 
 function Footer({ navigate }) {
-  // Current year only, derived — never hardcoded (locked by a test).
-  const year = new Date().getFullYear();
+  // Current year only, derived — never hardcoded (locked by a test). SSR
+  // note: the pre-rendered markup bakes the BUILD-time year; the effect
+  // refreshes it after hydration so a visitor in a later year sees the right
+  // one, and suppressHydrationWarning (on the copy line below) keeps the
+  // one-render difference from being reported as a mismatch.
+  const [year, setYear] = React.useState(() => new Date().getFullYear());
+  React.useEffect(() => { setYear(new Date().getFullYear()); }, []);
 
   // Sitemap: the two standalone pages plus the two home-only sections.
   const explore = [
@@ -396,7 +409,7 @@ function Footer({ navigate }) {
         </div>
 
         <div className="footer-bottom">
-          <span className="copy">© {year} {PROFILE.name}</span>
+          <span className="copy" suppressHydrationWarning>© {year} {PROFILE.name}</span>
         </div>
       </div>
     </footer>
@@ -432,12 +445,16 @@ function NotFound({ navigate }) {
       <h1>Page not found</h1>
       <p className="notfound-sub">This page may have moved, or never existed.</p>
       <div className="notfound-actions">
+        {/* "Home", not "Back": this action navigates to the homepage, and
+            "Back" beside three destination labels (News/Publications/Contact)
+            read as browser-back — which from a 404 goes to wherever the
+            broken link came from. */}
         <a
           className="btn btn-primary"
           href="/"
           onClick={(e) => handleAnchorClick(e, navigate, { page: "home" })}
         >
-          Back
+          Home
         </a>
         <a
           className="btn btn-ghost"
@@ -476,12 +493,13 @@ function App() {
   // article Back link) so components read it as a prop instead of pulling
   // window.history.state during render: a render-time read of mutable
   // external state is not tearing-safe under concurrent rendering and only
-  // worked because navigate() happened to pushState before setRoute. The
-  // initial value picks up history.state so a reload keeps its Back target.
-  const [route, setRoute] = useState(() => ({
-    ...parseRoute(window.location.pathname),
-    from: (window.history.state || {}).from,
-  }));
+  // worked because navigate() happened to pushState before setRoute.
+  // `from` is NOT part of the initial state: the pre-rendered markup cannot
+  // know it (no history at build time), so reading it here would make the
+  // first client render disagree with the server HTML on the article
+  // back-link. The mount effect below restores it from history.state right
+  // after hydration instead.
+  const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
   const [activeSection, setActiveSection] = useState(null);
   const mainRef = useRef(null);
   const firstRender = useRef(true);
@@ -513,6 +531,12 @@ function App() {
     // at 0, so the next pushState would mint key 1 — a key an EARLIER entry
     // still owns, cross-wiring the two entries' saved scroll positions.
     keyCounter.current = Math.max(keyCounter.current, currentKey.current);
+    // Restore `from` (the article Back-link target) from the reloaded
+    // history entry AFTER hydration — it is kept out of the initial state so
+    // the first client render matches the pre-rendered markup.
+    if (st.from !== undefined) {
+      setRoute((r) => ({ ...r, from: st.from }));
+    }
     return () => { if (supported) window.history.scrollRestoration = prev; };
   }, []);
 
@@ -549,6 +573,12 @@ function App() {
         return;
       }
       currentKey.current = state.key;
+      // Keep the mint counter ahead of ANY key we observe: the mount-time
+      // seeding covers the entry we reloaded on, but forward entries survive
+      // a reload too — reload deep in history, press Forward onto a
+      // higher-keyed entry, then navigate, and the counter would mint a key
+      // that live entry still owns (cross-wiring their saved scrolls).
+      keyCounter.current = Math.max(keyCounter.current, state.key);
       setRoute({ ...parseRoute(window.location.pathname), from: state.from });
       restoreScroll(scrollPositions.current.get(state.key) || 0, restoreCtl.current);
     };
@@ -556,16 +586,58 @@ function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // Keep the tab title correct after client-side navigation (and back/forward).
-  // Derived from the SAME pageTitle the server injects, so they cannot diverge.
+  // Keep the document HEAD correct after client-side navigation (and
+  // back/forward). The served HTML is per-route, but SPA navigations only
+  // swap the DOM below <body> — so title, canonical, og:url/title,
+  // descriptions and robots kept the values of the FIRST page loaded, and a
+  // client-side 404 kept an index,follow + stale canonical. Everything is
+  // derived from the SAME shared helpers the server injects with
+  // (pageTitle / pageSocialTitle / pageDescription / ROBOTS_*), so the two
+  // cannot drift. og:image/twitter:image are deliberately left alone: social
+  // scrapers fetch the served HTML (correct per route), and the client has
+  // no access to the versioned social-crop paths the server computes.
   useEffect(() => {
-    const articleTitle =
-      route.page === "article" ? (getArticle(route.slug) || {}).title : undefined;
+    const article = route.page === "article" ? getArticle(route.slug) : undefined;
+    const articleTitle = article && article.title;
     document.title = pageTitle(route, {
       siteName: SITE.name,
       jobTitle: SITE.jobTitle,
       articleTitle,
     });
+
+    // A route that renders the not-found view (unknown path OR unknown slug)
+    // must carry noindex and NO canonical, like the served 404.
+    const found = route.page !== "not-found" && !(route.page === "article" && !article);
+    const url = SITE.url + (found ? routeToPath({ ...route, section: null }) : "/");
+
+    const setContent = (selector, value) => {
+      const el = document.head.querySelector(selector);
+      if (el) el.setAttribute("content", value);
+    };
+    let canonical = document.head.querySelector('link[rel="canonical"]');
+    if (found) {
+      if (!canonical) {
+        canonical = document.createElement("link");
+        canonical.setAttribute("rel", "canonical");
+        document.head.appendChild(canonical);
+      }
+      canonical.setAttribute("href", url);
+    } else if (canonical) {
+      canonical.remove();
+    }
+    setContent('meta[property="og:url"]', url);
+    const social = pageSocialTitle(route, { jobTitle: SITE.jobTitle, articleTitle });
+    setContent('meta[property="og:title"]', social);
+    setContent('meta[name="twitter:title"]', social);
+    const description = pageDescription(route, {
+      defaultDescription: SITE.defaultDescription,
+      articleDescription: article && (article.seoDescription || article.excerpt),
+    });
+    setContent('meta[name="description"]', description);
+    setContent('meta[property="og:description"]', description);
+    setContent('meta[name="twitter:description"]', description);
+    setContent('meta[name="robots"]', found ? ROBOTS_INDEX : ROBOTS_NOINDEX);
+    setContent('meta[property="og:type"]', route.page === "article" && article ? "article" : "website");
   }, [route]);
 
   // Move focus to the main region on a full page change so keyboard and
@@ -772,4 +844,18 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+// Exposed for the Node-side pre-render (ssr.js renders <App /> to the HTML
+// that build-static bakes into #root — there is no document there).
+window.App = App;
+
+if (typeof document !== "undefined") {
+  const rootEl = document.getElementById("root");
+  if (rootEl.firstElementChild) {
+    // Pre-rendered shell (the normal case): adopt the existing markup.
+    ReactDOM.hydrateRoot(rootEl, <App />);
+  } else {
+    // Empty shell (e.g. a raw template before any static render): fall back
+    // to a fresh client render so the page still works.
+    ReactDOM.createRoot(rootEl).render(<App />);
+  }
+}
