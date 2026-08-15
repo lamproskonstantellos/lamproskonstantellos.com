@@ -170,6 +170,12 @@ main { flex: 1 0 auto; width: 100%; }
   backdrop-filter: saturate(140%) blur(10px);
   -webkit-backdrop-filter: saturate(140%) blur(10px);
   border-bottom: 1px solid var(--line);
+  /* Pin the header to its own compositor layer: on mobile Safari/Chrome a
+     backdrop-filter surface re-composites when the content under it changes
+     wholesale (SPA navigation swaps <main> and jumps to top in one frame),
+     which showed as a momentary header "blink". A pre-promoted layer keeps
+     the blur surface alive across that repaint. */
+  transform: translateZ(0);
 }
 .site-header-inner {
   max-width: var(--container);
@@ -234,6 +240,23 @@ main { flex: 1 0 auto; width: 100%; }
 .nav a:not(.nav-cv):hover::after,
 .nav a.active::after {
   transform: scaleX(1);
+}
+/* Touch devices have no hover, so the slide never plays as a hover flourish
+   there — it only played on ACTIVE handoffs, where the outgoing underline
+   shrinking left while the incoming grew from the left read as flicker in
+   the small mobile nav (worst while the scroll-spy hands off mid-scroll).
+   Crossfade instead: the underline sits full-width and fades — calm, quick,
+   and the reduced-motion override still collapses it to instant. */
+@media (hover: none) {
+  .nav a:not(.nav-cv)::after {
+    transform: none;
+    opacity: 0;
+    transition: opacity 150ms ease-out;
+  }
+  .nav a.active::after {
+    transform: none;
+    opacity: 1;
+  }
 }
 /* The CV chip: the one filled action among the nav's text links — solid navy
    with light lettering (the same tokens as the primary button, so dark mode
