@@ -258,6 +258,13 @@ main { flex: 1 0 auto; width: 100%; }
     opacity: 1;
   }
 }
+/* During a ROUTE swap the whole page changes in one paint, and the active
+   underline must change in that same paint — animating the handoff through
+   the swap read as the navbar "flickering like a refresh" on mobile. The
+   app sets .route-swap on <html> for exactly the swap's paint (app.jsx);
+   spy handoffs and hover keep their motion. Wins on specificity over both
+   the base slide and the hover:none crossfade — no !important needed. */
+.route-swap .nav a:not(.nav-cv)::after { transition: none; }
 /* The CV chip: the one filled action among the nav's text links — solid navy
    with light lettering (the same tokens as the primary button, so dark mode
    flips it correctly), compact on purpose. */
