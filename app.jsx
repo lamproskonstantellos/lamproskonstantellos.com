@@ -519,6 +519,14 @@ function App() {
   // restore — a data patch, not a navigation).
   const skipNextFocus = useRef(false);
   const [activeSection, setActiveSection] = useState(null);
+  // Scroll-spy lock for PROGRAMMATIC section scrolls: tapping "Contact" from
+  // About smooth-scrolls THROUGH Publications and News, and the spy dutifully
+  // activated each one in turn — on mobile the nav underline visibly walked
+  // the intermediate links for a few frames each. While a target is set, the
+  // spy ignores everything except that target (arrival releases the lock);
+  // a user takeover (wheel/touch/key) or the safety timeout releases it too.
+  const spyTarget = useRef(null);
+  const spyTargetTimer = useRef(0);
   const mainRef = useRef(null);
   const firstRender = useRef(true);
   // Manual scroll restoration. The browser's own restoration is unreliable in
@@ -794,7 +802,16 @@ function App() {
           top: rect.top - bandTop,
         };
       });
-      setActiveSection(pickActiveSection(observations, HOME_SECTION_IDS));
+      const picked = pickActiveSection(observations, HOME_SECTION_IDS);
+      if (spyTarget.current) {
+        // A programmatic scroll is in flight (navigate set the highlight to
+        // its destination already): swallow the intermediate sections, and
+        // release the lock the moment the destination itself is reached.
+        if (picked !== spyTarget.current) return;
+        spyTarget.current = null;
+        clearTimeout(spyTargetTimer.current);
+      }
+      setActiveSection(picked);
     };
     // Feature-detected: a constructor throw inside an effect would unmount
     // the whole root (blank page) for a purely decorative highlight. The
@@ -906,6 +923,20 @@ function App() {
     setRoute(opts.from !== undefined ? { ...next, from: opts.from } : next);
 
     if (next.page === "home" && next.section) {
+      // Lock the spy onto the destination for the duration of the smooth
+      // scroll and light the target's underline NOW — without this the spy
+      // walked the highlight through every intermediate section (visible
+      // underline flicker on mobile). Any user takeover releases the lock so
+      // an interrupted scroll leaves the spy tracking reality again; the
+      // timeout covers a scroll that never quite reaches the band.
+      spyTarget.current = next.section;
+      setActiveSection(next.section);
+      clearTimeout(spyTargetTimer.current);
+      spyTargetTimer.current = setTimeout(() => { spyTarget.current = null; }, 1800);
+      const release = () => { spyTarget.current = null; };
+      for (const ev of ["wheel", "touchstart", "keydown", "pointerdown"]) {
+        window.addEventListener(ev, release, { passive: true, once: true });
+      }
       requestAnimationFrame(() => {
         const el = document.getElementById(next.section);
         if (el) {
