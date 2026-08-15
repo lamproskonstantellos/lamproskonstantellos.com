@@ -5,7 +5,14 @@
    About, PublicationsPreview, PublicationsListPage,
    NewsPreview, NewsListPage, Article */
 
-const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect, useLayoutEffect, useCallback, useRef } = React;
+
+// useLayoutEffect under the SERVER renderer logs a mismatch warning even
+// though effects never run there. The SSR sandbox deliberately has `window`
+// (it IS the global) but no `document`, so document is the discriminator:
+// the server takes the silent useEffect branch, the browser keeps the real
+// layout effect (needed to flip a class BEFORE the route swap's paint).
+const useClientLayoutEffect = typeof document === "undefined" ? useEffect : useLayoutEffect;
 
 // An explicit behavior:"smooth" in scrollTo() bypasses the CSS
 // `scroll-behavior:auto` reduced-motion override, so gate it in JS too: users
@@ -655,6 +662,27 @@ function App() {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  // A route swap repaints the ENTIRE page in one frame — if the nav
+  // underline's handoff (old link fading out, new one in) animates through
+  // that same moment, the header reads as "flickering like a refresh" on
+  // mobile (the pre-animation design switched it instantly and invisibly).
+  // Suppress the underline transition for exactly the swap's paint: the
+  // class is added BEFORE the commit paints (layout effect) and removed two
+  // frames later, so scroll-spy handoffs and hover keep their motion.
+  useClientLayoutEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("route-swap");
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => root.classList.remove("route-swap"));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      root.classList.remove("route-swap");
+    };
+  }, [route.page, route.slug]);
 
   // Keep the document HEAD correct after client-side navigation (and
   // back/forward). The served HTML is per-route, but SPA navigations only
