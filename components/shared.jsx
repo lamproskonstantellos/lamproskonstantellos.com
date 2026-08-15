@@ -74,9 +74,13 @@ function SectionHeader({ title, action }) {
   );
 }
 
-function ViewAllLink({ href, onClick }) {
+// `label` names the destination for assistive tech: two "View all" links
+// (news + publications) sit on the home page with different targets, and
+// identically-named links are ambiguous in a screen reader's links list —
+// the same rule the article Back links follow.
+function ViewAllLink({ href, onClick, label }) {
   return (
-    <a className="view-all" href={href} onClick={onClick}>
+    <a className="view-all" href={href} onClick={onClick} aria-label={label}>
       View all
     </a>
   );

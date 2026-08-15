@@ -73,17 +73,50 @@ test("trailing-slash URLs redirect to the slash-less form", async () => {
 // DECODED path, so stripping the encoded pathname string missed %2F: for
 // GET /news%2F nothing was stripped and Location echoed the request target
 // itself — a permanently-cacheable 301 self-loop. The Location must land on
-// the slash-less canonical form, decoded.
-test("encoded trailing slash (%2F) redirects land on the slash-less form", async () => {
+// the slash-less canonical form, decoded. An encoded slash MID-path
+// (/news%2F<slug>) is the same class from the other side: it used to serve
+// the full article as a 200 under a second URL.
+test("encoded-slash (%2F) URLs redirect to the one canonical form", async () => {
   for (const [from, to] of [
     ["/news%2F", "/news"],
     ["/news/%2F", "/news"],
     [`/news/${ARTICLE}%2F`, `/news/${ARTICLE}`],
+    [`/news%2F${ARTICLE}`, `/news/${ARTICLE}`],
     ["/%2F", "/"],
   ]) {
     const res = await request(base, from);
     assert.equal(res.status, 301, `${from} should 301`);
     assert.equal(res.headers["location"], to, `${from} should point at ${to}`);
+  }
+});
+
+// The flat .html twins the static deploy 301s via _redirects: the dev server
+// answers the SAME map (FLAT_HTML_REDIRECTS), where it used to answer a raw
+// 404 — a status-code parity break between the two environments.
+test("flat .html addresses redirect to their clean URLs (deploy parity)", async () => {
+  for (const [from, to] of [
+    ["/news.html", "/news"],
+    ["/publications.html", "/publications"],
+    [`/news/${ARTICLE}.html`, `/news/${ARTICLE}`],
+    ["/404.html", "/"],
+  ]) {
+    const res = await request(base, from);
+    assert.equal(res.status, 301, `${from} should 301`);
+    assert.equal(res.headers["location"], to, `${from} should point at ${to}`);
+  }
+});
+
+// Redirects resolve in ONE hop: /index.html/ used to 301 → /index.html → /
+// (a chain of two permanently-cacheable hops).
+test("redirects land on the final canonical target in a single hop", async () => {
+  for (const [from, to] of [
+    ["/index.html/", "/"],
+    ["/news.html/", "/news"],
+    [`/news/${ARTICLE}.html///`, `/news/${ARTICLE}`],
+  ]) {
+    const res = await request(base, from);
+    assert.equal(res.status, 301, `${from} should 301`);
+    assert.equal(res.headers["location"], to, `${from} must resolve in one hop`);
   }
 });
 
@@ -251,12 +284,15 @@ test("indexable routes carry the image-preview robots directive and a noscript f
     );
     const noscript = html.match(/<noscript>([\s\S]*?)<\/noscript>/);
     assert.ok(noscript, `${p}: has a <noscript> fallback`);
-    // The fallback promises only what actually works without JavaScript: the
-    // feeds. The HTML routes render an empty #root, so linking them would
-    // send a JS-off visitor in a circle.
+    // Since the full-SSR pre-render, a JS-off visitor reads the whole page —
+    // the note exists to explain the missing interactive extras and to offer
+    // the feeds. It stays free of nav links by DESIGN (the page's own
+    // pre-rendered nav is right there; duplicating it in the note would be
+    // clutter, not a workaround — the pre-SSR wording of this comment called
+    // /news "JS-only", which is no longer why).
     assert.match(noscript[1], /href="\/rss\.xml"/, `${p}: noscript links to the RSS feed`);
     assert.match(noscript[1], /href="\/feed\.json"/, `${p}: noscript links to the JSON feed`);
-    assert.ok(!/href="\/news"/.test(noscript[1]), `${p}: noscript must not promise the JS-only /news route`);
+    assert.ok(!/href="\/news"/.test(noscript[1]), `${p}: noscript stays feeds-only (nav lives in the page)`);
   }
 });
 

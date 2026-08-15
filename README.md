@@ -1,7 +1,7 @@
 # lamproskonstantellos.com
 
 [![License: All Rights Reserved](https://img.shields.io/badge/license-All%20Rights%20Reserved-red.svg)](./LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D20.9-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Deployed on Cloudflare Pages](https://img.shields.io/badge/deployed%20on-Cloudflare%20Pages-F38020?logo=cloudflarepages&logoColor=white)](https://pages.cloudflare.com/)
 [![Live site](https://img.shields.io/badge/live-lamproskonstantellos.com-0a66c2)](https://lamproskonstantellos.com)
 
@@ -11,7 +11,7 @@ The personal website of **Lampros Konstantellos**, Electrical & Computer Enginee
 
 - **Frontend:** React 18 loaded via self-hosted UMD builds (`vendor/`). JSX is compiled to plain JavaScript at build time with [esbuild](https://esbuild.github.io/); no in-browser Babel. Plain CSS. Inter is self-hosted as subsetted woff2 (`vendor/fonts/`, preloaded, `font-display: swap`); monospace falls back to the system stack — no third-party font requests.
 - **Build / pre-render:** A Node build step (`build-static.js`) pre-renders every route to a static `build/` directory — the **full page body included**: `ssr.js` renders the React app per route (`react-dom/server`, pinned to the vendored React version) and the markup is baked into `#root`, so search engines, AI crawlers, reader modes and JS-off visitors see the real content; the client bundle hydrates it and the site behaves as an SPA from there. Alongside the body: per-route `<title>` / meta / Open Graph / Twitter / canonical / JSON-LD, the auto-discovered per-article scripts, `sitemap.xml` / `rss.xml` / `feed.json`, a route-independent `404.html`, and the security-header + cache rules as Cloudflare `_headers` / `_redirects`. It reuses the same `renderHtml` and `feeds.js` builders as the local preview server, so the static output is byte-identical to what `server.js` serves (proven by `test/parity.test.js`). A per-deploy version query string on local CSS/JS busts browser caches on every deploy.
-- **Local preview:** The Node.js HTTP server (`server.js`, `npm start`) is retained for local preview — Node built-ins throughout, plus the pinned `react-dom/server` (the one npm runtime dependency, kept at exactly the vendored browser React's version) for the pre-render. It serves the same per-route meta and feeds at request time, with cached brotli/gzip compression, security headers + CSP, class-appropriate `Cache-Control`, and malformed-request guards (no request can crash the process).
+- **Local preview:** The Node.js HTTP server (`server.js`, `npm start`) is retained for local preview — Node built-ins throughout, plus the pinned `react` + `react-dom` npm packages (the only runtime dependencies, kept at exactly the vendored browser React's version) for the pre-render. It serves the same per-route meta and feeds at request time, with cached brotli/gzip compression, security headers + CSP, class-appropriate `Cache-Control`, and malformed-request guards (no request can crash the process).
 - **Hosting:** [Cloudflare Pages](https://pages.cloudflare.com/). Builds and deploys the static `build/` output on every git push: build command `npm run build && npm run build:static`, output directory `build`, `NODE_VERSION=22`.
 
 ## Local development
@@ -84,7 +84,7 @@ from the repo.
 ├── .github/workflows/     CI (npm ci → build → test) + IndexNow ping on deploy
 ├── .nvmrc                 Node major for local dev + CI (mirror it in Cloudflare's NODE_VERSION)
 ├── robots.txt             Search-engine directives
-├── 4f9448…c2d.txt         IndexNow ownership key file (public by design; see the SEO section)
+├── 4f9448…a2d.txt         IndexNow ownership key file (public by design; see the SEO section)
 ├── dist/                  Built JS (gitignored; produced by `npm run build`)
 ├── build/                 Static Cloudflare Pages output (gitignored; `npm run build:static`)
 └── news/                  Per-article folders, each with article.js + images

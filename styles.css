@@ -250,8 +250,12 @@ main {
 }
 /* #main-content receives focus on client-side route changes (and via the skip
    link) so screen-reader/keyboard users land in the new content. It is a focus
-   *target*, not a control, so no focus ring is drawn. */
+   *target*, not a control, so no focus ring is drawn. The scroll margin keeps
+   the skip link's native fragment scroll from parking the content top UNDER
+   the sticky header (same offset section.block already uses) — WCAG 2.4.11,
+   Focus Not Obscured. */
 #main-content:focus { outline: none; }
+#main-content { scroll-margin-top: var(--header-offset, 70px); }
 
 /* Content appears in its final position on load — no page fade-up and no
    card slide-in reveal. Hover feedback lives on the individual card rules. */
@@ -985,6 +989,17 @@ section.block {
   }
 }
 .article-body p { margin: 0 0 22px; }
+/* Authored section headings (a fully-bold, colon-terminated body paragraph
+   renders as <h2> — see components/news.jsx): visually the same weight and
+   size as the old <p><strong> form, but a REAL heading so screen-reader
+   heading navigation works inside an article. */
+.article-body .article-subhead {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.75;
+  color: var(--ink-soft);
+  margin: 0 0 22px;
+}
 /* Real lists (grouped from the authored "• " entries in components/news.jsx):
    left-aligned — justification stretches short list lines badly — with a
    hanging indent so wrapped lines align under the text, not the marker. */

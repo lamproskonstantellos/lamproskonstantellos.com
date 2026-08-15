@@ -122,6 +122,12 @@ Two optional fields drive everything: **`type`** and **`kind`**.
 
 ## Publishing checklist
 
+These rules are ENFORCED, not advisory: `server.js` (`validatePublications`)
+throws on load — so `npm start`, `npm test` and the Cloudflare build all fail
+loudly — for a missing/empty `title`/`authors`/`venue`/`citation`, a `year`
+that is not a `"YYYY"` string, an empty `links` array, a link without an
+`https://` href, or an entry setting both `award` and `type`.
+
 1. `npm run build && npm test` — the suite validates the rendered pages and
    must stay green (it also asserts filter predicates split the set cleanly).
 2. `npm start` → open `http://localhost:3000/#publications` and

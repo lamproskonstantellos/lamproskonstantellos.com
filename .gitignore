@@ -12,6 +12,9 @@ Thumbs.db
 *.avif
 # Generated per-article social share crop (og:image), built by optimize-images.
 cover-og.jpg
+# In-flight encoder temp files (optimize-images writes tmp + atomic rename);
+# a SIGKILL mid-encode can orphan one.
+*.tmp-*
 # Backstop for test fixtures: fixture articles live in OS temp dirs, but if a
 # crashed run ever leaves one under news/, it must not get committed.
 news/__*__/

@@ -7,13 +7,13 @@
   "scripts": {
     "start": "node server.js",
     "build:static": "node build-static.js",
-    "test": "node --test --test-timeout=120000",
+    "test": "node --test --test-timeout=120000 \"test/*.test.js\"",
     "optimize-images": "node scripts/optimize-images.js",
     "build": "npm run optimize-images && node scripts/build.js",
     "watch": "node scripts/build.js --watch"
   },
   "engines": {
-    "node": ">=20.9"
+    "node": ">=22"
   },
   "dependencies": {
     "react": "18.3.1",

@@ -16,8 +16,13 @@ const SITE = {
   // especially) skip oversized preview images — the JPEG is ~35 KB vs 733 KB.
   defaultImage: "/og-image.jpg",
   heroImage: "/lampros-konstantellos-picture.jpg",
+  // Natural dimensions of heroImage (px), shared by the browser <Picture>
+  // and the server preload so both advertise the full variant's REAL width
+  // (a 1023px square capped at "2200w" over-claimed by ~2x — ui-helpers).
+  heroImageWidth: 1023,
+  heroImageHeight: 1023,
   // The CV PDF the header's "CV" chip opens; the static build copies the
-  // file because it is listed in server.js ROOT_PLAIN_FILES.
+  // file because it is listed in public-files.js ROOT_PLAIN_FILES.
   cvPath: "/lampros-konstantellos-cv.pdf",
   defaultDescription:
     "Exploring renewable energy, battery storage, grid flexibility, and electricity markets through engineering, modelling, and applied research.",

@@ -23,10 +23,16 @@ concurrency:
 
 jobs:
   ping:
+    # Fork guard: the workflow file travels with every fork, and a fork's
+    # push to its own main would otherwise poll the REAL production sitemap
+    # and ping IndexNow with the real (public-by-design) key on the owner's
+    # behalf.
+    if: github.repository == 'lamproskonstantellos/lamproskonstantellos.com'
     runs-on: ubuntu-latest
     # The ping is a best-effort hint. A slow Cloudflare deploy or an IndexNow
     # API hiccup must not paint the repository's default branch red — the
-    # engines crawl the sitemap on their own schedule regardless.
+    # engines crawl the sitemap on their own schedule regardless. Skips and
+    # failures DO surface as ::warning:: annotations on the run.
     continue-on-error: true
     timeout-minutes: 10
     steps:
@@ -48,23 +54,38 @@ jobs:
       - name: Wait for the live sitemap to match this commit, then ping IndexNow
         run: |
           node --input-type=module -e '
-          import { readdirSync } from "node:fs";
+          import { readdirSync, existsSync } from "node:fs";
 
+          // HOST is locked to site.config.js url by test/consistency.test.js.
           const HOST = "lamproskonstantellos.com";
           const KEY = "4f944816acc54986697c161e20f28a2d";
           const GRACE_MS = 90_000;      // typical Pages build+deploy latency
           const POLL_MS = 20_000;
           const MAX_POLLS = 20;         // ~6.5 min of polling after the grace
 
+          // Only folders that actually carry an article.js: the sitemap is
+          // built from the VALIDATED article set, so counting every bare
+          // directory (a drafts/ or assets-only folder) would make the
+          // match below impossible forever — permanently and silently
+          // disabling the ping. (An article that FAILS validation is caught
+          // upstream: the CI test suite on the same push goes red.)
           const wantSlugs = new Set(
             readdirSync("news", { withFileTypes: true })
               .filter((e) => e.isDirectory() && !/^__.*__$/.test(e.name))
+              .filter((e) => existsSync(`news/${e.name}/article.js`))
               .map((e) => e.name)
           );
           const wantUrls = [...wantSlugs].map((s) => `https://${HOST}/news/${s}`);
 
+          // Every fetch carries its own timeout: Node fetch has none by
+          // default, and one stalled connection would silently eat the whole
+          // polling budget while the comment above still promised ~6.5 min
+          // of actual polls.
           const fetchSitemapUrls = async () => {
-            const res = await fetch(`https://${HOST}/sitemap.xml`, { cache: "no-store" });
+            const res = await fetch(`https://${HOST}/sitemap.xml`, {
+              cache: "no-store",
+              signal: AbortSignal.timeout(15_000),
+            });
             if (!res.ok) throw new Error(`sitemap fetch failed: ${res.status}`);
             const xml = await res.text();
             return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
@@ -98,10 +119,13 @@ jobs:
           }
 
           if (!urls) {
-            console.warn(
-              "WARNING: live sitemap never matched this commit within the polling budget — " +
-              "skipping the IndexNow ping (the engines will pick the URLs up from the sitemap " +
-              `on their own). Expected ${wantUrls.length} article URL(s).`
+            // ::warning:: makes this a real annotation on the run (and the
+            // commit) — a plain stderr line inside a green, continue-on-error
+            // job is a message nobody ever sees.
+            console.log(
+              "::warning title=IndexNow ping skipped::live sitemap never matched this commit " +
+              `within the polling budget (expected ${wantUrls.length} article URLs); the engines ` +
+              "will pick the URLs up from the sitemap on their own schedule."
             );
             process.exit(0);
           }
@@ -109,6 +133,7 @@ jobs:
           const res = await fetch("https://api.indexnow.org/indexnow", {
             method: "POST",
             headers: { "Content-Type": "application/json; charset=utf-8" },
+            signal: AbortSignal.timeout(30_000),
             body: JSON.stringify({
               host: HOST,
               key: KEY,
@@ -117,5 +142,8 @@ jobs:
             }),
           });
           console.log(`IndexNow: submitted ${urls.length} URLs — HTTP ${res.status}`);
-          if (res.status >= 400) process.exit(1);
+          if (res.status >= 400) {
+            console.log(`::warning title=IndexNow ping failed::the IndexNow API answered HTTP ${res.status}.`);
+            process.exit(1);
+          }
           '

@@ -1,6 +1,7 @@
 /* global React, Icon, Picture, SITE, getRecentNews, getArticle, LIMITS,
    asset, routeToPath, handleAnchorClick, shareLinks, copyTextToClipboard,
-   renderInline, SectionHeader, ViewAllLink, ARTICLE_COVER_SIZES */
+   renderInline, SectionHeader, ViewAllLink, ARTICLE_COVER_SIZES,
+   ARTICLE_PORTRAIT_SIZES, NEWS_CARD_SIZES */
 
 /* ============================================================
    NEWS / ARTICLES
@@ -28,7 +29,8 @@ function NewsCard({ article, navigate, from, headingLevel = "h3" }) {
               alt=""
               width="640"
               height="400"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              natural={article.coverWidth ? { width: article.coverWidth, height: article.coverHeight } : undefined}
+              sizes={NEWS_CARD_SIZES}
             />
           : /* Cover-less fallback: purely decorative hatch (aria-hidden and
                empty — the card's accessible name is the title). The old
@@ -60,6 +62,7 @@ function NewsPreview({ navigate }) {
         action={showViewAll ? (
           <ViewAllLink
             href="/news"
+            label="View all news"
             onClick={(e) => handleAnchorClick(e, navigate, { page: "news-list" })}
           />
         ) : null}
@@ -315,7 +318,17 @@ function ArticleShare({ article }) {
       >
         <Icon.brandLinkedin /> LinkedIn
       </a>
-      <button type="button" className={copied ? "copied" : ""} onClick={copyUrl}>
+      {/* Static aria-label: the visible text flips to "Copied!" as sighted
+          feedback, but a CHANGED accessible name on the focused button is
+          re-announced by several screen readers and doubled up with the live
+          region below — same pattern as the contact email card. The live
+          region is the sole announcer. */}
+      <button
+        type="button"
+        className={copied ? "copied" : ""}
+        aria-label="Copy link"
+        onClick={copyUrl}
+      >
         {copied
           ? <Icon.check />
           : <Icon.link />}
@@ -413,10 +426,14 @@ function Article({ slug, from, navigate }) {
   const renderInlineFigure = ({ photo, index }, key) => {
     const alt = photoAlt(photo);
     const open = openPhoto(index);
+    // Portrait photos are height-capped (max-height: 70vh) and render far
+    // narrower than the article column — advertise the narrower slot so the
+    // browser picks the 960w candidate instead of the full-size one.
+    const portrait = photo.width && photo.height && Number(photo.height) > Number(photo.width);
     return (
       <figure className="article-figure" key={key}>
         <div
-          className={"figure-frame" + (photo.align === "top" ? " photo-align-top" : "")}
+          className="figure-frame"
           role="button"
           tabIndex={0}
           aria-label={openLabel(alt)}
@@ -427,13 +444,18 @@ function Article({ slug, from, navigate }) {
         >
           {/* width/height (when the article provides them) let the browser
               reserve the figure's box from the intrinsic ratio before the
-              image decodes — no layout shift mid-article. */}
+              image decodes — no layout shift mid-article.
+              alt="" whenever a caption follows: the visible <figcaption>
+              carries the description and the button's aria-label names the
+              action — a full alt on top announced the same sentence three
+              times in a row. Caption-less photos keep the generated alt. */}
           <Picture
             src={asset(photo.src)}
-            alt={alt}
+            alt={photo.caption ? "" : alt}
             width={photo.width}
             height={photo.height}
-            sizes={ARTICLE_COVER_SIZES}
+            natural={photo.width ? { width: photo.width, height: photo.height } : undefined}
+            sizes={portrait ? ARTICLE_PORTRAIT_SIZES : ARTICLE_COVER_SIZES}
           />
         </div>
         {photo.caption && <figcaption>{photo.caption}</figcaption>}
@@ -484,12 +506,15 @@ function Article({ slug, from, navigate }) {
       {article.cover && (
         <div className={"article-cover" + (article.coverAlign === "top" ? " cover-align-top" : "")}>
           {/* Eager + high priority: the cover is the page's LCP element and the
-              server preloads its AVIF sibling — the two must stay in step. */}
+              server preloads its AVIF sibling — the two must stay in step
+              (which is why `natural` comes from the ARTICLE DATA both worlds
+              share, never from a server-side probe the client can't repeat). */}
           <Picture
             src={asset(article.cover)}
             alt={article.title}
             width="1280"
             height="720"
+            natural={article.coverWidth ? { width: article.coverWidth, height: article.coverHeight } : undefined}
             sizes={ARTICLE_COVER_SIZES}
             loading="eager"
             fetchPriority="high"
@@ -501,21 +526,30 @@ function Article({ slug, from, navigate }) {
             tech announces "list, N items" instead of N bare paragraphs (the
             authored body keeps the literal bullets — see news/README.md; the
             glyph is stripped here and the list marker takes over). A figure
-            or the video anchored to an index INSIDE a run splits the list
-            there: "after paragraph i" placement wins. */}
+            or the video anchored to an index INSIDE the run renders inside
+            that item's <li> (valid flow content there), so an attachment no
+            longer splits one authored list into two.
+            A paragraph that is ENTIRELY bold and ends with ":" is the
+            authored section-heading idiom — it renders as a real <h2> so
+            screen-reader heading navigation can move within the article
+            (visually styled to match the old bold paragraph). */}
         {(() => {
           const isBullet = (s) => typeof s === "string" && s.startsWith("• ");
-          const attachedAt = (i) =>
-            (inlineAfter.get(i) || []).length > 0 || (article.video && videoAfter === i);
+          const subhead = (s) =>
+            typeof s === "string" && /^\*\*[^*]+\*\*$/.test(s) ? s.slice(2, -2) : null;
+          const attachments = (i) => (
+            <React.Fragment>
+              {(inlineAfter.get(i) || []).map((photo, j) =>
+                renderInlineFigure(photo, `fig-${i}-${j}`)
+              )}
+              {article.video && videoAfter === i && renderVideo()}
+            </React.Fragment>
+          );
           const blocks = [];
           for (let i = 0; i < article.body.length; i++) {
             if (isBullet(article.body[i])) {
               const items = [i];
-              while (
-                i + 1 < article.body.length &&
-                isBullet(article.body[i + 1]) &&
-                !attachedAt(i)
-              ) {
+              while (i + 1 < article.body.length && isBullet(article.body[i + 1])) {
                 i += 1;
                 items.push(i);
               }
@@ -529,16 +563,18 @@ function Article({ slug, from, navigate }) {
               {b.list ? (
                 <ul>
                   {b.list.map((i) => (
-                    <li key={i}>{renderInline(article.body[i].slice(2))}</li>
+                    <li key={i}>
+                      {renderInline(article.body[i].slice(2))}
+                      {i !== b.last && attachments(i)}
+                    </li>
                   ))}
                 </ul>
+              ) : subhead(article.body[b.index]) ? (
+                <h2 className="article-subhead">{subhead(article.body[b.index])}</h2>
               ) : (
                 <p>{renderInline(article.body[b.index])}</p>
               )}
-              {(inlineAfter.get(b.last) || []).map((photo, j) =>
-                renderInlineFigure(photo, `fig-${b.last}-${j}`)
-              )}
-              {article.video && videoAfter === b.last && renderVideo()}
+              {attachments(b.last)}
             </React.Fragment>
           ));
         })()}

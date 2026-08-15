@@ -35,10 +35,17 @@ jobs:
 
       # The sharp encode pass (webp/avif/og variants for every image) is by
       # far the slowest build step. All of its outputs are pure functions of
-      # (source image bytes, encoder settings), so they are cached under a
-      # key hashed from exactly those inputs. Exact-key hits only - NO
+      # (source image bytes, encoder settings, encoder version), so they are
+      # cached under a key hashed from exactly those inputs: the images, the
+      # two modules that own the width/quality settings and the brand-image
+      # skip list, and package-lock.json for the pinned sharp/libvips build
+      # (a sharp upgrade must regenerate — old-encoder bytes under a fresh
+      # key would ship forever otherwise). Exact-key hits only - NO
       # restore-keys: a partial restore plus the freshen step below would
-      # pass stale variants off as fresh.
+      # pass stale variants off as fresh. The save runs post-job, when the
+      # test suite's build/ output exists and holds a COPY of every variant —
+      # exclude it (and node_modules) so the cache stays half the size and a
+      # restore never materializes a stale build/ tree into a fresh checkout.
       - name: Cache optimized image variants
         id: image-cache
         uses: actions/cache@v4
@@ -48,7 +55,9 @@ jobs:
             **/*.avif
             news/*/cover-og.jpg
             .optimize-images-stamp.json
-          key: image-variants-v1-${{ hashFiles('**/*.jpg', '**/*.jpeg', '**/*.png', 'ui-helpers.js', 'scripts/optimize-images.js') }}
+            !build/**
+            !node_modules/**
+          key: image-variants-v1-${{ hashFiles('**/*.jpg', '**/*.jpeg', '**/*.png', 'ui-helpers.js', 'scripts/optimize-images.js', 'public-files.js', 'package-lock.json') }}
 
       # optimize-images decides freshness by mtime (variant >= source), but a
       # fresh checkout stamps every source with "now" while the cache restores
@@ -59,7 +68,7 @@ jobs:
       - name: Freshen cached image variants
         if: steps.image-cache.outputs.cache-hit == 'true'
         run: >
-          find . -path ./node_modules -prune -o
+          find . \( -path ./node_modules -o -path ./build \) -prune -o
           \( -name '*.webp' -o -name '*.avif' -o -name 'cover-og.jpg' \)
           -type f -print0 | xargs -0 -r touch
 

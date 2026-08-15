@@ -88,7 +88,10 @@ test("app.jsx marks in-page section nav with aria-current=location", () => {
 test("compiled news bundle labels the video and gates captions on article data", () => {
   const code = compiledBundle("components/news.jsx");
   assert.ok(code.includes("Video:"), "video is missing an accessible name");
-  assert.ok(code.includes("captions"), "captions track wiring is missing");
+  // The compiled <track kind="captions"> attribute pair, not the bare word
+  // "captions" — a CSS class or prop name containing the word survived the
+  // removal of the actual element and kept the old assertion green.
+  assert.ok(/kind:\s*"captions"/.test(code), "captions <track> wiring is missing");
 });
 
 // ---- Contact: ResearchGate + GitHub cards ------------------------------------

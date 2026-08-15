@@ -98,17 +98,33 @@
   // for each width here plus a full-size `<base>.webp/.avif` capped at
   // IMAGE_MAX_WIDTH. imageSrcset() describes exactly that set, so the
   // <Picture> sources, the server's preload imagesrcset, and the generated
-  // files can never drift. (The full variant's real width is
-  // min(original, IMAGE_MAX_WIDTH); using the cap as its descriptor only ever
-  // overstates the LARGEST candidate — at worst the browser picks the biggest
-  // file, which is what it fell back to before the variants existed.)
+  // files can never drift.
+  //
+  // The full variant's REAL width is what sharp's fit:"inside" produces —
+  // both dimensions capped, so a portrait source tops out well under
+  // IMAGE_MAX_WIDTH wide (a 3:4 photo at 1650px, a square at 2200÷1=2200 —
+  // but a 1023px original stays 1023). When the caller passes the source's
+  // natural dimensions, the descriptor states that real width; a lying
+  // "2200w" made DPR-2 screens pick the full candidate for slots the 960w
+  // file already covered, and hid that no better candidate exists. Without
+  // dimensions the cap remains the descriptor — it only ever overstates the
+  // LARGEST candidate, which at worst re-picks the pre-variants fallback.
+  // Callers must pass the SAME dimensions in both worlds (article data /
+  // site config), or the SSR markup and the client would disagree.
   const IMAGE_WIDTH_VARIANTS = [480, 960];
   const IMAGE_MAX_WIDTH = 2200;
-  function imageSrcset(src, ext) {
+  function fullVariantWidth(natural) {
+    const w = natural && Number(natural.width);
+    const h = natural && Number(natural.height);
+    if (!(w > 0) || !(h > 0)) return IMAGE_MAX_WIDTH;
+    const scale = Math.min(IMAGE_MAX_WIDTH / w, IMAGE_MAX_WIDTH / h, 1);
+    return Math.round(w * scale);
+  }
+  function imageSrcset(src, ext, natural) {
     const base = String(src).replace(/\.(jpe?g|png)$/i, "");
     if (base === src) return null; // not a raster the pipeline optimizes
     return IMAGE_WIDTH_VARIANTS.map((w) => `${base}-${w}.${ext} ${w}w`)
-      .concat(`${base}.${ext} ${IMAGE_MAX_WIDTH}w`)
+      .concat(`${base}.${ext} ${fullVariantWidth(natural)}w`)
       .join(", ");
   }
 
@@ -123,6 +139,20 @@
   // article measure.
   const HERO_IMG_SIZES = "(max-width: 820px) 96px, min(44vw, 360px)";
   const ARTICLE_COVER_SIZES = "(max-width: 776px) 100vw, 720px";
+  // Inline article figures cap portrait photos by HEIGHT (max-height: 70vh),
+  // so a portrait figure renders far narrower than the 720px column —
+  // claiming the column width made DPR-2 laptops fetch the full-size
+  // candidate where the 960w one covers the real box. sizes cannot express
+  // a vh-derived width, so a conservative fixed bound stands in for the
+  // desktop case.
+  const ARTICLE_PORTRAIT_SIZES = "(max-width: 776px) 100vw, 480px";
+  // News cards live in the 1100px-capped container (28px side padding,
+  // 18px gaps): three columns of at most ~336px on desktop, two above
+  // 640px. The former bare "50vw, 33vw" claimed the viewport fraction with
+  // no cap, so a 1920px desktop fetched the 960w cover for a 336px slot on
+  // every card.
+  const NEWS_CARD_SIZES =
+    "(max-width: 640px) calc(100vw - 56px), (max-width: 1024px) calc(50vw - 37px), 336px";
 
   const api = {
     shareLinks,
@@ -131,10 +161,13 @@
     groupPublicationsByYear,
     headlineJoiner,
     imageSrcset,
+    fullVariantWidth,
     IMAGE_WIDTH_VARIANTS,
     IMAGE_MAX_WIDTH,
     HERO_IMG_SIZES,
     ARTICLE_COVER_SIZES,
+    ARTICLE_PORTRAIT_SIZES,
+    NEWS_CARD_SIZES,
   };
 
   if (typeof module !== "undefined" && module.exports) {

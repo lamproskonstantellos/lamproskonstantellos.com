@@ -27,6 +27,10 @@ defineArticle({
     { name: "Photovoltaic system", sameAs: "https://en.wikipedia.org/wiki/Photovoltaic_system" },
   ],
   cover: "news/ieee-pess-2025-best-paper-award/cover.jpg",
+  // Natural cover dimensions (px): they let the srcset advertise the full
+  // variant's REAL width instead of the 2200 cap (see ui-helpers).
+  coverWidth: 3840,
+  coverHeight: 2160,
   photos: [
     {
       src: "news/ieee-pess-2025-best-paper-award/photo-01.jpg",

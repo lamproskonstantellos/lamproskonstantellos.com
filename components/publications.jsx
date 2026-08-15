@@ -70,10 +70,14 @@ function CiteButton({ pub }) {
       {/* No `copied` class: .pub-cite's resting color is already the accent
           the other copy controls flip TO, so a class flip had nothing visible
           to add — the check icon + "Copied!" label + live region are the
-          confirmation. */}
+          confirmation. The aria-label is STATIC (naming the work — five bare
+          "Cite" buttons are indistinguishable in a screen reader's controls
+          list) and also keeps the flipped visible text from re-announcing on
+          the focused button alongside the live region. */}
       <button
         type="button"
         className="pub-cite"
+        aria-label={`Copy citation for “${pub.title}”`}
         onClick={copyCitation}
       >
         {copied
@@ -93,8 +97,17 @@ function PubLinks({ pub }) {
   if (!links || links.length === 0) return null;
   return (
     <div className="pub-links">
+      {/* aria-label ties the destination to the work: three bare "Zenodo"
+          links pointing at three different records are indistinguishable in
+          a screen reader's links list (same rule as the Back links). */}
       {links.map((l, j) => (
-        <a key={j} href={l.href} target="_blank" rel="noopener noreferrer">
+        <a
+          key={j}
+          href={l.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${l.label}: “${pub.title}”`}
+        >
           {l.label}
           <Icon.external />
         </a>
@@ -128,6 +141,7 @@ function PublicationsPreview({ navigate }) {
         action={showViewAll ? (
           <ViewAllLink
             href="/publications"
+            label="View all publications"
             onClick={(e) => handleAnchorClick(e, navigate, { page: "publications-list" })}
           />
         ) : null}

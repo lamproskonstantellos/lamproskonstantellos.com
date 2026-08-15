@@ -70,7 +70,17 @@ test("the home preload's imagesrcset matches the shared imageSrcset helper", asy
   const html = (await request(base, "/")).body.toString("utf8");
   const m = html.match(/<link rel="preload" as="image"[^>]*imagesrcset="([^"]+)"[^>]*imagesizes="([^"]+)"/);
   assert.ok(m, "home preload missing imagesrcset/imagesizes");
-  assert.equal(m[1], imageSrcset(SITE.heroImage, "avif"), "preload srcset drifted from imageSrcset()");
+  // Same natural dims the browser Hero passes (site.config), so this locks
+  // the preload to what <Picture> actually renders — including the real
+  // full-variant width the descriptor now states.
+  assert.equal(
+    m[1],
+    imageSrcset(SITE.heroImage, "avif", {
+      width: SITE.heroImageWidth,
+      height: SITE.heroImageHeight,
+    }),
+    "preload srcset drifted from imageSrcset()"
+  );
   assert.equal(m[2], HERO_IMG_SIZES, "preload sizes drifted from HERO_IMG_SIZES");
 });
 
@@ -139,8 +149,12 @@ test("dist bundles do not embed React (kept external via window globals)", () =>
   for (const [out, info] of Object.entries(manifest.outputs)) {
     if (!info.entryPoint) continue;
     const code = fs.readFileSync(path.join(ROOT, out), "utf8");
-    // A bundled React copy would contain its dev/prod banner or scheduler text.
-    assert.ok(!code.includes("react.production.min"), `${out} appears to embed React`);
+    // Marker chosen from React's actual SOURCE text (its internals handle,
+    // present in every bundled copy, dev or prod). The previous marker —
+    // "react.production.min" — was the vendored FILENAME, which esbuild
+    // never emits into a bundle, so that assertion could not fail even with
+    // React fully inlined; only the size budget below did any work.
+    assert.ok(!code.includes("__SECRET_INTERNALS"), `${out} appears to embed React`);
     assert.ok(
       code.length < MAX_ENTRY_BUNDLE_BYTES,
       `${out} unexpectedly large (${code.length}b > ${MAX_ENTRY_BUNDLE_BYTES}b) — dependency inlined?`

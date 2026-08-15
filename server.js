@@ -239,16 +239,52 @@ function loadArticleMeta(slug, baseDir = PUBLIC_DIR) {
 // loadArticleMeta above; a broken data.js degrades to an empty list (the
 // sitemap falls back to the article dates) rather than crashing the server.
 function loadPublications() {
+  let pubs;
   try {
     const code = fs.readFileSync(path.join(PUBLIC_DIR, "data.js"), "utf8");
     const fakeWindow = { SITE: SITE_CFG };
     new Function("window", code)(fakeWindow);
-    return fakeWindow.PROFILE && Array.isArray(fakeWindow.PROFILE.publications)
+    pubs = fakeWindow.PROFILE && Array.isArray(fakeWindow.PROFILE.publications)
       ? fakeWindow.PROFILE.publications
       : [];
   } catch (e) {
     console.error(`Could not load publications from data.js — ${e.message}`);
     return [];
+  }
+  // Deliberately outside the try above — a data error must not degrade to
+  // the empty list.
+  validatePublications(pubs);
+  return pubs;
+}
+
+// Enforce the rules PUBLICATIONS.md promises. Unlike an invalid article
+// (skipped with a logged error — a missing news item is survivable), a bad
+// publication THROWS: it corrupts the page's centerpiece dataset (the
+// ItemList JSON-LD, the year grouping, the links row), and the throw is
+// what makes `npm start` and the Cloudflare build fail loudly instead of
+// shipping it.
+function validatePublications(pubs) {
+  for (const p of pubs) {
+    const where = `publication "${(p && p.title) || "?"}"`;
+    const nonEmpty = (v) => typeof v === "string" && v.trim() !== "" && !/[\x00-\x1f\x7f]/.test(v);
+    if (!p || typeof p !== "object") throw new Error("publications: non-object entry");
+    for (const field of ["title", "authors", "citation", "venue"]) {
+      if (!nonEmpty(p[field])) throw new Error(`${where}: missing/invalid ${field}`);
+    }
+    if (typeof p.year !== "string" || !/^\d{4}$/.test(p.year)) {
+      throw new Error(`${where}: year must be a "YYYY" STRING (grouping and sorting compare strings)`);
+    }
+    if (!Array.isArray(p.links) || p.links.length === 0) {
+      throw new Error(`${where}: links must be a non-empty array`);
+    }
+    for (const l of p.links) {
+      if (!l || !nonEmpty(l.label) || typeof l.href !== "string" || !/^https:\/\//.test(l.href)) {
+        throw new Error(`${where}: each link needs a label and an https:// href`);
+      }
+    }
+    if (p.award !== undefined && p.type !== undefined) {
+      throw new Error(`${where}: award and type are mutually exclusive (PUBLICATIONS.md)`);
+    }
   }
 }
 
@@ -405,6 +441,20 @@ const ARTICLE_SCRIPTS = VALID_ARTICLE_SLUGS
   .join("\n");
 const ASSET_MAP = loadAssetMap();
 
+// The static deploy's flat files (news.html, news/<slug>.html) 301 to their
+// clean URLs via _redirects; the dev server answers the SAME map so the two
+// environments agree on status codes for every address (a raw 404 here while
+// the deploy redirects was a parity break). /index.html → / is the same rule
+// and joins the map rather than keeping its own branch.
+const FLAT_HTML_REDIRECTS = Object.create(null);
+FLAT_HTML_REDIRECTS["/index.html"] = "/";
+FLAT_HTML_REDIRECTS["/news.html"] = "/news";
+FLAT_HTML_REDIRECTS["/publications.html"] = "/publications";
+FLAT_HTML_REDIRECTS["/404.html"] = "/";
+for (const slug of VALID_ARTICLE_SLUGS) {
+  FLAT_HTML_REDIRECTS[`/news/${slug}.html`] = `/news/${slug}`;
+}
+
 // Live view of the asset map for the REQUEST path: re-read whenever
 // dist/manifest.json changes, so the local `npm run watch` workflow serves
 // fresh bundles on the next refresh without a server restart (README promises
@@ -455,25 +505,32 @@ function currentAssetMap() {
 // pre-rendered body while the browser loaded the fresh article.js — a
 // hydration mismatch and a flash of old content on every save.
 let ssrRenderer;
-let ssrInputsMtimeSeen = 0;
-function ssrInputsMtime() {
-  let max = 0;
+let ssrInputsSignatureSeen = "";
+// A composite signature (every input's own mtime, joined) rather than a
+// running max: a max cannot see an input whose timestamp moves BACKWARDS
+// (git stash pop, rsync -t, tar -x restore an older file while another input
+// still holds the max), and a vanished input must also flip the signature so
+// a failed renderer build ("" entry) retries when the file comes back —
+// with a max, a deleted-then-restored article.js could leave SSR disabled
+// until some unrelated edit. Dev-only cost: ~one statSync per input per HTML
+// render (production deploys are static — this server never runs there).
+function ssrInputsSignature() {
+  const parts = [];
   const stat = (rel) => {
     try {
-      const m = fs.statSync(path.join(PUBLIC_DIR, rel)).mtimeMs;
-      if (m > max) max = m;
+      parts.push(`${rel}:${fs.statSync(path.join(PUBLIC_DIR, rel)).mtimeMs}`);
     } catch {
-      /* a vanished input reads as unchanged; the render itself will throw */
+      parts.push(`${rel}:gone`);
     }
   };
   for (const rel of SSR_GLOBAL_SCRIPTS) stat(rel);
   for (const slug of VALID_ARTICLE_SLUGS) stat(`news/${slug}/article.js`);
-  return max;
+  return parts.join("|");
 }
 function ssrAppHtml(pathname) {
-  const inputsMtime = ssrInputsMtime();
-  if (inputsMtime !== ssrInputsMtimeSeen) {
-    ssrInputsMtimeSeen = inputsMtime;
+  const inputsSignature = ssrInputsSignature();
+  if (inputsSignature !== ssrInputsSignatureSeen) {
+    ssrInputsSignatureSeen = inputsSignature;
     ssrRenderer = undefined;
   }
   if (ssrRenderer === undefined) {
@@ -520,7 +577,13 @@ function computePageMeta(pathname) {
       socialTitle: pageSocialTitle(route, titleCtx),
       jsonLd: PROFILE_JSONLD,
       preloadImage: HERO_PRELOAD_IMAGE,
-      preloadImageSrcset: imageSrcset(SITE_CFG.heroImage, "avif"),
+      // Natural dims from site.config (shared with the browser Hero) so the
+      // full-variant descriptor states the real generated width — passing a
+      // server-side probe instead would desync this preload from <Picture>.
+      preloadImageSrcset: imageSrcset(SITE_CFG.heroImage, "avif", {
+        width: SITE_CFG.heroImageWidth,
+        height: SITE_CFG.heroImageHeight,
+      }),
       preloadImageSizes: HERO_IMG_SIZES,
     };
   }
@@ -684,7 +747,14 @@ function computePageMeta(pathname) {
         preloadImage: article.cover
           ? `/${article.cover.replace(/\.(jpe?g|png)$/i, ".avif")}`
           : undefined,
-        preloadImageSrcset: article.cover ? imageSrcset(`/${article.cover}`, "avif") : undefined,
+        // Natural dims from the ARTICLE DATA (coverWidth/coverHeight), the
+        // same source <Picture> reads in the browser — see the home branch.
+        preloadImageSrcset: article.cover
+          ? imageSrcset(`/${article.cover}`, "avif", {
+              width: article.coverWidth,
+              height: article.coverHeight,
+            })
+          : undefined,
         preloadImageSizes: article.cover ? ARTICLE_COVER_SIZES : undefined,
       };
     }
@@ -1057,11 +1127,17 @@ function serveIndex(req, res, filePath, pathname, statusCode = 200) {
   });
 }
 
-// Weak validator derived from size + mtime: cheap (the stat is already in
-// hand), stable until the file is rewritten. Weak because the same entity is
-// also served content-encoded — byte-equality across encodings is not claimed.
-function entityTag(stats) {
-  return `W/"${stats.size.toString(16)}-${Math.trunc(stats.mtimeMs).toString(16)}"`;
+// Validator derived from size + mtime: cheap (the stat is already in hand),
+// stable until the file is rewritten. Two strengths, chosen by the caller:
+// the compressible branch serves the SAME entity in identity/gzip/br bytes
+// under one tag, so it may only claim semantic equivalence (weak — and weak
+// comparison is exactly what RFC 9110 permits for If-None-Match); the
+// streaming branch serves identity bytes only, so its tag is STRONG — which
+// is what lets If-Range legally resume a download (§13.1.5 forbids honouring
+// If-Range against a weak validator).
+function entityTag(stats, { weak = true } = {}) {
+  const tag = `"${stats.size.toString(16)}-${Math.trunc(stats.mtimeMs).toString(16)}"`;
+  return weak ? `W/${tag}` : tag;
 }
 
 // True when the request's conditional headers show the client copy is current
@@ -1109,7 +1185,9 @@ function sendFile(req, res, filePath) {
         return;
       }
       const size = stats.size;
-      const etag = entityTag(stats);
+      // Strong: this branch serves identity bytes only (never re-encoded),
+      // so byte-equality holds and If-Range below may legally resume.
+      const etag = entityTag(stats, { weak: false });
       const lastModified = stats.mtime.toUTCString();
       let start = 0;
       let end = size > 0 ? size - 1 : 0;
@@ -1135,13 +1213,17 @@ function sendFile(req, res, filePath) {
 
       // A Range is honoured only when If-Range (if present) still matches:
       // a client resuming across a file replacement must get the full new
-      // entity, not a splice of two different versions.
+      // entity, not a splice of two different versions. Per RFC 9110 §13.1.5
+      // the comparison is STRICT: strong entity-tag equality (a W/ prefixed
+      // tag never validates), and for a date form an EXACT Last-Modified
+      // match — "not modified since" (<=) would splice across a same-second
+      // rewrite the validator cannot distinguish.
       const ifRange = req.headers["if-range"];
       const ifRangeDate = ifRange && !String(ifRange).includes('"') ? Date.parse(ifRange) : NaN;
       const rangeValid =
         !ifRange ||
-        ifRange === etag ||
-        (!Number.isNaN(ifRangeDate) && Math.trunc(stats.mtimeMs / 1000) * 1000 <= ifRangeDate);
+        (String(ifRange) === etag && !String(ifRange).startsWith("W/")) ||
+        (!Number.isNaN(ifRangeDate) && Math.trunc(stats.mtimeMs / 1000) * 1000 === ifRangeDate);
 
       const rangeHeader = req.headers["range"];
       if (rangeHeader && rangeValid) {
@@ -1494,52 +1576,38 @@ const server = http.createServer((req, res) => {
     // URL paths are POSIX, so normalize with POSIX rules (path.sep-independent).
     urlPathname = path.posix.normalize(urlPathname);
 
-    // /index.html is the home page under a second URL. Redirect to "/" so
-    // there is one canonical home (previously it served 200 with "Page not
-    // found" meta and a self-canonical to /index.html — a duplicate-content
-    // bug). The query string is preserved, matching the _redirects rule the
-    // static deploy uses (Cloudflare keeps it by default).
-    if (urlPathname === "/index.html") {
-      res.writeHead(301, {
-        "Location": "/" + (parsedUrl.search || ""),
-        "Content-Type": "text/plain; charset=utf-8",
-      });
-      res.end("Moved Permanently");
-      return;
-    }
-
-    // Trailing slashes redirect to the slash-less form, mirroring Cloudflare
-    // Pages (which 308s /foo/ → /foo for the flat foo.html layout). The dev
-    // server used to answer /news/<slug>/ with a 200 of the full article — a
-    // duplicate-content URL the deploy redirects, i.e. a status-code parity
-    // break between the two environments.
+    // One canonical URL per page, resolved in a SINGLE hop. Three former
+    // branches (the /index.html rule, trailing-slash stripping, and the
+    // encoded-bare-root guard) each redirected one step at a time, which
+    // produced permanently-cacheable 301 CHAINS (/index.html/ → /index.html
+    // → /) and still missed whole classes: an encoded slash MID-path
+    // (/news%2F<slug>) served a duplicate 200, and the flat .html twins the
+    // static deploy redirects (/news.html) answered a raw 404 here.
     //
-    // Location derivation: strip the slashes from the DECODED, normalized
-    // path, then re-encode per segment. Stripping the ENCODED pathname
-    // instead looked header-safe but self-looped on %2F: for GET /news%2F
-    // the decoded path "/news/" triggered the guard while the encoded
-    // "/news%2F" ends in "F" — nothing was stripped and the 301 pointed at
-    // its own request target, a permanently-cacheable redirect loop.
-    // Re-encoding keeps the header-injection property (encodeURIComponent
-    // never emits control bytes), and the control-character rejection above
-    // already closed the decoded-byte class.
+    // The rule: compute the request's canonical form — decoded + normalized
+    // path, trailing slashes stripped, the flat-file map applied — then
+    // re-encode it per segment. If that differs from the encoded pathname the
+    // client actually sent, 301 straight to the final target. This is a
+    // fixpoint (decode∘canonicalize∘encode is stable after one application),
+    // so a redirect can never loop or chain.
+    //
+    // Header-injection safety: encodeURIComponent never emits control bytes,
+    // and the control-character rejection above already closed the
+    // decoded-byte class. (Encoded forms of dots — /%2E/ — are resolved by
+    // the WHATWG parser itself before this point; a literal "/./" never
+    // reaches here as anything but "/".)
     const strippedPath = urlPathname.replace(/\/+$/, "") || "/";
-    if (strippedPath !== urlPathname) {
+    const canonicalPath = FLAT_HTML_REDIRECTS[strippedPath] || strippedPath;
+    const canonicalEncoded =
+      canonicalPath.split("/").map(encodeURIComponent).join("/") || "/";
+    // Only PUBLIC canonical targets earn a redirect: an encoded traversal
+    // (/%2e%2e%2fetc%2fpasswd) also decodes to a "canonical" form, and
+    // 301-ing it would bounce hostile probes around instead of answering
+    // 404 outright the way every other denied path is answered. (The next
+    // hop would 404 anyway — this just refuses the detour.)
+    if (canonicalEncoded !== parsedUrl.pathname && !isPrivatePath(canonicalPath)) {
       res.writeHead(301, {
-        "Location":
-          (strippedPath.split("/").map(encodeURIComponent).join("/") || "/") +
-          (parsedUrl.search || ""),
-        "Content-Type": "text/plain; charset=utf-8",
-      });
-      res.end("Moved Permanently");
-      return;
-    }
-    // The same class from the other side: an encoded form that DECODES to the
-    // bare root (/%2F, /./) must not serve the home page as a duplicate 200
-    // under a second URL — send it to the one true "/".
-    if (urlPathname === "/" && parsedUrl.pathname !== "/") {
-      res.writeHead(301, {
-        "Location": "/" + (parsedUrl.search || ""),
+        "Location": canonicalEncoded + (parsedUrl.search || ""),
         "Content-Type": "text/plain; charset=utf-8",
       });
       res.end("Moved Permanently");
@@ -1614,14 +1682,22 @@ const server = http.createServer((req, res) => {
       // under the root whose target lies outside it would be served with a
       // 200. Re-apply the containment test against the RESOLVED path.
       checkRealPathContained(requestedPath, PUBLIC_DIR_REAL, (contained) => {
-        if (!contained) {
-          sendStatus(res, 403, "403 Forbidden");
-          return;
-        }
-        if (requestedPath.endsWith(".html")) {
-          serveIndex(req, res, requestedPath, urlPathname);
-        } else {
-          sendFile(req, res, requestedPath);
+        // Same try/catch every async callback in this chain carries: a throw
+        // here would unwind to the non-exiting uncaughtException handler with
+        // no response written, hanging the socket until the request timeout.
+        try {
+          if (!contained) {
+            sendStatus(res, 403, "403 Forbidden");
+            return;
+          }
+          if (requestedPath.endsWith(".html")) {
+            serveIndex(req, res, requestedPath, urlPathname);
+          } else {
+            sendFile(req, res, requestedPath);
+          }
+        } catch (e) {
+          console.error("Request handler error:", (e && e.message) || e);
+          sendStatus(res, 500, "500 Internal Server Error");
         }
       });
       return;
@@ -1687,6 +1763,7 @@ module.exports = {
   isPrivatePath,
   checkRealPathContained,
   parsePublicationAuthors,
+  validatePublications,
   // Build-time reuse: the static build (build-static.js) renders and writes the
   // exact bytes the server serves by reusing this already-loaded state.
   DEPLOY_VERSION,

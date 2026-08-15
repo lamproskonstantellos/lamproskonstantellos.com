@@ -86,7 +86,13 @@ function Header({ route, navigate, activeSection }) {
     if (
       (route.page === "publications-list" && it.id === "publications") ||
       (route.page === "news-list" && it.id === "news") ||
-      (route.page === "article" && it.id === "news")
+      // Only a KNOWN slug highlights News: an unknown one renders the
+      // NotFound view, and the static host serves it from the one 404.html
+      // — which was pre-rendered with NO active nav link. Highlighting here
+      // anyway made the first client render disagree with that markup
+      // (class/aria-current attribute mismatches that React 18 hydration
+      // silently keeps).
+      (route.page === "article" && it.id === "news" && Boolean(getArticle(route.slug)))
     ) {
       return "true";
     }
@@ -164,7 +170,7 @@ function Hero({ navigate }) {
           <div className="hero-intro-photo">
             {/* Same (preloaded) asset as the big portrait, so this costs no
                 extra download; eager because it is the mobile LCP image. */}
-            <Picture src={SITE.heroImage} alt="" width="220" height="220" sizes={HERO_IMG_SIZES} loading="eager" fetchPriority="high" />
+            <Picture src={SITE.heroImage} alt="" width="220" height="220" natural={{ width: SITE.heroImageWidth, height: SITE.heroImageHeight }} sizes={HERO_IMG_SIZES} loading="eager" fetchPriority="high" />
           </div>
           <div className="hero-intro-text">
             <span className="hero-intro-name">{PROFILE.name}</span>
@@ -211,12 +217,14 @@ function Hero({ navigate }) {
       <div className="hero-photo">
         {/* sizes matches the server's preload imagesizes exactly (both come
             from ui-helpers.HERO_IMG_SIZES) so the preloaded candidate is the
-            rendered one. */}
+            rendered one; `natural` likewise mirrors the preload's (both from
+            site.config heroImageWidth/Height). */}
         <Picture
           src={SITE.heroImage}
           alt={PROFILE.name}
           width="720"
           height="900"
+          natural={{ width: SITE.heroImageWidth, height: SITE.heroImageHeight }}
           sizes={HERO_IMG_SIZES}
           loading="eager"
           fetchPriority="high"
@@ -534,6 +542,10 @@ function App() {
     if (supported) window.history.scrollRestoration = "manual";
     // Seed the initial entry with a key so its scroll can be tracked/restored.
     const st = window.history.state || {};
+    // An entry that ALREADY carries a key is one of ours being re-entered
+    // across documents (reload, or cross-document Back from an external
+    // page). Remember that before seeding — it decides the restore below.
+    const reentry = st.key !== undefined;
     if (st.key === undefined) window.history.replaceState({ ...st, key: 0 }, "");
     currentKey.current = (window.history.state && window.history.state.key) || 0;
     // Seed the mint counter past the restored key: after a reload deep in a
@@ -541,6 +553,24 @@ function App() {
     // at 0, so the next pushState would mint key 1 — a key an EARLIER entry
     // still owns, cross-wiring the two entries' saved scroll positions.
     keyCounter.current = Math.max(keyCounter.current, currentKey.current);
+    // Reload / cross-document Back lands in a NEW document whose in-memory
+    // scroll map is empty, while history.scrollRestoration stays "manual" on
+    // the entry — so without this the reader of a long article was silently
+    // dropped back at the headline. The positions are persisted per-entry-key
+    // to sessionStorage on pagehide (same tab, survives the document) and
+    // restored here — but ONLY for a re-entered keyed entry: a fresh
+    // navigation (typed URL, external link) also starts at key 0 and must
+    // not inherit a previous visit's key-0 offset.
+    try {
+      const saved = JSON.parse(sessionStorage.getItem("scroll-positions") || "[]");
+      for (const [k, y] of saved) {
+        if (!scrollPositions.current.has(k)) scrollPositions.current.set(k, y);
+      }
+    } catch { /* corrupt/unavailable storage — start empty */ }
+    if (reentry) {
+      const y = scrollPositions.current.get(currentKey.current);
+      if (y) restoreScroll(y, restoreCtl.current);
+    }
     // Restore `from` (the article Back-link target) from the reloaded
     // history entry AFTER hydration — it is kept out of the initial state so
     // the first client render matches the pre-rendered markup. The update is
@@ -565,8 +595,26 @@ function App() {
         scrollPositions.current.set(currentKey.current, window.scrollY);
       });
     };
+    // Persist the map when the document goes away (reload, external link,
+    // tab close) so the next document in this entry can restore — see the
+    // mount effect. pagehide, not beforeunload: it also fires when the page
+    // enters the back/forward cache, and it never blocks the navigation.
+    const persist = () => {
+      scrollPositions.current.set(currentKey.current, window.scrollY);
+      try {
+        sessionStorage.setItem(
+          "scroll-positions",
+          JSON.stringify([...scrollPositions.current])
+        );
+      } catch { /* storage full/unavailable — restoring is best-effort */ }
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
+    window.addEventListener("pagehide", persist);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pagehide", persist);
+      cancelAnimationFrame(raf);
+    };
   }, []);
 
   useEffect(() => {

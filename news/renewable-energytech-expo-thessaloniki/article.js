@@ -22,6 +22,10 @@ defineArticle({
   ],
   articleSection: "Energy Markets",
   cover: "news/renewable-energytech-expo-thessaloniki/cover.jpg",
+  // Natural cover dimensions (px): they let the srcset advertise the full
+  // variant's REAL width instead of the 2200 cap (see ui-helpers).
+  coverWidth: 2889,
+  coverHeight: 2166,
   coverAlign: "top",
   video: "news/renewable-energytech-expo-thessaloniki/video.mp4",
   videoWidth: 1390,   // intrinsic pixels — reserve the frame before the poster loads

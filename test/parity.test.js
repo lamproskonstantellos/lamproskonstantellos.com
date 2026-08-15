@@ -140,6 +140,19 @@ test("_headers carries every security header and every HTML route", () => {
       `_headers has no rule block for HTML route ${routePath}`
     );
   }
+  // The feeds' registered media types: Cloudflare's extension-derived
+  // defaults (application/xml, application/json) contradict both the server
+  // and every page's <link rel="alternate" type=…> declarations.
+  for (const [feedPath, type] of [
+    ["/sitemap.xml", "application/xml; charset=utf-8"],
+    ["/rss.xml", "application/rss+xml; charset=utf-8"],
+    ["/feed.json", "application/feed+json; charset=utf-8"],
+  ]) {
+    assert.ok(
+      headersFile.includes(`Content-Type: ${type}`),
+      `_headers is missing the ${feedPath} Content-Type (${type})`
+    );
+  }
 });
 
 // Every pre-rendered flat file must 301 to its clean URL so no page is ever
@@ -156,10 +169,32 @@ test("_redirects maps every flat HTML file to its clean URL", () => {
       `_redirects is missing "${from} ${to} 301"`
     );
   expect("/index.html", "/");
+  // 404.html is served INTERNALLY by Cloudflare for unmatched paths; its
+  // direct address joins the same no-second-address rule.
+  expect("/404.html", "/");
   for (const [routePath, buildRel] of HTML_ROUTES) {
     if (buildRel === "index.html") continue;
     expect(`/${buildRel}`, routePath);
   }
+  // And the dev server agrees on the STATUS for these addresses (it used to
+  // answer 404 where the deploy 301s — locked in test/seo.test.js, which
+  // exercises the FLAT_HTML_REDIRECTS map over live requests).
+});
+
+// The deploy must not ship files the dev server refuses to serve: .md/.jsx
+// inside the deep-copied folders (news/<slug>/, vendor/) are private by
+// extension on the server, and used to ship 200 on Cloudflare.
+test("no privately-classed extension ships inside build/", () => {
+  const offenders = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.(md|jsx)$/i.test(e.name)) offenders.push(path.relative(BUILD, p));
+    }
+  };
+  walk(BUILD);
+  assert.deepEqual(offenders, [], `private-extension files leaked into build/: ${offenders.join(", ")}`);
 });
 
 // Guard against a reference-but-don't-copy bug: every icon the site points at

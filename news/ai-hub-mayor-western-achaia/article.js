@@ -21,6 +21,10 @@ defineArticle({
   ],
   articleSection: "Regional Policy",
   cover: "news/ai-hub-mayor-western-achaia/cover.jpg",
+  // Natural cover dimensions (px): they let the srcset advertise the full
+  // variant's REAL width instead of the 2200 cap (see ui-helpers).
+  coverWidth: 1024,
+  coverHeight: 692,
   photos: [
     {
       src: "news/ai-hub-mayor-western-achaia/photo-01.jpg",

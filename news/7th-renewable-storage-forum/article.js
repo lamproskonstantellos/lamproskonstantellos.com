@@ -20,6 +20,10 @@ defineArticle({
   ],
   articleSection: "Energy Storage",
   cover: "news/7th-renewable-storage-forum/cover.jpg",
+  // Natural cover dimensions (px): they let the srcset advertise the full
+  // variant's REAL width instead of the 2200 cap (see ui-helpers).
+  coverWidth: 4646,
+  coverHeight: 3485,
   body: [
     "On 22–23 October 2025, I attended the **7th Renewable & Storage Forum** in Athens, organised by **energypress**. The forum focused on the next stage of the Greek energy transition, with particular emphasis on renewable energy development, storage deployment, grid constraints, curtailment, auctions, investment conditions, and the regulatory framework for new market participants.",
     "The discussion made clear that storage is no longer treated as a future add-on to the power system. It is becoming one of the key tools for managing high renewable penetration, reducing curtailment, supporting system flexibility, and improving the economic performance of renewable assets.",
