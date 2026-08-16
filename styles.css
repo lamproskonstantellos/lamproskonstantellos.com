@@ -170,12 +170,26 @@ main { flex: 1 0 auto; width: 100%; }
   backdrop-filter: saturate(140%) blur(10px);
   -webkit-backdrop-filter: saturate(140%) blur(10px);
   border-bottom: 1px solid var(--line);
-  /* Pin the header to its own compositor layer: on mobile Safari/Chrome a
-     backdrop-filter surface re-composites when the content under it changes
-     wholesale (SPA navigation swaps <main> and jumps to top in one frame),
-     which showed as a momentary header "blink". A pre-promoted layer keeps
-     the blur surface alive across that repaint. */
-  transform: translateZ(0);
+  /* NO transform here: an earlier translateZ(0) "layer pinning" attempt is
+     a documented HAZARD on iOS Safari, where a transform combined with
+     -webkit-backdrop-filter makes the blur surface itself glitch — the
+     opposite of the intent. The mobile flicker is solved structurally
+     instead: touch devices get a fully OPAQUE header (media block below),
+     so there is no blur surface to recomposite at all. */
+}
+/* Touch devices: opaque header, no glass. The translucent backdrop blur is
+   the one surface that kept micro-flickering through SPA route swaps on
+   phone GPUs — it must recomposite whenever the page under it changes
+   wholesale, and no timing trick makes that reliably invisible on every
+   mobile browser. An opaque --bg header is visually near-identical (the
+   glass was 85% --bg already) and deterministically stable: there is
+   nothing to recompute, ever. Desktop keeps the glassy blur. */
+@media (hover: none) {
+  .site-header {
+    background: var(--bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 .site-header-inner {
   max-width: var(--container);
@@ -225,7 +239,11 @@ main { flex: 1 0 auto; width: 100%; }
   transition: color var(--transition);
 }
 .nav a:hover { color: var(--ink); }
-.nav a.active { color: var(--ink); font-weight: 500; }
+/* NO font-weight change on the active link: bold glyphs are WIDER, so a
+   weight flip reflowed the whole flex row — every menu item visibly nudged
+   sideways on each active-link handoff ("the whole menu flickers"). The
+   ink color + the underline are the active markers; the width never moves. */
+.nav a.active { color: var(--ink); }
 .nav a:not(.nav-cv)::after {
   content: "";
   position: absolute;
@@ -265,6 +283,10 @@ main { flex: 1 0 auto; width: 100%; }
    spy handoffs and hover keep their motion. Wins on specificity over both
    the base slide and the hover:none crossfade — no !important needed. */
 .route-swap .nav a:not(.nav-cv)::after { transition: none; }
+/* The link COLOR transition (a 220ms ink<->muted crossfade on both ends of
+   the handoff) must freeze during the swap too — suppressing only the
+   underline still left two text fades playing across the route change. */
+.route-swap .nav a { transition: none; }
 /* The header's translucent blur is the other flicker source on route swaps:
    the backdrop-filter surface re-composites while the ENTIRE page under it
    changes and jumps to top — on mobile GPUs that recomposite is visible as
