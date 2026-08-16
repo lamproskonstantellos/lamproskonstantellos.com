@@ -265,6 +265,19 @@ main { flex: 1 0 auto; width: 100%; }
    spy handoffs and hover keep their motion. Wins on specificity over both
    the base slide and the hover:none crossfade — no !important needed. */
 .route-swap .nav a:not(.nav-cv)::after { transition: none; }
+/* The header's translucent blur is the other flicker source on route swaps:
+   the backdrop-filter surface re-composites while the ENTIRE page under it
+   changes and jumps to top — on mobile GPUs that recomposite is visible as
+   a momentary header blink (worst from the home page, whose hero under the
+   header differs most from the destination). During the swap's paint the
+   header goes fully OPAQUE instead: at scroll-top nothing sits under the
+   header, so a plain --bg surface is visually identical there — and there
+   is simply no blur to recomposite. Restored two frames later. */
+.route-swap .site-header {
+  background: var(--bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
 /* The CV chip: the one filled action among the nav's text links — solid navy
    with light lettering (the same tokens as the primary button, so dark mode
    flips it correctly), compact on purpose. */
@@ -1577,6 +1590,35 @@ section.block {
   color: rgba(255, 255, 255, 0.52);
 }
 .site-footer .copy { display: flex; align-items: center; gap: 6px; }
+
+/* ===== Touch devices: no phantom-hover motion ===== */
+/* Touch has no real hover — a tap STICKS the hover state onto the element it
+   activates, so the card lift, cover zoom, badge pop and surface tint all
+   fired at tap time, piling motion onto the navigation itself (perceived as
+   the page "flickering" on mobile). Neutralize the decorative MOTION half of
+   hover on touch; color/underline feedback stays (it doubles as tap
+   feedback), and keyboard :focus-visible parity below is untouched. Placed
+   after every hover original so the equal-specificity ties resolve here. */
+@media (hover: none) {
+  .btn-primary:hover,
+  .btn-ghost:hover,
+  .chip:hover,
+  .footer-col a:hover { transform: none; }
+  .pub-card:hover,
+  .news-card:hover,
+  .contact-card:hover {
+    transform: none;
+    box-shadow: none;
+    background-color: var(--surface);
+    border-color: var(--line);
+  }
+  .pub-card:hover::before { transform: scaleY(0); }
+  .news-card:hover .cover img { transform: none; }
+  .contact-card:hover .ico-badge { transform: none; }
+  .contact-card:hover .ext { opacity: 0; transform: none; }
+  .article-figure .figure-frame:hover { box-shadow: var(--shadow-sm); }
+  .article-gallery .photo:hover { transform: none; }
+}
 
 /* Keyboard parity: :focus-visible answers with the exact hover feedback. */
 .news-card:focus-visible {
