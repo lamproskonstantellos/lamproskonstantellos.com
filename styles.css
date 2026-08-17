@@ -177,6 +177,21 @@ main { flex: 1 0 auto; width: 100%; }
      instead: touch devices get a fully OPAQUE header (media block below),
      so there is no blur surface to recomposite at all. */
 }
+/* Route swaps run inside a native View Transition (app.jsx navigate):
+   the browser crossfades an old-page snapshot into the new page instead of
+   hard-repainting the swap + scroll jump in one frame — the repaint that
+   flashed "like a reload" on iPhones. The header gets its OWN snapshot
+   pair: its pixels are identical on both sides of a route change, so it
+   simply cannot appear to move or blink. The crossfade is kept short so
+   navigation stays snappy; reduced-motion users never enter a transition
+   (guarded in app.jsx), and browsers without the API keep the instant
+   swap. */
+.site-header { view-transition-name: site-header; }
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 160ms;
+}
+
 /* Touch devices: opaque header, no glass. The translucent backdrop blur is
    the one surface that kept micro-flickering through SPA route swaps on
    phone GPUs — it must recomposite whenever the page under it changes
