@@ -133,6 +133,10 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+/* Brand-tinted text selection: the same accent band the hero keywords use,
+   resolved through the theme tokens so both palettes stay AA-readable. */
+::selection { background: var(--marker-strong); color: var(--ink); }
+
 a { color: var(--accent); text-decoration: none; transition: color var(--transition); }
 a:hover { color: var(--accent-hover); }
 img { max-width: 100%; display: block; }
