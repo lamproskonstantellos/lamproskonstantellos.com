@@ -930,6 +930,10 @@ function App() {
     const desiredUrl = next.page === "home" && next.section ? targetPath : targetPathname;
     const fromState = opts.from !== undefined ? { from: opts.from } : {};
     const currentUrl = window.location.pathname + window.location.hash;
+    // Captured BEFORE the history update below rewrites location: only a real
+    // PAGE swap (pathname change) earns a view transition further down —
+    // same-page hash/section updates keep their instant/smooth behavior.
+    const pathnameChanged = window.location.pathname !== targetPathname;
     if (window.location.pathname !== targetPathname) {
       // Remember where we were before leaving, then start a freshly-keyed entry.
       scrollPositions.current.set(currentKey.current, window.scrollY);
@@ -948,7 +952,34 @@ function App() {
     }
     // Mirror `from` onto the route so consumers get it as a prop (the history
     // entry keeps carrying it for reload/Back-Forward restoration).
-    setRoute(opts.from !== undefined ? { ...next, from: opts.from } : next);
+    const nextRoute = opts.from !== undefined ? { ...next, from: opts.from } : next;
+
+    // PAGE swaps (pathname changed) run inside a native View Transition
+    // where the browser supports it (Safari 18+, Chrome 111+): WebKit
+    // snapshots the old page and crossfades to the new one instead of
+    // hard-repainting a full content swap + instant scroll jump in one
+    // frame — which on iPhones flashed the whole page "like a reload" no
+    // matter how byte-stable the header DOM was. The header carries its own
+    // view-transition-name (styles.css), so its identical pixels are
+    // snapshotted separately and it cannot visibly change at all. The
+    // scroll-to-top runs INSIDE the callback, so the jump itself is under
+    // the crossfade. flushSync forces React's commit inside the callback,
+    // which is exactly the contract startViewTransition requires.
+    // Fallbacks: same-page section jumps, reduced-motion users, and older
+    // browsers keep the previous instant behavior.
+    const wantsTransition =
+      typeof document.startViewTransition === "function" &&
+      !(next.page === "home" && next.section) &&
+      !(typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (wantsTransition && pathnameChanged) {
+      document.startViewTransition(() => {
+        ReactDOM.flushSync(() => setRoute(nextRoute));
+        window.scrollTo({ top: 0 });
+      });
+      return;
+    }
+    setRoute(nextRoute);
 
     if (next.page === "home" && next.section) {
       // Lock the spy onto the destination for the duration of the smooth
