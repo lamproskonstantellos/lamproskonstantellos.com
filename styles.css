@@ -191,6 +191,18 @@ main { flex: 1 0 auto; width: 100%; }
 ::view-transition-new(root) {
   animation-duration: 160ms;
 }
+/* The header's two snapshots must SNAP, not crossfade. Their only pixel
+   difference across a swap is the active indicator (underline + ink on a
+   DIFFERENT link), and the default crossfade visibly morphed the menu for
+   160ms — the exact artifact the separate snapshot exists to prevent.
+   With the animations off, the new snapshot simply replaces the old one in
+   the first frame: the menu holds perfectly still, the indicator IS in its
+   new place, and only the page content below crossfades. */
+::view-transition-group(site-header),
+::view-transition-old(site-header),
+::view-transition-new(site-header) {
+  animation: none;
+}
 
 /* Touch devices: opaque header, no glass. The translucent backdrop blur is
    the one surface that kept micro-flickering through SPA route swaps on
