@@ -9,7 +9,7 @@
    ============================================================ */
 
 function About() {
-  const focus = ["Renewable Energy", "Battery Storage", "Grid Flexibility", "Energy Markets"];
+  const focus = ["Renewable Energy", "Battery Storage", "Grid Flexibility", "Energy Management", "Energy Markets"];
 
   return (
     <section className="block" id="about">
