@@ -63,7 +63,11 @@ Two optional fields drive everything: **`type`** and **`kind`**.
   location: "Patras, Greece",        // optional — second token of the meta line
                                      // (omit for journals — they have no venue city)
   year: "2025",                      // REQUIRED — a STRING; drives sorting and
-                                     // the big year label on /publications
+                                     // the big year label on /publications.
+                                     // Journal article already assigned to a
+                                     // volume → the ISSUE year (as cited)
+  publishedOnline: "2024-11-20",     // optional — online-first day (YYYY-MM-DD)
+                                     // when it precedes the issue year
 
   title: "Full publication title exactly as published",   // REQUIRED
 
@@ -99,6 +103,7 @@ Two optional fields drive everything: **`type`** and **`kind`**.
 | `authors` | ✅ | string | Author line; `**…**` renders bold (use it on your own name); keep the `(YYYY)` suffix |
 | `links` | ✅ | `{ label, href }[]` | Quiet text links with the ↗ mark; each opens in a new tab |
 | `location` | optional | string | Second token of the meta line (`City, Country`); omit for journals |
+| `publishedOnline` | optional | string (`"2026-08-07"`) | Online-first day of an article filed under a later issue `year`; becomes the JSON-LD `datePublished` (otherwise the year). Must be a real `YYYY-MM-DD` day, no later than `year`. Mention it in `description` too — it is not rendered on its own |
 | `kind` | optional | `"journal"` / `"conference"` | Files a peer-reviewed entry under the **Journal articles** or **Conference papers** filter; without it a peer-reviewed entry counts as a conference paper. Ignored on typed entries |
 | `type` | optional | string | Navy badge text **and** what files the entry under **Theses & reports** (see above) |
 | `award` | optional | string | Gold badge text (e.g. an award); use instead of `type`, never together |
@@ -125,8 +130,9 @@ Two optional fields drive everything: **`type`** and **`kind`**.
 These rules are ENFORCED, not advisory: `server.js` (`validatePublications`)
 throws on load — so `npm start`, `npm test` and the Cloudflare build all fail
 loudly — for a missing/empty `title`/`authors`/`venue`/`citation`, a `year`
-that is not a `"YYYY"` string, an empty `links` array, a link without an
-`https://` href, or an entry setting both `award` and `type`.
+that is not a `"YYYY"` string, a `publishedOnline` that is not a real
+`YYYY-MM-DD` day (or falls after `year`), an empty `links` array, a link
+without an `https://` href, or an entry setting both `award` and `type`.
 
 1. `npm run build && npm test` — the suite validates the rendered pages and
    must stay green (it also asserts filter predicates split the set cleanly).
@@ -154,6 +160,9 @@ that is not a `"YYYY"` string, an empty `links` array, a link without an
     node per author, so keep it in the `Surname, I., Surname, I., &
     Surname, I. (YYYY)` shape the template uses. The full list ships to the
     schema; never list fewer authors than the DOI registration.
+  - **Date** — `datePublished` is `publishedOnline` when set, else `year`.
+    An article listed under a future issue year therefore still reports the
+    day it actually went online, not a date that hasn't happened.
   - **Title** — must be unique across entries (a consistency test enforces
     it; the list rows and the schema both key on it).
 - The `/publications` page's `<title>`, meta description, canonical URL, and

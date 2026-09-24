@@ -8,7 +8,7 @@ const { test, before, after } = require("node:test");
 const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
-const { start, stop, request } = require("./helper");
+const { start, stop, request, loadDataWindow } = require("./helper");
 const SITE = require("../site.config.js");
 const server = require("../server.js");
 
@@ -222,6 +222,39 @@ test("home JSON-LD Person sameAs is socialLinks minus search URLs", async () => 
   assert.ok(person.sameAs.includes("https://github.com/lamproskonstantellos"));
 });
 
+test("home JSON-LD Person affiliations carry the full TUM unit hierarchy", async () => {
+  const html = (await request(base, "/")).body.toString("utf8");
+  const block = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1];
+  const person = JSON.parse(block)["@graph"].find((n) => n["@type"] === "ProfilePage").mainEntity;
+  // Walk parentOrganization up to the root: every chain must end at a
+  // university that carries an https url (the unit names alone identify
+  // nothing).
+  const chain = (org) => {
+    const names = [];
+    for (let o = org; o; o = o.parentOrganization) {
+      assert.ok(o["@type"] && o.name, "organization node needs @type and name");
+      names.push(o.name);
+      if (!o.parentOrganization) {
+        assert.equal(o["@type"], "CollegeOrUniversity", `${o.name}: root type`);
+        assert.match(o.url || "", /^https:\/\//, `${o.name}: root url`);
+      }
+    }
+    return names;
+  };
+  assert.deepEqual(chain(person.worksFor), [
+    "Center for Combined Smart Energy Systems (CoSES)",
+    "Munich Institute of Integrated Materials, Energy and Process Engineering (MEP)",
+    "Technical University of Munich",
+  ]);
+  assert.deepEqual(chain(person.affiliation), [
+    "Chair of Renewable and Sustainable Energy Systems",
+    "Department of Energy & Process Engineering",
+    "TUM School of Engineering and Design",
+    "Technical University of Munich",
+  ]);
+  assert.deepEqual(person.alumniOf.map(chain), [["University of Patras"]]);
+});
+
 // ---- RSS 2.0 spec checks ----------------------------------------------------
 
 test("rss.xml is RSS 2.0 with RFC-822 dates, guid and atom:link self", async () => {
@@ -433,4 +466,15 @@ test("/publications emits a typed ItemList with DOIs and full author lists", asy
   const types = list.itemListElement.map((e) => e.item["@type"]);
   assert.ok(types.includes("Thesis"), "Master's thesis must be typed Thesis");
   assert.ok(types.includes("Report"), "internship report must be typed Report");
+  // datePublished is the first-publication day: an entry filed under a
+  // future issue year reports its online-first date, never that year.
+  const pubs = loadDataWindow().PROFILE.publications;
+  for (const e of list.itemListElement) {
+    const p = pubs.find((x) => x.title === e.item.headline);
+    assert.equal(e.item.datePublished, p.publishedOnline || p.year, `${p.title}: datePublished`);
+  }
+  const epsr = list.itemListElement.find(
+    (e) => e.item.identifier && e.item.identifier.value === "10.1016/j.epsr.2026.113914"
+  ).item;
+  assert.equal(epsr.datePublished, "2026-08-07", "EPSR article reports its online-first day");
 });

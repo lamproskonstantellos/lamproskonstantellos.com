@@ -156,6 +156,16 @@ const HOME_URL = `${SITE_CFG.url}/`;
 // preload can never point at a renamed/missing file.
 const HERO_PRELOAD_IMAGE = SITE_CFG.heroImage.replace(/\.(jpe?g|png)$/i, ".avif");
 
+// A site.config.js affiliation as a schema.org Organization: its `parent`
+// chain (chair → department → school → university) nests as
+// parentOrganization, so every unit stays tied to its institution.
+function orgJsonLd(org) {
+  const node = { "@type": org.type || "Organization", "name": org.name };
+  if (org.url) node.url = org.url;
+  if (org.parent) node.parentOrganization = orgJsonLd(org.parent);
+  return node;
+}
+
 const PROFILE_JSONLD = {
   "@context": "https://schema.org",
   "@graph": [
@@ -172,6 +182,10 @@ const PROFILE_JSONLD = {
         "jobTitle": SITE_CFG.jobTitle,
         "url": HOME_URL,
         "image": DEFAULT_IMAGE,
+        // Affiliations from site.config.js (unit → … → university).
+        "worksFor": orgJsonLd(SITE_CFG.worksFor),
+        "affiliation": orgJsonLd(SITE_CFG.affiliation),
+        "alumniOf": SITE_CFG.alumniOf.map(orgJsonLd),
         // sameAs must hold URLs that IDENTIFY the person (profile pages,
         // authority records). The Zenodo entry in socialLinks is a paginated
         // full-text SEARCH — useful on the contact row, but as an identity
@@ -273,6 +287,23 @@ function validatePublications(pubs) {
     }
     if (typeof p.year !== "string" || !/^\d{4}$/.test(p.year)) {
       throw new Error(`${where}: year must be a "YYYY" STRING (grouping and sorting compare strings)`);
+    }
+    // Optional online-first date (JSON-LD datePublished). Same real-calendar-
+    // day check as article dates; it can precede the issue year but never
+    // fall after it.
+    if (p.publishedOnline !== undefined) {
+      const d = new Date(`${p.publishedOnline}T00:00:00Z`);
+      if (
+        typeof p.publishedOnline !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(p.publishedOnline) ||
+        Number.isNaN(d.getTime()) ||
+        d.toISOString().slice(0, 10) !== p.publishedOnline
+      ) {
+        throw new Error(`${where}: publishedOnline must be a real YYYY-MM-DD day`);
+      }
+      if (p.publishedOnline.slice(0, 4) > p.year) {
+        throw new Error(`${where}: publishedOnline is later than the issue year`);
+      }
     }
     if (!Array.isArray(p.links) || p.links.length === 0) {
       throw new Error(`${where}: links must be a non-empty array`);
@@ -417,7 +448,9 @@ const PUBLICATIONS_ITEMLIST = {
         ? (/thesis/i.test(p.type) ? "Thesis" : "Report")
         : "ScholarlyArticle",
       "headline": p.title,
-      "datePublished": String(p.year),
+      // First publication: the online-first day when one is set (an
+      // in-press issue year would claim a date that hasn't happened yet).
+      "datePublished": p.publishedOnline || String(p.year),
       "author": authors.length
         ? authors
         : { "@type": "Person", "name": SITE_CFG.name, "url": HOME_URL },

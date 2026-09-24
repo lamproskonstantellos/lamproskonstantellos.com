@@ -7,6 +7,13 @@
    Loads in both the browser (window.SITE) and Node (require).
    ============================================================ */
 
+// Both TUM affiliation chains below end at the same university node.
+const TUM_ORG = {
+  type: "CollegeOrUniversity",
+  name: "Technical University of Munich",
+  url: "https://www.tum.de",
+};
+
 const SITE = {
   url: "https://lamproskonstantellos.com",
   name: "Lampros Konstantellos",
@@ -26,6 +33,30 @@ const SITE = {
   cvPath: "/lampros-konstantellos-cv.pdf",
   defaultDescription:
     "Exploring renewable energy, battery storage, grid flexibility, and electricity markets through engineering, modelling, and applied research.",
+  // Home-page Person JSON-LD affiliations, mirroring the CV. Each unit
+  // climbs to its institution through `parent` (JSON-LD
+  // parentOrganization); `type` defaults to Organization. Update them when
+  // the role changes.
+  // Research Associate — the employment:
+  worksFor: {
+    name: "Center for Combined Smart Energy Systems (CoSES)",
+    parent: {
+      name: "Munich Institute of Integrated Materials, Energy and Process Engineering (MEP)",
+      parent: TUM_ORG,
+    },
+  },
+  // Doctoral Candidate (Dr.-Ing.) — the doctorate:
+  affiliation: {
+    name: "Chair of Renewable and Sustainable Energy Systems",
+    parent: {
+      name: "Department of Energy & Process Engineering",
+      parent: { name: "TUM School of Engineering and Design", parent: TUM_ORG },
+    },
+  },
+  // The degree-granting university:
+  alumniOf: [
+    { type: "CollegeOrUniversity", name: "University of Patras", url: "https://www.upatras.gr" },
+  ],
   socialLinks: [
     "https://www.linkedin.com/in/lampros-konstantellos/",
     "https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en",
