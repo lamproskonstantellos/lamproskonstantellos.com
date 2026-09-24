@@ -10,6 +10,8 @@
      - location, description, award, type,
        kind ("journal" / "conference" — the
        peer-reviewed filter split),
+       publishedOnline (YYYY-MM-DD online-first
+       date, when it precedes the issue year),
        citation (IEEE reference for the Cite
        button; auto-assembled when omitted)      (optional)
 
@@ -39,15 +41,17 @@ const PROFILE = {
       // count as conference papers.
       kind: "journal",
       venue: "Electric Power Systems Research",
-      // Listed under the year it went online (7 August 2026); vol. 265 is
-      // the April 2027 issue, which the Cite reference below carries. The
-      // description spells that out on the page — without it the "2026" year
-      // label and the "Apr. 2027" in the copied citation read as a
-      // contradiction.
-      year: "2026",
-      description: "Available online August 2026; assigned to vol. 265, pt. A (April 2027 issue).",
+      // Listed under its issue year: vol. 265, pt. A is the April 2027 issue
+      // — the year the Cite reference below, the CV, and the indexes
+      // (Scopus, Scholar) carry. It went online on 7 August 2026, which
+      // `publishedOnline` feeds to the JSON-LD datePublished (a future
+      // "2027" there would misstate first publication) and the description
+      // spells out on the page.
+      year: "2027",
+      publishedOnline: "2026-08-07",
+      description: "Available online 7 August 2026; vol. 265, pt. A (April 2027 issue).",
       title: "Regulation-aware BESS dispatch for PV systems under virtual net-billing in Greece",
-      authors: "**Konstantellos, L.**, Vazakas, A., Koumkoudis, K., & Papadopoulos, N.-A. (2026)",
+      authors: "**Konstantellos, L.**, Vazakas, A., Koumkoudis, K., & Papadopoulos, N.-A. (2027)",
       citation: 'L. Konstantellos, A. Vazakas, K. Koumkoudis and N.-A. Papadopoulos, "Regulation-aware BESS dispatch for PV systems under virtual net-billing in Greece," Electric Power Systems Research, vol. 265, pt. A, Art. no. 113914, Apr. 2027, doi: 10.1016/j.epsr.2026.113914.',
       links: [
         { label: "ScienceDirect", href: "https://www.sciencedirect.com/science/article/pii/S0378779626012034" },

@@ -245,6 +245,11 @@ test("validatePublications enforces the PUBLICATIONS.md rules", () => {
   assert.throws(() => validatePublications([{ ...good, year: 2026 }]), /STRING/);
   assert.throws(() => validatePublications([{ ...good, award: "Best", type: "Thesis" }]), /mutually exclusive/);
   assert.throws(() => validatePublications([{ ...good, title: "" }]), /title/);
+  assert.doesNotThrow(() => validatePublications([{ ...good, year: "2027", publishedOnline: "2026-08-07" }]));
+  for (const bad of ["2026-02-30", "2026-8-7", "07/08/2026", 20260807]) {
+    assert.throws(() => validatePublications([{ ...good, publishedOnline: bad }]), /real YYYY-MM-DD/);
+  }
+  assert.throws(() => validatePublications([{ ...good, publishedOnline: "2027-01-05" }]), /later than the issue year/);
   // And the REAL data passes (it already loaded at require time — this makes
   // the guarantee explicit).
   assert.doesNotThrow(() => validatePublications(loadDataWindow().PROFILE.publications));

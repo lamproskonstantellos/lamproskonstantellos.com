@@ -8,7 +8,7 @@ const { test, before, after } = require("node:test");
 const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
-const { start, stop, request } = require("./helper");
+const { start, stop, request, loadDataWindow } = require("./helper");
 const SITE = require("../site.config.js");
 const server = require("../server.js");
 
@@ -433,4 +433,15 @@ test("/publications emits a typed ItemList with DOIs and full author lists", asy
   const types = list.itemListElement.map((e) => e.item["@type"]);
   assert.ok(types.includes("Thesis"), "Master's thesis must be typed Thesis");
   assert.ok(types.includes("Report"), "internship report must be typed Report");
+  // datePublished is the first-publication day: an entry filed under a
+  // future issue year reports its online-first date, never that year.
+  const pubs = loadDataWindow().PROFILE.publications;
+  for (const e of list.itemListElement) {
+    const p = pubs.find((x) => x.title === e.item.headline);
+    assert.equal(e.item.datePublished, p.publishedOnline || p.year, `${p.title}: datePublished`);
+  }
+  const epsr = list.itemListElement.find(
+    (e) => e.item.identifier && e.item.identifier.value === "10.1016/j.epsr.2026.113914"
+  ).item;
+  assert.equal(epsr.datePublished, "2026-08-07", "EPSR article reports its online-first day");
 });
