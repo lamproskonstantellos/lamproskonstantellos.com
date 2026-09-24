@@ -107,9 +107,9 @@ const PROFILE = {
       venue: "Technical University of Munich",
       location: "Munich, Germany",
       year: "2023",
-      title: "Novel Optimization Model Applied for Decarbonization Scenarios of Non-Interconnected Mediterranean Islands – A Kastellorizo Case Study",
+      title: "Novel Optimization Model Applied for Decarbonization Scenarios of Non-Interconnected Mediterranean Islands: A Kastellorizo Case Study",
       authors: "**Konstantellos, L.** (2023)",
-      citation: 'L. Konstantellos, "Novel Optimization Model Applied for Decarbonization Scenarios of Non-Interconnected Mediterranean Islands – A Kastellorizo Case Study", Technical University of Munich, Munich, Germany, 2023. doi: 10.5281/zenodo.13936256.',
+      citation: 'L. Konstantellos, "Novel Optimization Model Applied for Decarbonization Scenarios of Non-Interconnected Mediterranean Islands: A Kastellorizo Case Study", Technical University of Munich, Munich, Germany, 2023. doi: 10.5281/zenodo.13936256.',
       links: [
         { label: "Zenodo", href: "https://zenodo.org/records/13936256" },
       ],
