@@ -156,6 +156,16 @@ const HOME_URL = `${SITE_CFG.url}/`;
 // preload can never point at a renamed/missing file.
 const HERO_PRELOAD_IMAGE = SITE_CFG.heroImage.replace(/\.(jpe?g|png)$/i, ".avif");
 
+// A site.config.js affiliation as a schema.org Organization: its `parent`
+// chain (chair → department → school → university) nests as
+// parentOrganization, so every unit stays tied to its institution.
+function orgJsonLd(org) {
+  const node = { "@type": org.type || "Organization", "name": org.name };
+  if (org.url) node.url = org.url;
+  if (org.parent) node.parentOrganization = orgJsonLd(org.parent);
+  return node;
+}
+
 const PROFILE_JSONLD = {
   "@context": "https://schema.org",
   "@graph": [
@@ -172,19 +182,10 @@ const PROFILE_JSONLD = {
         "jobTitle": SITE_CFG.jobTitle,
         "url": HOME_URL,
         "image": DEFAULT_IMAGE,
-        // Affiliations from site.config.js. worksFor stays a plain
-        // Organization so the claim holds whatever the next employer is.
-        "worksFor": {
-          "@type": "Organization",
-          "name": SITE_CFG.worksFor.name,
-          "url": SITE_CFG.worksFor.url,
-          "department": { "@type": "Organization", "name": SITE_CFG.worksFor.department }
-        },
-        "alumniOf": SITE_CFG.alumniOf.map((o) => ({
-          "@type": "CollegeOrUniversity",
-          "name": o.name,
-          "url": o.url
-        })),
+        // Affiliations from site.config.js (unit → … → university).
+        "worksFor": orgJsonLd(SITE_CFG.worksFor),
+        "affiliation": orgJsonLd(SITE_CFG.affiliation),
+        "alumniOf": SITE_CFG.alumniOf.map(orgJsonLd),
         // sameAs must hold URLs that IDENTIFY the person (profile pages,
         // authority records). The Zenodo entry in socialLinks is a paginated
         // full-text SEARCH — useful on the contact row, but as an identity
