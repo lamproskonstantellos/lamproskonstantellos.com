@@ -26,6 +26,17 @@ const SITE = {
   cvPath: "/lampros-konstantellos-cv.pdf",
   defaultDescription:
     "Exploring renewable energy, battery storage, grid flexibility, and electricity markets through engineering, modelling, and applied research.",
+  // Home-page Person JSON-LD affiliations, mirroring the CV: the current
+  // employer (worksFor — update it when the role changes) and the
+  // degree-granting university (alumniOf).
+  worksFor: {
+    name: "Technical University of Munich",
+    url: "https://www.tum.de",
+    department: "Center for Combined Smart Energy Systems (CoSES)",
+  },
+  alumniOf: [
+    { name: "University of Patras", url: "https://www.upatras.gr" },
+  ],
   socialLinks: [
     "https://www.linkedin.com/in/lampros-konstantellos/",
     "https://scholar.google.com/citations?user=In1MHMwAAAAJ&hl=en",

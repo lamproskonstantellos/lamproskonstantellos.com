@@ -222,6 +222,25 @@ test("home JSON-LD Person sameAs is socialLinks minus search URLs", async () => 
   assert.ok(person.sameAs.includes("https://github.com/lamproskonstantellos"));
 });
 
+test("home JSON-LD Person affiliations mirror site.config", async () => {
+  const html = (await request(base, "/")).body.toString("utf8");
+  const block = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1];
+  const person = JSON.parse(block)["@graph"].find((n) => n["@type"] === "ProfilePage").mainEntity;
+  assert.deepEqual(person.worksFor, {
+    "@type": "Organization",
+    "name": SITE.worksFor.name,
+    "url": SITE.worksFor.url,
+    "department": { "@type": "Organization", "name": SITE.worksFor.department },
+  });
+  assert.deepEqual(
+    person.alumniOf,
+    SITE.alumniOf.map((o) => ({ "@type": "CollegeOrUniversity", "name": o.name, "url": o.url }))
+  );
+  for (const u of [person.worksFor.url, ...person.alumniOf.map((o) => o.url)]) {
+    assert.match(u, /^https:\/\//, `affiliation url ${u}`);
+  }
+});
+
 // ---- RSS 2.0 spec checks ----------------------------------------------------
 
 test("rss.xml is RSS 2.0 with RFC-822 dates, guid and atom:link self", async () => {

@@ -142,7 +142,7 @@ first — nothing else changes.
 ## SEO
 
 - Every route is pre-rendered at build time into one static HTML file — the full visible body (`ssr.js`) plus `<title>`, `<meta description>`, Open Graph, Twitter Card, and canonical URL — so non-JS crawlers (most AI/LLM crawlers included) index the real content.
-- Article pages include `Article` schema JSON-LD with author, dates, headline, image, full text, and (when set) `topics` as `about` entities. The home page includes `ProfilePage` / `Person` JSON-LD; `/publications` carries a typed `ItemList` with a DOI-bearing node per publication.
+- Article pages include `Article` schema JSON-LD with author, dates, headline, image, full text, and (when set) `topics` as `about` entities. The home page includes `ProfilePage` / `Person` JSON-LD (with `worksFor` / `alumniOf` from `site.config.js`); `/publications` carries a typed `ItemList` with a DOI-bearing node per publication.
 - `sitemap.xml` is generated at build time and includes every static page plus every auto-discovered article; `lastmod` follows `dateUpdated` when an article is edited.
 - `robots.txt` allows all crawlers and points to the sitemap.
 - `rss.xml` and `feed.json` (JSON Feed 1.1) are generated at build time from the auto-discovered articles, newest first.

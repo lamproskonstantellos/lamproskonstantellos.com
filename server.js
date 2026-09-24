@@ -172,6 +172,19 @@ const PROFILE_JSONLD = {
         "jobTitle": SITE_CFG.jobTitle,
         "url": HOME_URL,
         "image": DEFAULT_IMAGE,
+        // Affiliations from site.config.js. worksFor stays a plain
+        // Organization so the claim holds whatever the next employer is.
+        "worksFor": {
+          "@type": "Organization",
+          "name": SITE_CFG.worksFor.name,
+          "url": SITE_CFG.worksFor.url,
+          "department": { "@type": "Organization", "name": SITE_CFG.worksFor.department }
+        },
+        "alumniOf": SITE_CFG.alumniOf.map((o) => ({
+          "@type": "CollegeOrUniversity",
+          "name": o.name,
+          "url": o.url
+        })),
         // sameAs must hold URLs that IDENTIFY the person (profile pages,
         // authority records). The Zenodo entry in socialLinks is a paginated
         // full-text SEARCH — useful on the contact row, but as an identity
