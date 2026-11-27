@@ -1,7 +1,8 @@
 /* global React, Icon, Picture, SITE, getRecentNews, getArticle, LIMITS,
    asset, routeToPath, handleAnchorClick, shareLinks, copyTextToClipboard,
    renderInline, SectionHeader, ViewAllLink, ARTICLE_COVER_SIZES,
-   ARTICLE_PORTRAIT_SIZES, NEWS_CARD_SIZES */
+   ARTICLE_FIGURE_SIZES, ARTICLE_PAIR_SIZES, ARTICLE_PORTRAIT_SIZES,
+   NEWS_CARD_SIZES */
 
 /* ============================================================
    NEWS / ARTICLES
@@ -423,15 +424,25 @@ function Article({ slug, from, navigate }) {
     setLightboxIndex(index);
   };
 
-  const renderInlineFigure = ({ photo, index }, key) => {
+  const isPortrait = (photo) =>
+    photo.width && photo.height && Number(photo.height) > Number(photo.width);
+  // Two photos anchored to the same paragraph, both with known dimensions and
+  // the same orientation, render side by side as one balanced row; anything
+  // else (one photo, three or more, mixed orientations) stacks as before.
+  const isPair = (entries) =>
+    entries.length === 2 &&
+    entries.every((e) => e.photo.width && e.photo.height) &&
+    Boolean(isPortrait(entries[0].photo)) === Boolean(isPortrait(entries[1].photo));
+
+  const renderInlineFigure = ({ photo, index }, key, paired) => {
     const alt = photoAlt(photo);
     const open = openPhoto(index);
     // Portrait photos are height-capped (max-height: 70vh) and render far
     // narrower than the article column — advertise the narrower slot so the
     // browser picks the 960w candidate instead of the full-size one.
-    const portrait = photo.width && photo.height && Number(photo.height) > Number(photo.width);
+    const portrait = isPortrait(photo);
     return (
-      <figure className="article-figure" key={key}>
+      <figure className={"article-figure" + (portrait ? " is-portrait" : "")} key={key}>
         <div
           className="figure-frame"
           role="button"
@@ -455,7 +466,7 @@ function Article({ slug, from, navigate }) {
             width={photo.width}
             height={photo.height}
             natural={photo.width ? { width: photo.width, height: photo.height } : undefined}
-            sizes={portrait ? ARTICLE_PORTRAIT_SIZES : ARTICLE_COVER_SIZES}
+            sizes={paired ? ARTICLE_PAIR_SIZES : portrait ? ARTICLE_PORTRAIT_SIZES : ARTICLE_FIGURE_SIZES}
           />
         </div>
         {photo.caption && <figcaption>{photo.caption}</figcaption>}
@@ -496,6 +507,21 @@ function Article({ slug, from, navigate }) {
     </div>
   );
 
+  // "More news": the three articles nearest to this one in the newest-first
+  // list (so a trip's sibling pieces surface next to each other), shown
+  // newest first. Gives every article internal links to other articles.
+  const related = (() => {
+    const all = getRecentNews();
+    const at = all.findIndex((n) => n.slug === article.slug);
+    return all
+      .map((n, i) => ({ n, i }))
+      .filter((x) => x.i !== at)
+      .sort((a, b) => Math.abs(a.i - at) - Math.abs(b.i - at) || a.i - b.i)
+      .slice(0, 3)
+      .sort((a, b) => a.i - b.i)
+      .map((x) => x.n);
+  })();
+
   return (
     <div className="page article">
       {backLink}
@@ -521,6 +547,8 @@ function Article({ slug, from, navigate }) {
           />
         </div>
       )}
+      {/* Full-width layout: title, cover and text all span the same container
+          as the header (logo to CV button). */}
       <div className="article-body">
         {/* Consecutive "• " entries render as ONE real <ul> so assistive
             tech announces "list, N items" instead of N bare paragraphs (the
@@ -537,11 +565,20 @@ function Article({ slug, from, navigate }) {
           const isBullet = (s) => typeof s === "string" && s.startsWith("• ");
           const subhead = (s) =>
             typeof s === "string" && /^\*\*[^*]+\*\*$/.test(s) ? s.slice(2, -2) : null;
+          const figures = (i) => {
+            const entries = inlineAfter.get(i) || [];
+            if (isPair(entries)) {
+              return (
+                <div className="article-figure-pair">
+                  {entries.map((photo, j) => renderInlineFigure(photo, `fig-${i}-${j}`, true))}
+                </div>
+              );
+            }
+            return entries.map((photo, j) => renderInlineFigure(photo, `fig-${i}-${j}`));
+          };
           const attachments = (i) => (
             <React.Fragment>
-              {(inlineAfter.get(i) || []).map((photo, j) =>
-                renderInlineFigure(photo, `fig-${i}-${j}`)
-              )}
+              {figures(i)}
               {article.video && videoAfter === i && renderVideo()}
             </React.Fragment>
           );
@@ -631,6 +668,25 @@ function Article({ slug, from, navigate }) {
             </React.Fragment>
           ))}
         </div>
+      )}
+      {related.length > 0 && (
+        <section className="article-related">
+          <SectionHeader
+            title="More news"
+            action={
+              <ViewAllLink
+                href="/news"
+                label="View all news"
+                onClick={(e) => handleAnchorClick(e, navigate, { page: "news-list" })}
+              />
+            }
+          />
+          <div className="news-grid">
+            {related.map((n) => (
+              <NewsCard key={n.slug} article={n} navigate={navigate} />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

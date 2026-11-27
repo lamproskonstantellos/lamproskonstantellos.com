@@ -212,13 +212,6 @@ function Hero({ navigate }) {
           >
             Read news
           </a>
-          <a
-            className="btn btn-ghost"
-            href="/#contact"
-            onClick={(e) => handleAnchorClick(e, navigate, { page: "home", section: "contact" })}
-          >
-            Contact
-          </a>
         </div>
       </div>
       <div className="hero-photo">
