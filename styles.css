@@ -431,22 +431,24 @@ main {
 .btn-ghost { border-color: var(--line); color: var(--ink); background: var(--surface); }
 .btn-ghost:hover { border-color: var(--ink); color: var(--ink); transform: translateY(-1px); }
 
+/* A quiet portrait: a small square with the page's hairline border and no
+   drop shadow, so the headline carries the hero and the photo accompanies it
+   (the former 360px 4:5 card with a large shadow dominated the first screen). */
 .hero-photo {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 5;
-  max-width: 360px;
+  aspect-ratio: 1 / 1;
+  max-width: 280px;
   justify-self: end;
   margin-left: auto;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--shadow-lg);
   background: var(--img-ph);
 }
 .hero-photo img {
   width: 100%; height: 100%;
   object-fit: cover;
-  object-position: center 15%;
+  object-position: center 20%;
 }
 
 /* Small profile card (photo + name + role) above the headline. Hidden on
