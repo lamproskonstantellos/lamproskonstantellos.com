@@ -168,14 +168,14 @@ function Hero({ navigate }) {
   return (
     <section className="hero">
       <div className="hero-text">
-        {/* Small profile card (photo + name + role), shown ONLY on small
-            screens where the large portrait on the right is hidden — the
-            single mobile carrier of the photo. aria-hidden: assistive tech
-            already gets the name/role from the header brand link's
+        {/* Small profile card (photo + name + role), shown ONLY on phones,
+            where the header drops the name and the About portrait is hidden
+            — the single phone carrier of the photo. aria-hidden: assistive
+            tech already gets the name/role from the header brand link's
             aria-label, so this visual duplicate would be read twice. */}
         <div className="hero-intro" aria-hidden="true">
           <div className="hero-intro-photo">
-            {/* Same (preloaded) asset as the big portrait, so this costs no
+            {/* Same (preloaded) asset as the About portrait, so this costs no
                 extra download; eager because it is the mobile LCP image. */}
             <Picture src={SITE.heroImage} alt="" width="220" height="220" natural={{ width: SITE.heroImageWidth, height: SITE.heroImageHeight }} sizes={HERO_IMG_SIZES} loading="eager" fetchPriority="high" />
           </div>
@@ -213,22 +213,6 @@ function Hero({ navigate }) {
             Read news
           </a>
         </div>
-      </div>
-      <div className="hero-photo">
-        {/* sizes matches the server's preload imagesizes exactly (both come
-            from ui-helpers.HERO_IMG_SIZES) so the preloaded candidate is the
-            rendered one; `natural` likewise mirrors the preload's (both from
-            site.config heroImageWidth/Height). */}
-        <Picture
-          src={SITE.heroImage}
-          alt={PROFILE.name}
-          width="720"
-          height="900"
-          natural={{ width: SITE.heroImageWidth, height: SITE.heroImageHeight }}
-          sizes={HERO_IMG_SIZES}
-          loading="eager"
-          fetchPriority="high"
-        />
       </div>
     </section>
   );

@@ -131,15 +131,11 @@
   // sizes attributes shared between the components and the server-side
   // preloads (they MUST match, or the browser preloads one candidate and
   // renders another — a double download).
-  // Hero portrait: the 96px mobile intro card up to 600px; the 220px-capped
-  // tablet portrait up to 820px; above that ~44vw of
-  // the hero grid, but never more than the 280px the CSS caps .hero-photo at
-  // — a bare 44vw claimed up to ~700px on wide desktops and made DPR-1
-  // screens (and the preload) fetch the 960w candidate where 480w suffices,
-  // on the LCP path. Article cover: the full container width, up to the
-  // 1044px content box of the 1100px container (the article page spans the
-  // same width as the header since the full-width layout).
-  const HERO_IMG_SIZES = "(max-width: 600px) 96px, (max-width: 820px) min(34vw, 220px), min(44vw, 280px)";
+  // Portrait: the 96px intro card in the phone hero (up to 600px), and the
+  // 132px tile in the About sidebar above that. One string for both
+  // <Picture>s and the home preload — they MUST match, or the browser
+  // preloads one candidate and renders another.
+  const HERO_IMG_SIZES = "(max-width: 600px) 96px, 132px";
   const ARTICLE_COVER_SIZES = "(max-width: 1100px) 100vw, 1044px";
   // A single inline landscape figure is capped at 760px inside the text.
   const ARTICLE_FIGURE_SIZES = "(max-width: 816px) 100vw, 760px";
