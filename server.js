@@ -14,7 +14,7 @@ const {
   ROBOTS_INDEX,
   ROBOTS_NOINDEX,
 } = require("./routes.js");
-const { validateArticle, plainBody, escapeHtml } = require("./article-schema.js");
+const { validateArticle, plainBody, escapeHtml, compareByDateDesc } = require("./article-schema.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
 const { createSsrRenderer, GLOBAL_SCRIPTS: SSR_GLOBAL_SCRIPTS } = require("./ssr.js");
 // Shared responsive-image vocabulary (same module the browser loads), so the
@@ -653,6 +653,19 @@ function computePageMeta(pathname) {
               { "@type": "ListItem", "position": 2, "name": "News", "item": `${SITE_CFG.url}/news` },
             ],
           },
+          // The list itself, newest first — the same order the page renders —
+          // so crawlers get every article URL and headline as data, like the
+          // /publications ItemList.
+          {
+            "@type": "ItemList",
+            "name": "News",
+            "itemListElement": [...ARTICLES].sort(compareByDateDesc).map((a, i) => ({
+              "@type": "ListItem",
+              "position": i + 1,
+              "url": `${SITE_CFG.url}/news/${a.slug}`,
+              "name": a.title,
+            })),
+          },
         ],
       },
     };
@@ -759,6 +772,18 @@ function computePageMeta(pathname) {
       }
       if (article.articleSection) {
         articleSchema.articleSection = article.articleSection;
+      }
+      // A self-hosted clip is declared as a VideoObject (name, thumbnail and
+      // upload date are what video results require).
+      if (article.video) {
+        articleSchema.video = {
+          "@type": "VideoObject",
+          "name": article.title,
+          "description": description,
+          "uploadDate": `${article.date}T00:00:00+00:00`,
+          "contentUrl": `${SITE_CFG.url}/${article.video}`,
+          "thumbnailUrl": article.poster ? `${SITE_CFG.url}/${article.poster}` : image,
+        };
       }
       if (article.topics && article.topics.length) {
         articleSchema.about = article.topics.map((t) => ({

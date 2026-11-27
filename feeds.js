@@ -148,8 +148,16 @@ function buildRss({ articles, siteCfg }) {
   // (a) diverged between the server and the static build and (b) broke the
   // constant-key compression cache's assumption that the body is
   // deterministic per process.
-  const lastBuildDate = items.length
-    ? `  <lastBuildDate>${new Date(`${items[0].date}T00:00:00Z`).toUTCString()}</lastBuildDate>\n`
+  // The newest EFFECTIVE date across the items (an article's dateUpdated when
+  // set, else its publish date), so editing an older article moves the
+  // channel date too — items[0].date alone ignored edits.
+  const newest = items
+    .map((a) => (ISO_DATE.test(a.dateUpdated) ? a.dateUpdated : a.date))
+    .filter((d) => ISO_DATE.test(d))
+    .sort()
+    .pop();
+  const lastBuildDate = newest
+    ? `  <lastBuildDate>${new Date(`${newest}T00:00:00Z`).toUTCString()}</lastBuildDate>\n`
     : "";
 
   return (

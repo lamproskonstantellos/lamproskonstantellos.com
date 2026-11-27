@@ -545,3 +545,45 @@ test("home describes the person: name, Greek spelling, role and affiliation", as
   assert.equal(person.image, `${SITE.url}${SITE.heroImage}`);
   assert.equal(graph.find((n) => n["@type"] === "WebSite").alternateName, SITE.alternateName);
 });
+
+// ---- /news list data, article video, feed date -----------------------------
+
+test("/news emits an ItemList of every article, newest first", () => {
+  const graph = server.computePageMeta("/news").jsonLd["@graph"];
+  const list = graph.find((n) => n["@type"] === "ItemList");
+  assert.ok(list, "no ItemList on /news");
+  const urls = list.itemListElement.map((i) => i.url);
+  assert.ok(urls.includes(`${SITE.url}/news/${ARTICLE}`));
+  list.itemListElement.forEach((item, i) => {
+    assert.equal(item.position, i + 1);
+    assert.match(item.url, new RegExp(`^${SITE.url}/news/[a-z0-9-]+$`));
+    assert.ok(item.name);
+  });
+  const dates = list.itemListElement.map((i) => server.loadArticleMeta(i.url.split("/").pop()).date);
+  assert.deepEqual(dates, [...dates].sort().reverse(), "newest first");
+});
+
+test("an article with a video declares it as a VideoObject", () => {
+  const slug = "renewable-energytech-expo-thessaloniki";
+  const article = server.computePageMeta(`/news/${slug}`).jsonLd["@graph"].find((n) => n["@type"] === "Article");
+  assert.equal(article.video["@type"], "VideoObject");
+  assert.match(article.video.contentUrl, new RegExp(`^${SITE.url}/news/${slug}/.+\\.mp4$`));
+  assert.match(article.video.thumbnailUrl, new RegExp(`^${SITE.url}/news/${slug}/`));
+  assert.match(article.video.uploadDate, /^\d{4}-\d{2}-\d{2}T/);
+  // An article without a video carries no video node.
+  const plain = server.computePageMeta(`/news/${ARTICLE}`).jsonLd["@graph"].find((n) => n["@type"] === "Article");
+  assert.equal(plain.video, undefined);
+});
+
+test("rss lastBuildDate follows the newest edit, not only the newest publish date", () => {
+  const { buildRss } = require("../feeds.js");
+  const base = { title: "t", excerpt: "e" };
+  const xml = buildRss({
+    siteCfg: SITE,
+    articles: [
+      { ...base, slug: "new", date: "2026-03-01" },
+      { ...base, slug: "old-but-edited", date: "2026-01-01", dateUpdated: "2026-04-15" },
+    ],
+  });
+  assert.match(xml, /<lastBuildDate>Wed, 15 Apr 2026 00:00:00 GMT<\/lastBuildDate>/);
+});
