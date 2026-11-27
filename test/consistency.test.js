@@ -355,3 +355,30 @@ test("ssr.js GLOBAL_SCRIPTS + BUNDLE_ORDER mirror index.html and ENTRY_POINTS", 
     "ssr.js BUNDLE_ORDER and build.config.js ENTRY_POINTS cover different bundles"
   );
 });
+
+// ---- Type scale: six sizes, by role ------------------------------------------
+
+test("every font-size in styles.css comes from the six-step type scale", () => {
+  const css = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");
+  // The scale itself (README "Type scale"). Changing a value here is a
+  // deliberate, site-wide decision.
+  const scale = {
+    "--fs-label": "12px",
+    "--fs-ui": "14px",
+    "--fs-body": "17px",
+    "--fs-h2": "22px",
+    "--fs-title": "clamp(28px, 3.3vw, 36px)",
+    "--fs-display": "clamp(36px, 4.6vw, 56px)",
+  };
+  for (const [name, value] of Object.entries(scale)) {
+    assert.ok(css.includes(`${name}: ${value};`), `${name} should be ${value}`);
+  }
+  // Not text: the two lightbox glyph buttons (close, prev/next) and the
+  // print-only external-link arrow, sized relative to its link.
+  const allowed = new Set(["26px", "30px", "0.85em"]);
+  const tokens = new Set(Object.keys(scale).map((n) => `var(${n})`));
+  const offenders = [...css.matchAll(/font-size:\s*([^;]+);/g)]
+    .map((m) => m[1].trim())
+    .filter((v) => !tokens.has(v) && !allowed.has(v));
+  assert.deepEqual(offenders, [], "font sizes outside the type scale");
+});
