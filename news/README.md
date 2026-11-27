@@ -101,7 +101,7 @@ Each entry in `photos` is either a bare path string or an object `{ src, align?,
 
 Photos without `after` collect into a gallery grid at the end of the article. Both inline and gallery photos open in a full-screen lightbox on click (or Enter/Space when focused).
 
-**Render order** of an article: title → cover (both span the full container width) → a two-part row: the facts rail (published date, location, share buttons; on the left on desktop, it stays in view while reading) and the 720px text column with the body paragraphs (inline photos — and the video, if `videoAfter` is set — interleaved) → video (if not placed inline) → end gallery → sources. Below 860px the row becomes one column: facts, text, then the share buttons. Every article ends with **More news**: the three articles nearest to it by date.
+**Render order** of an article: date and location line → title → cover → body paragraphs (with any inline photos — and the video, if `videoAfter` is set — interleaved) → video (if not placed inline) → end gallery → share row → sources → **More news** (the three articles nearest to it by date). Title, cover and text all span the full container width, the same as the header; a single inline photo is capped at 760px and centred.
 
 ### SEO checklist
 

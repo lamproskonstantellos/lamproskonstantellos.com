@@ -310,7 +310,7 @@ function ArticleShare({ article }) {
 
   return (
     <div className="article-share">
-      <span className="share-label">Share</span>
+      <span className="share-label">Share:</span>
       <a
         href={shareLinks(url).linkedin}
         target="_blank"
@@ -525,6 +525,9 @@ function Article({ slug, from, navigate }) {
   return (
     <div className="page article">
       {backLink}
+      <div className="article-meta">
+        {article.dateLabel}{article.location ? ` · ${article.location}` : ""}
+      </div>
       <h1>{article.title}</h1>
       {article.cover && (
         <div className={"article-cover" + (article.coverAlign === "top" ? " cover-align-top" : "")}>
@@ -544,27 +547,8 @@ function Article({ slug, from, navigate }) {
           />
         </div>
       )}
-      {/* Full-width layout: the page spans the same container as the header.
-          The facts + share rail sits left of the text column on desktop and
-          stays in view while reading; below 860px it dissolves (display:
-          contents) so the facts lead the text and the share row follows it. */}
-      <div className="article-layout">
-      <aside className="article-aside">
-        <dl className="article-facts">
-          <div>
-            <dt>Published</dt>
-            <dd>{article.dateLabel}</dd>
-          </div>
-          {article.location && (
-            <div>
-              <dt>Location</dt>
-              <dd>{article.location}</dd>
-            </div>
-          )}
-        </dl>
-        <ArticleShare article={article} />
-      </aside>
-      <div className="article-main">
+      {/* Full-width layout: title, cover and text all span the same container
+          as the header (logo to CV button). */}
       <div className="article-body">
         {/* Consecutive "• " entries render as ONE real <ul> so assistive
             tech announces "list, N items" instead of N bare paragraphs (the
@@ -673,6 +657,7 @@ function Article({ slug, from, navigate }) {
           onClose={closeLightbox}
         />
       )}
+      <ArticleShare article={article} />
       {article.sources && article.sources.length > 0 && (
         <div className="article-sources">
           Sources:{" "}
@@ -684,8 +669,6 @@ function Article({ slug, from, navigate }) {
           ))}
         </div>
       )}
-      </div>
-      </div>
       {related.length > 0 && (
         <section className="article-related">
           <SectionHeader
