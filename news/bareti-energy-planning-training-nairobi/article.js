@@ -43,7 +43,7 @@ defineArticle({
       width: 1777,
       height: 1333,
       after: 1, // after the intro
-      caption: "Lampros Konstantellos presenting at the BARETI training in Nairobi, Kenya.",
+      caption: "Presenting at the BARETI training in Nairobi, Kenya.",
     },
     {
       src: "news/bareti-energy-planning-training-nairobi/bareti-kenya-training-participants-nairobi.jpg",
@@ -71,7 +71,7 @@ defineArticle({
       width: 1777,
       height: 1333,
       after: 16, // closes the article
-      caption: "Lampros Konstantellos with the participants of the BARETI training in Nairobi, Kenya.",
+      caption: "With the participants of the BARETI training in Nairobi, Kenya.",
     },
   ],
   body: [
@@ -85,7 +85,7 @@ defineArticle({
     "• **Power cuts are part of everyday life.** 71.9% had experienced at least two power cuts in the previous month.",
     "• **Most have no backup.** 65.6% had no backup solution during an outage.",
     "• **Solar PV and storage come first.** Assuming a three-year payback period, 85.7% would choose solar photovoltaics (PV) or battery storage as their first investment.",
-    "• **There is willingness to pay.** 46.9% would pay more than 2,500 Kenyan shillings (KSh) per month, about EUR 17, for a home battery.",
+    "• **There is willingness to pay.** 46.9% would pay more than 2,500 Kenyan shillings (KSh) per month, about EUR 18, for a home battery.",
     "The picture is consistent. Even for the people who plan and operate the power system, reliability of supply is a personal, household issue, and the interest in PV, storage, and energy independence follows from it.",
     "**What I took from the training room:**",
     "• **The young women in the room were among its strongest voices.** Many of the participants in their 20s and 30s were women. They asked many questions, contributed actively to the discussions, and were involved in university student associations and women's empowerment initiatives. Their confidence and willingness to learn were among the most inspiring parts of the workshop.",
