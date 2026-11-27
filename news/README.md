@@ -94,13 +94,14 @@ Each entry in `photos` is either a bare path string or an object `{ src, align?,
 
 - **`after`** (number) — render the photo **inline**, right after the `body` paragraph at that (0-based) index, instead of in the end gallery. Inline photos show whole, at their natural aspect ratio (portrait or landscape), capped in size. Anchoring to a bullet paragraph in the middle of a list renders the photo **inside that bullet's list item** — the list stays one list for assistive tech.
 - **`caption`** (string) — a short caption shown beneath an inline photo (also used as its alt text).
+- **Pairs** — two inline photos with the **same `after`**, both with `width`/`height` and the same orientation, render **side by side** as one row, each cropped to the shared ratio (4:3 landscape, 3:4 portrait). One photo, three or more, or mixed orientations stack one under the other as usual.
 - **`align: "top"`** — for a **gallery** photo (one without `after`), crop from the top instead of the centre when the subject sits high in the frame. Gallery photos are shown in a 4:3 grid.
 - **`width` / `height`** (numbers, set both) — the photo's intrinsic pixel size. Worth adding on **inline** photos: the browser then reserves the figure's space before the image loads, so the article doesn't jump mid-read. (Gallery tiles are fixed 4:3 and don't need it.)
 - A **bare string** is shorthand for `{ src }` — an uncaptioned gallery photo.
 
 Photos without `after` collect into a gallery grid at the end of the article. Both inline and gallery photos open in a full-screen lightbox on click (or Enter/Space when focused).
 
-**Render order** of an article: cover → body paragraphs (with any inline photos — and the video, if `videoAfter` is set — interleaved) → video (if not placed inline) → end gallery → share row → sources.
+**Render order** of an article: title → cover (both span the full container width) → a two-part row: the facts rail (published date, location, share buttons; on the left on desktop, it stays in view while reading) and the 720px text column with the body paragraphs (inline photos — and the video, if `videoAfter` is set — interleaved) → video (if not placed inline) → end gallery → sources. Below 860px the row becomes one column: facts, text, then the share buttons. Every article ends with **More news**: the three articles nearest to it by date.
 
 ### SEO checklist
 

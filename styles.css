@@ -1005,9 +1005,10 @@ section.block {
 .muted-note { color: var(--muted); }
 
 /* ===== Article ===== */
+/* Full-width article page: title, cover and the facts-rail + text grid span
+   the same container as the header (logo to CV button). The text itself keeps
+   a readable 720px measure inside the grid. */
 .article {
-  max-width: 720px;
-  margin: 0 auto;
   padding: clamp(28px, 4vw, 44px) 0 clamp(56px, 7vw, 80px);
 }
 /* The Back link is an outlined pill, matching .view-all so the two secondary
@@ -1031,24 +1032,69 @@ section.block {
   border-color: var(--accent);
 }
 
-.article-meta {
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted-2);
-  margin-bottom: 14px;
-}
 .article h1 {
-  font-size: clamp(28px, 3.5vw, 40px);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  font-size: clamp(28px, 4.2vw, 48px);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
   font-weight: 700;
+  max-width: 880px;
   margin: 0 0 32px;
   color: var(--ink);
   text-wrap: balance;
 }
+/* Facts rail (left) + text column (right). The rail takes whatever the 720px
+   text measure leaves; it sticks under the header while the text scrolls. */
+.article-layout {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(0, 720px);
+  column-gap: 64px;
+  align-items: start;
+}
+.article-aside {
+  position: sticky;
+  top: 104px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.article-facts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.article-facts dt,
+.article-aside .share-label {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.article-facts dt { margin-bottom: 4px; }
+.article-facts dd {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.article-main { min-width: 0; }
+@media (max-width: 860px) {
+  /* One column: the rail dissolves so its two parts can sit on either side
+     of the text — facts first, share row last. */
+  .article-layout { display: flex; flex-direction: column; }
+  .article-aside { display: contents; }
+  .article-facts {
+    order: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px 32px;
+    margin-bottom: 24px;
+  }
+  .article-main { order: 1; }
+  .article-aside .article-share { order: 2; margin-top: 36px; }
+}
 .article-cover {
-  margin: 0 0 36px;
+  margin: 0 0 44px;
   border-radius: var(--radius-lg);
   overflow: hidden;
   aspect-ratio: 16 / 9;
@@ -1083,31 +1129,31 @@ section.block {
   max-height: 80vh;
 }
 
+/* Left-aligned, no automatic hyphenation: justified web text left uneven word
+   gaps and broke words at line ends ("re-member", "profes-sional"). */
 .article-body {
   font-size: 17px;
   line-height: 1.75;
   color: var(--ink-soft);
-  hyphens: auto;
-  -webkit-hyphens: auto;
-}
-@media (min-width: 720px) {
-  .article-body {
-    text-align: justify;
-    text-justify: inter-word;
-  }
 }
 .article-body p { margin: 0 0 22px; }
+/* The opening paragraph reads as the article's lead. */
+.article-body > p:first-child {
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--ink);
+}
 /* Authored section headings (a fully-bold, colon-terminated body paragraph
    renders as <h2> — see components/news.jsx): visually the same weight and
    size as the old <p><strong> form, but a REAL heading so screen-reader
    heading navigation works inside an article. */
 .article-body .article-subhead {
-  font-size: 19px;
-  font-weight: 650;
-  line-height: 1.35;
-  letter-spacing: -0.012em;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
   color: var(--ink);
-  margin: 36px 0 14px;
+  margin: 40px 0 16px;
 }
 .article-body .article-subhead:first-child { margin-top: 0; }
 /* Real lists (grouped from the authored "• " entries in components/news.jsx):
@@ -1169,6 +1215,32 @@ section.block {
   line-height: 1.5;
   color: var(--muted);
   text-align: center;
+}
+
+/* Two same-orientation photos anchored to one paragraph: one balanced row,
+   each tile cropped to the shared ratio (4:3 landscape, 3:4 portrait) so the
+   pair always lines up. The lightbox still shows each photo whole. */
+.article-figure-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 10px 0 30px;
+  align-items: start;
+}
+.article-figure-pair .article-figure { margin: 0; }
+.article-figure-pair .figure-frame { display: block; }
+.article-figure-pair img,
+.article-figure-pair picture {
+  width: 100%;
+  max-height: none;
+}
+.article-figure-pair img {
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+.article-figure-pair .is-portrait img { aspect-ratio: 3 / 4; }
+@media (max-width: 560px) {
+  .article-figure-pair { grid-template-columns: minmax(0, 1fr); }
 }
 
 .article-gallery {
@@ -1299,7 +1371,7 @@ section.block {
 }
 
 .article-share {
-  margin-top: 40px;
+  margin-top: 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1307,10 +1379,11 @@ section.block {
 }
 .article-share a svg,
 .article-share button svg { width: 14px; height: 14px; }
-.article-share .share-label {
-  font-size: 13.5px;
-  color: var(--muted);
-  margin-right: 2px;
+/* In the desktop rail the label sits on its own line above the buttons,
+   matching the facts' labels; in the one-column layout it leads the row. */
+.article-share .share-label { flex-basis: 100%; }
+@media (max-width: 860px) {
+  .article-share .share-label { flex-basis: auto; margin-right: 4px; }
 }
 .article-share a,
 .article-share button {
@@ -1361,6 +1434,14 @@ section.block {
   border-top: 1px solid var(--line);
 }
 .article-sources a { color: var(--accent); }
+
+/* "More news" under the article: the same section header and card grid as
+   the home page preview, set off from the article by a rule. */
+.article-related {
+  margin-top: clamp(48px, 6vw, 72px);
+  padding-top: clamp(40px, 5vw, 56px);
+  border-top: 1px solid var(--line);
+}
 
 /* Hairline underlines for links in running text: always visible (affordance
    without color-alone), fading to full strength on hover. */

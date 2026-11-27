@@ -135,10 +135,16 @@
   // the hero grid, but never more than the 360px the CSS caps .hero-photo at
   // — a bare 44vw claimed up to ~700px on wide desktops and made DPR-1
   // screens (and the preload) fetch the 960w candidate where 480w suffices,
-  // on the LCP path. Article cover: the full column width up to the 720px
-  // article measure.
+  // on the LCP path. Article cover: the full container width, up to the
+  // 1044px content box of the 1100px container (the article page spans the
+  // same width as the header since the full-width layout).
   const HERO_IMG_SIZES = "(max-width: 820px) 96px, min(44vw, 360px)";
-  const ARTICLE_COVER_SIZES = "(max-width: 776px) 100vw, 720px";
+  const ARTICLE_COVER_SIZES = "(max-width: 1100px) 100vw, 1044px";
+  // Inline landscape figures stay inside the 720px text column.
+  const ARTICLE_FIGURE_SIZES = "(max-width: 776px) 100vw, 720px";
+  // Two same-orientation photos anchored to one paragraph sit side by side:
+  // half the text column each (minus the 16px gap), stacked below 560px.
+  const ARTICLE_PAIR_SIZES = "(max-width: 560px) 100vw, (max-width: 776px) 50vw, 352px";
   // Inline article figures cap portrait photos by HEIGHT (max-height: 70vh),
   // so a portrait figure renders far narrower than the 720px column —
   // claiming the column width made DPR-2 laptops fetch the full-size
@@ -166,6 +172,8 @@
     IMAGE_MAX_WIDTH,
     HERO_IMG_SIZES,
     ARTICLE_COVER_SIZES,
+    ARTICLE_FIGURE_SIZES,
+    ARTICLE_PAIR_SIZES,
     ARTICLE_PORTRAIT_SIZES,
     NEWS_CARD_SIZES,
   };
