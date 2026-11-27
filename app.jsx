@@ -214,6 +214,17 @@ function Hero({ navigate }) {
           </a>
         </div>
       </div>
+      {/* Who, at a glance: four label/value pairs in equal columns (two per
+          row on tablets and phones). A <dl>, so each value is read with its
+          label. */}
+      <dl className="hero-facts">
+        {PROFILE.hero.facts.map((f) => (
+          <div key={f.label}>
+            <dt>{f.label}</dt>
+            <dd>{f.value}</dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }
