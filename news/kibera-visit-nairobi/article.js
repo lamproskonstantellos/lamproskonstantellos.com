@@ -36,13 +36,6 @@ defineArticle({
   // captions carry the image-search signal (captioned photos render alt="").
   photos: [
     {
-      src: "news/kibera-visit-nairobi/kibera-nairobi-children-school-bags.jpg",
-      width: 1120,
-      height: 840,
-      after: 1, // after the Kibera intro
-      caption: "Children on their way through Kibera with their school bags.",
-    },
-    {
       src: "news/kibera-visit-nairobi/kibera-nairobi-water-queue.jpg",
       width: 1125,
       height: 1500,
@@ -62,6 +55,13 @@ defineArticle({
       height: 1500,
       after: 4, // second classroom photo, under the first
       caption: "Children in the classroom during our visit.",
+    },
+    {
+      src: "news/kibera-visit-nairobi/kibera-nairobi-children-school-bags.jpg",
+      width: 1120,
+      height: 840,
+      after: 5, // next to the way-to-school bullet
+      caption: "Children on their way through Kibera with their school bags.",
     },
     {
       src: "news/kibera-visit-nairobi/kibera-nairobi-railway-tracks.jpg",
