@@ -118,6 +118,34 @@ sync, and the site stays fully readable with JavaScript disabled. Golden
 snapshots live in `test/golden/`; a deliberate output change is refreshed with
 `UPDATE_GOLDEN=1 npm test`. CI runs the same `build` + `test` on every push.
 
+## Design conventions
+
+### Type scale
+
+Every text on the site takes one of six sizes, chosen by its role. Reading
+text is 17px everywhere: no paragraph is larger than the others, in About or
+in articles.
+
+| Token | Size | Used for |
+|-------|------|----------|
+| `--fs-display` | 56px (scales down to 28px on phones) | The home headline |
+| `--fs-title` | 36px (scales down to 28px) | Page and article titles |
+| `--fs-h2` | 22px | Section headings |
+| `--fs-body` | 17px | Reading text, and card titles in semibold |
+| `--fs-ui` | 14px | Buttons, nav, links, card summaries, captions |
+| `--fs-label` | 12px | Dates, locations, tags, small uppercase labels |
+
+The tokens live in `:root` in [`styles.css`](./styles.css). New styles use a
+token, never a literal size: `test/consistency.test.js` fails on any
+`font-size` outside the scale. The only exceptions are the two icon glyphs of
+the photo lightbox and the print-only link arrow.
+
+### Text alignment
+
+Running text is left-aligned, without automatic hyphenation, in About and in
+articles alike. Justified text on the web leaves uneven word gaps and breaks
+words at line ends.
+
 ## Adding content
 
 ### New article (News)

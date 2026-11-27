@@ -24,6 +24,8 @@ defineArticle({
     "inequality",
     "community",
   ],
+  // The kind of piece: shown on the card and used by the /news filters.
+  category: "Perspectives",
   articleSection: "Society",
   // JSON-LD `about` entities: sameAs points each topic at its canonical page
   // so search engines resolve the CONCEPT, not just the keyword string.

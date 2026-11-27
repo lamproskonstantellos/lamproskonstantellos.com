@@ -2,7 +2,7 @@
    asset, routeToPath, handleAnchorClick, shareLinks, copyTextToClipboard,
    renderInline, SectionHeader, ViewAllLink, ARTICLE_COVER_SIZES,
    ARTICLE_FIGURE_SIZES, ARTICLE_PAIR_SIZES, ARTICLE_PORTRAIT_SIZES,
-   NEWS_CARD_SIZES */
+   NEWS_CARD_SIZES, newsCategories */
 
 /* ============================================================
    NEWS / ARTICLES
@@ -40,6 +40,7 @@ function NewsCard({ article, navigate, from, headingLevel = "h3" }) {
             <div className="ph" aria-hidden="true" />}
       </div>
       <div className="body">
+        {article.category && <div className="cat">{article.category}</div>}
         <div className="meta">
           {article.dateLabel}{article.location ? ` · ${article.location}` : ""}
         </div>
@@ -79,6 +80,12 @@ function NewsPreview({ navigate }) {
 
 function NewsListPage({ navigate }) {
   const items = getRecentNews();
+  // Category filter: "all" or a category name. The pills come from the
+  // articles themselves (ui-helpers newsCategories), so a new category shows
+  // up on its own. The pre-rendered page is the unfiltered list.
+  const [category, setCategory] = React.useState("all");
+  const categories = newsCategories(items);
+  const shown = category === "all" ? items : items.filter((n) => n.category === category);
 
   // Scroll-to-top on arrival is handled by App.navigate (fresh navigations
   // only); Back/Forward scroll comes from the app's own restoreScroll in the
@@ -100,11 +107,34 @@ function NewsListPage({ navigate }) {
         <h1>News</h1>
         <p>Conferences, forums, awards, and project milestones, ordered from most recent.</p>
       </header>
+      {categories.length > 1 && (
+        <div className="pub-filters" role="group" aria-label="Filter news">
+          <button
+            type="button"
+            className={`pub-filter${category === "all" ? " active" : ""}`}
+            aria-pressed={category === "all"}
+            onClick={() => setCategory("all")}
+          >
+            All ({items.length})
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c.name}
+              type="button"
+              className={`pub-filter${category === c.name ? " active" : ""}`}
+              aria-pressed={category === c.name}
+              onClick={() => setCategory(c.name)}
+            >
+              {c.name} ({c.count})
+            </button>
+          ))}
+        </div>
+      )}
       {items.length === 0 ? (
         <p className="list-empty">No articles yet.</p>
       ) : (
         <div className="news-grid">
-          {items.map((n) => (
+          {shown.map((n) => (
             <NewsCard
               key={n.slug}
               article={n}

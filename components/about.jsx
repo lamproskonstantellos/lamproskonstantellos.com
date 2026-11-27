@@ -43,7 +43,7 @@ function About() {
         </aside>
         <div className="about-stream">
           {PROFILE.about.map((p, i) => (
-            <p key={i} className={`about-paragraph${i === 0 ? " about-lead" : ""}`}>
+            <p key={i} className="about-paragraph">
               {renderInline(p)}
             </p>
           ))}

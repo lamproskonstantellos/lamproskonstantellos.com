@@ -21,6 +21,8 @@ defineArticle({
     "data centres",
     "energy transition",
   ],
+  // The kind of piece: shown on the card and used by the /news filters.
+  category: "Conferences",
   articleSection: "Energy Markets",
   cover: "news/7th-power-gas-forum-athens/cover.jpg",
   // Natural cover dimensions (px): they let the srcset advertise the full

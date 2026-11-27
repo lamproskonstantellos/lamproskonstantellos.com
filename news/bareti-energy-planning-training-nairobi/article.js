@@ -27,6 +27,8 @@ defineArticle({
     "solar PV",
     "battery storage",
   ],
+  // The kind of piece: shown on the card and used by the /news filters.
+  category: "Training",
   articleSection: "Training and Capacity Building",
   // JSON-LD `about` entities: sameAs points each topic at its canonical page
   // so search engines resolve the CONCEPT, not just the keyword string.

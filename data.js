@@ -28,6 +28,16 @@ const PROFILE = {
     // own; the joining commas / "and" / final period stay plain ink.
     headlineHighlights: ["renewable energy", "grid flexibility", "battery storage"],
     sub: "Applied energy system modelling, techno-economic assessment, and industry-driven research for PV, wind, storage, and flexible electricity systems.",
+    // Four facts in a row under the hero actions: the current role, the
+    // research topic, where the experience comes from, and one recognition.
+    // Keep each value to about two lines; update "Now" together with
+    // site.config.js worksFor when the role changes.
+    facts: [
+      { label: "Now", value: "Research Associate and doctoral candidate, TUM" },
+      { label: "Research", value: "Home energy management systems in sector-coupled buildings" },
+      { label: "Previously", value: "Fraunhofer ISE, renewable energy consulting" },
+      { label: "Recognition", value: "3rd Best Paper Award, IEEE PESS 2025" },
+    ],
   },
   about: [
     "Electrical & Computer Engineer working at the intersection of renewable energy, grid flexibility, battery storage, and energy markets. The work centres on techno-economic assessment, feasibility studies, and investment-oriented analysis for PV, wind, BESS, and flexible electricity systems.",

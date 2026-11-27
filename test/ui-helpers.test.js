@@ -197,3 +197,25 @@ test("headlineJoiner renders an Oxford-comma list ending in a period", () => {
     "renewable energy, grid flexibility, and battery storage."
   );
 });
+
+// ---- newsCategories (the /news filter pills) --------------------------------
+
+test("newsCategories counts per category, largest first, ties in list order", () => {
+  const { newsCategories } = require("../ui-helpers.js");
+  const list = [
+    { category: "Perspectives" },
+    { category: "Conferences" },
+    { category: "Projects" },
+    { category: "Conferences" },
+    { title: "no category" },
+    { category: "Training" },
+  ];
+  assert.deepEqual(newsCategories(list), [
+    { name: "Conferences", count: 2 },
+    { name: "Perspectives", count: 1 },
+    { name: "Projects", count: 1 },
+    { name: "Training", count: 1 },
+  ]);
+  assert.deepEqual(newsCategories([]), []);
+  assert.deepEqual(newsCategories(undefined), []);
+});

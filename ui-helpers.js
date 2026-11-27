@@ -157,11 +157,28 @@
   const NEWS_CARD_SIZES =
     "(max-width: 640px) calc(100vw - 56px), (max-width: 1024px) calc(50vw - 36px), 338px";
 
+  // The /news filter pills: one per article category, most articles first
+  // (ties keep first-appearance order, i.e. newest article first), each with
+  // its count. Articles without a category only show under "All".
+  function newsCategories(articles) {
+    const counts = new Map();
+    for (const a of Array.isArray(articles) ? articles : []) {
+      if (a && typeof a.category === "string" && a.category.trim()) {
+        counts.set(a.category, (counts.get(a.category) || 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .map(([name, count], order) => ({ name, count, order }))
+      .sort((x, y) => y.count - x.count || x.order - y.order)
+      .map(({ name, count }) => ({ name, count }));
+  }
+
   const api = {
     shareLinks,
     pickActiveSection,
     PUB_FILTERS,
     groupPublicationsByYear,
+    newsCategories,
     headlineJoiner,
     imageSrcset,
     fullVariantWidth,
