@@ -140,6 +140,12 @@ token, never a literal size: `test/consistency.test.js` fails on any
 `font-size` outside the scale. The only exceptions are the two icon glyphs of
 the photo lightbox and the print-only link arrow.
 
+### Text alignment
+
+Running text is left-aligned, without automatic hyphenation, in About and in
+articles alike. Justified text on the web leaves uneven word gaps and breaks
+words at line ends.
+
 ## Adding content
 
 ### New article (News)

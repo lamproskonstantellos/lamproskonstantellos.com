@@ -637,11 +637,6 @@ section.block {
   color: var(--ink-soft);
   font-size: var(--fs-body);
   line-height: var(--lh-body);
-  hyphens: auto;
-  -webkit-hyphens: auto;
-}
-@media (min-width: 720px) {
-  .about-paragraph { text-align: justify; }
 }
 /* Quiet navy emphasis on the credibility phrases (institutions + award),
    wrapped in **bold** in data.js and parsed by renderInline, plus the same
