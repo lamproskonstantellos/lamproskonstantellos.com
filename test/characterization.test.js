@@ -57,7 +57,7 @@ test("title per route", async () => {
   assert.equal(titleOf((await request(base, "/publications")).body), "Publications - Lampros Konstantellos");
   assert.equal(
     titleOf((await request(base, "/news/ieee-pess-2025-best-paper-award")).body),
-    "Third Best Paper Award at IEEE PESS 2025 - Lampros Konstantellos"
+    "3rd Best Paper Award, IEEE PESS 2025 - Lampros Konstantellos"
   );
 });
 

@@ -8,6 +8,9 @@ defineArticle({
   dateLabel: "October 23, 2025",
   location: "Athens, Greece",
   title: "Reflections from the 7th Renewable & Storage Forum",
+  // Shorter wording for the <title> tag (search results, browser tab); with
+  // " - Lampros Konstantellos" it stays within 60 characters.
+  seoTitle: "7th Renewable & Storage Forum",
   excerpt: "Notes on renewable deployment, storage, curtailment, grid access, and the regulatory conditions shaping the next phase of the Greek electricity market.",
   keywords: [
     "BESS",

@@ -82,9 +82,20 @@ function buildSitemap({ articles, siteCfg, publicationYears }) {
 
   for (const a of list) {
     const eff = effectiveDate(a);
+    // Image sitemap entries (Google's image extension): the cover first,
+    // then every article photo, in author order. This is how the photos get
+    // discovered and tied to their article for image search — the pre-rendered
+    // <picture> markup alone lists only resized variants.
+    const images = [];
+    if (a.cover) images.push(a.cover);
+    for (const p of Array.isArray(a.photos) ? a.photos : []) {
+      const src = typeof p === "string" ? p : p && p.src;
+      if (src) images.push(src);
+    }
     entries.push({
       path: `/news/${a.slug}`,
       lastmod: eff && ISO_DATE.test(eff) ? eff : latestContentDate,
+      images,
     });
   }
 
@@ -93,11 +104,15 @@ function buildSitemap({ articles, siteCfg, publicationYears }) {
   // on a precondition enforced in another file.
   return (
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n` +
     entries
       .map((e) =>
         `  <url>\n    <loc>${escapeHtml(`${siteCfg.url}${e.path}`)}</loc>\n` +
         (e.lastmod ? `    <lastmod>${escapeHtml(e.lastmod)}</lastmod>\n` : "") +
+        (e.images || [])
+          .map((src) =>
+            `    <image:image>\n      <image:loc>${escapeHtml(`${siteCfg.url}/${src}`)}</image:loc>\n    </image:image>\n`)
+          .join("") +
         `  </url>`)
       .join("\n") +
     `\n</urlset>\n`
@@ -133,8 +148,16 @@ function buildRss({ articles, siteCfg }) {
   // (a) diverged between the server and the static build and (b) broke the
   // constant-key compression cache's assumption that the body is
   // deterministic per process.
-  const lastBuildDate = items.length
-    ? `  <lastBuildDate>${new Date(`${items[0].date}T00:00:00Z`).toUTCString()}</lastBuildDate>\n`
+  // The newest EFFECTIVE date across the items (an article's dateUpdated when
+  // set, else its publish date), so editing an older article moves the
+  // channel date too — items[0].date alone ignored edits.
+  const newest = items
+    .map((a) => (ISO_DATE.test(a.dateUpdated) ? a.dateUpdated : a.date))
+    .filter((d) => ISO_DATE.test(d))
+    .sort()
+    .pop();
+  const lastBuildDate = newest
+    ? `  <lastBuildDate>${new Date(`${newest}T00:00:00Z`).toUTCString()}</lastBuildDate>\n`
     : "";
 
   return (

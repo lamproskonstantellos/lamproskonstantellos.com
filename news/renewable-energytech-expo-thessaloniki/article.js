@@ -8,6 +8,9 @@ defineArticle({
   dateLabel: "March 28, 2026",
   location: "Thessaloniki, Greece",
   title: "Reflections from Renewable EnergyTech in Thessaloniki",
+  // Shorter wording for the <title> tag (search results, browser tab); with
+  // " - Lampros Konstantellos" it stays within 60 characters.
+  seoTitle: "Renewable EnergyTech in Thessaloniki",
   excerpt: "Notes from Renewable EnergyTech in Thessaloniki on curtailment, storage delays, flexible portfolios, and self-consumption, and a conversation on what young engineers gain from the market itself.",
   seoDescription: "Notes from Renewable EnergyTech in Thessaloniki on curtailment, storage delays, flexible portfolios, self-consumption, and offshore wind.",
   keywords: [

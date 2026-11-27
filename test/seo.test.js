@@ -138,7 +138,8 @@ test("200 routes have self-consistent canonical, og:url, title", async () => {
 test("article meta matches article.js source", () => {
   const a = server.loadArticleMeta(ARTICLE);
   const meta = server.computePageMeta(`/news/${ARTICLE}`);
-  assert.equal(meta.title, `${a.title} - ${SITE.name}`);
+  // <title> uses the article's shorter seoTitle when it has one.
+  assert.equal(meta.title, `${a.seoTitle || a.title} - ${SITE.name}`);
   assert.equal(meta.description, a.excerpt);
   // og:image is the dedicated 1200x630 social crop (cover-og.jpg) plus a
   // content-hash ?v= so a same-name cover replacement busts LinkedIn/Facebook/
@@ -179,14 +180,18 @@ test("og:image is a per-article 1200x630 social crop, not the raw cover", async 
   );
   assert.match(article, /<meta property="og:image:width" content="1200" \/>/);
   assert.match(article, /<meta property="og:image:height" content="630" \/>/);
-  // Scoped to <head>: the pre-rendered BODY legitimately renders the raw
-  // cover as the on-page <img> — only the share metadata must never point
-  // at it.
-  const head = article.slice(0, article.indexOf("</head>"));
-  assert.ok(
-    !head.includes(`/news/${ARTICLE}/cover.jpg`),
-    "article head must not reference the raw cover as a share image"
-  );
+  // Scoped to the share tags (og:image / twitter:image): the pre-rendered
+  // BODY legitimately renders the raw cover as the on-page <img>, and the
+  // Article JSON-LD lists it as an ImageObject — only the share metadata
+  // must never point at it.
+  const shareTags = article.match(/<meta (?:property="og:image"|name="twitter:image") content="[^"]*"/g) || [];
+  assert.ok(shareTags.length >= 2, "og:image and twitter:image present");
+  for (const tag of shareTags) {
+    assert.ok(
+      !tag.includes(`/news/${ARTICLE}/cover.jpg`),
+      "article share tags must not reference the raw cover"
+    );
+  }
 });
 
 // ---- JSON-LD Article: ISO dates, consistent author/publisher ---------------
@@ -292,7 +297,7 @@ test("feed.json conforms to JSON Feed 1.1", async () => {
 test("sitemap.xml is well-formed with absolute locs and YYYY-MM-DD lastmod", async () => {
   const xml = (await request(base, "/sitemap.xml")).body.toString("utf8");
   assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
-  assert.match(xml, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
+  assert.match(xml, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9" xmlns:image="http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1">/);
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
   assert.ok(locs.length >= 4);
   for (const loc of locs) assert.match(loc, /^https:\/\/lamproskonstantellos\.com\//);
@@ -352,7 +357,7 @@ test("the 404 route is noindex and emits no empty JSON-LD block", async () => {
 
 test("article served HTML carries title/canonical/JSON-LD without JS", async () => {
   const html = (await request(base, `/news/${ARTICLE}`)).body.toString("utf8");
-  assert.match(html, /<title>Third Best Paper Award at IEEE PESS 2025 - Lampros Konstantellos<\/title>/);
+  assert.match(html, /<title>3rd Best Paper Award, IEEE PESS 2025 - Lampros Konstantellos<\/title>/);
   assert.match(html, new RegExp(`<link rel="canonical" href="${SITE.url}/news/${ARTICLE}"`));
   assert.match(html, /<meta property="og:type" content="article"/);
   assert.ok(html.includes('"@type":"Article"'), "Article JSON-LD present in raw HTML");
@@ -408,7 +413,7 @@ test("og:title is the bare headline; <title> keeps the site-name suffix", async 
   const html = (await request(base, `/news/${ARTICLE}`)).body.toString("utf8");
   assert.match(html, /<meta property="og:title" content="Third Best Paper Award at IEEE PESS 2025" \/>/);
   assert.match(html, /<meta name="twitter:title" content="Third Best Paper Award at IEEE PESS 2025" \/>/);
-  assert.match(html, /<title>Third Best Paper Award at IEEE PESS 2025 - Lampros Konstantellos<\/title>/);
+  assert.match(html, /<title>3rd Best Paper Award, IEEE PESS 2025 - Lampros Konstantellos<\/title>/);
   // Lists and home carry og:type website plus their own social titles.
   const news = (await request(base, "/news")).body.toString("utf8");
   assert.match(news, /<meta property="og:type" content="website"/);
@@ -477,4 +482,108 @@ test("/publications emits a typed ItemList with DOIs and full author lists", asy
     (e) => e.item.identifier && e.item.identifier.value === "10.1016/j.epsr.2026.113914"
   ).item;
   assert.equal(epsr.datePublished, "2026-08-07", "EPSR article reports its online-first day");
+});
+
+
+// ---- Image discovery: sitemap image entries, Article.image, photo alts -----
+
+test("sitemap lists each article's cover and photos as image entries", async () => {
+  const xml = (await request(base, "/sitemap.xml")).body.toString("utf8");
+  const block = xml.split("<url>").find((u) => u.includes(`<loc>${SITE.url}/news/${ARTICLE}</loc>`));
+  assert.ok(block, "article url entry present");
+  const images = [...block.matchAll(/<image:loc>([^<]+)<\/image:loc>/g)].map((m) => m[1]);
+  assert.ok(images.includes(`${SITE.url}/news/${ARTICLE}/cover.jpg`), "cover listed");
+  for (const loc of images) assert.match(loc, new RegExp(`^${SITE.url}/news/${ARTICLE}/`));
+  // The static pages carry no image entries.
+  const home = xml.split("<url>").find((u) => u.includes(`<loc>${SITE.url}/</loc>`));
+  assert.ok(!home.includes("<image:image>"));
+});
+
+test("Article JSON-LD lists the social crop first, then cover and photos as ImageObjects", () => {
+  const meta = server.computePageMeta(`/news/${ARTICLE}`);
+  const article = meta.jsonLd["@graph"].find((n) => n["@type"] === "Article");
+  assert.ok(Array.isArray(article.image), "image is a list");
+  assert.match(article.image[0], /\/cover-og\.jpg/);
+  const objects = article.image.slice(1);
+  assert.ok(objects.length >= 1);
+  for (const o of objects) {
+    assert.equal(o["@type"], "ImageObject");
+    assert.match(o.url, new RegExp(`^${SITE.url}/news/${ARTICLE}/`));
+    assert.equal(o.creator, undefined, "no authorship claimed for photos");
+  }
+});
+
+test("captioned article photos carry their caption as alt text", async () => {
+  const html = (await request(base, `/news/${ARTICLE}`)).body.toString("utf8");
+  const figures = html.match(/<figure class="article-figure[^"]*">[\s\S]*?<\/figure>/g) || [];
+  assert.ok(figures.length >= 1, "the article has an inline photo");
+  for (const f of figures) {
+    const alt = (f.match(/<img [^>]*alt="([^"]*)"/) || [])[1];
+    assert.ok(alt && alt.length > 0, "inline photo has a non-empty alt");
+  }
+});
+
+// ---- Home: who the person is, in the snippet and in the Person data --------
+
+test("home describes the person: name, Greek spelling, role and affiliation", async () => {
+  const meta = server.computePageMeta("/");
+  assert.equal(meta.description, SITE.homeDescription);
+  assert.ok(meta.description.length <= 160, `home description is ${meta.description.length} characters`);
+  assert.ok(meta.description.includes(SITE.name));
+  assert.ok(meta.description.includes(SITE.alternateName));
+  assert.match(meta.description, /TUM/);
+  // Other routes keep their own descriptions.
+  assert.notEqual(server.computePageMeta("/news").description, SITE.homeDescription);
+  assert.equal(server.computePageMeta("/no-such-route").description, SITE.defaultDescription);
+
+  const graph = meta.jsonLd["@graph"];
+  const person = graph.find((n) => n["@type"] === "ProfilePage").mainEntity;
+  assert.equal(person.alternateName, SITE.alternateName);
+  assert.equal(person.description, SITE.personDescription);
+  assert.deepEqual(person.knowsAbout, SITE.knowsAbout);
+  // The Person image is the portrait, not the text share card.
+  assert.equal(person.image, `${SITE.url}${SITE.heroImage}`);
+  assert.equal(graph.find((n) => n["@type"] === "WebSite").alternateName, SITE.alternateName);
+});
+
+// ---- /news list data, article video, feed date -----------------------------
+
+test("/news emits an ItemList of every article, newest first", () => {
+  const graph = server.computePageMeta("/news").jsonLd["@graph"];
+  const list = graph.find((n) => n["@type"] === "ItemList");
+  assert.ok(list, "no ItemList on /news");
+  const urls = list.itemListElement.map((i) => i.url);
+  assert.ok(urls.includes(`${SITE.url}/news/${ARTICLE}`));
+  list.itemListElement.forEach((item, i) => {
+    assert.equal(item.position, i + 1);
+    assert.match(item.url, new RegExp(`^${SITE.url}/news/[a-z0-9-]+$`));
+    assert.ok(item.name);
+  });
+  const dates = list.itemListElement.map((i) => server.loadArticleMeta(i.url.split("/").pop()).date);
+  assert.deepEqual(dates, [...dates].sort().reverse(), "newest first");
+});
+
+test("an article with a video declares it as a VideoObject", () => {
+  const slug = "renewable-energytech-expo-thessaloniki";
+  const article = server.computePageMeta(`/news/${slug}`).jsonLd["@graph"].find((n) => n["@type"] === "Article");
+  assert.equal(article.video["@type"], "VideoObject");
+  assert.match(article.video.contentUrl, new RegExp(`^${SITE.url}/news/${slug}/.+\\.mp4$`));
+  assert.match(article.video.thumbnailUrl, new RegExp(`^${SITE.url}/news/${slug}/`));
+  assert.match(article.video.uploadDate, /^\d{4}-\d{2}-\d{2}T/);
+  // An article without a video carries no video node.
+  const plain = server.computePageMeta(`/news/${ARTICLE}`).jsonLd["@graph"].find((n) => n["@type"] === "Article");
+  assert.equal(plain.video, undefined);
+});
+
+test("rss lastBuildDate follows the newest edit, not only the newest publish date", () => {
+  const { buildRss } = require("../feeds.js");
+  const base = { title: "t", excerpt: "e" };
+  const xml = buildRss({
+    siteCfg: SITE,
+    articles: [
+      { ...base, slug: "new", date: "2026-03-01" },
+      { ...base, slug: "old-but-edited", date: "2026-01-01", dateUpdated: "2026-04-15" },
+    ],
+  });
+  assert.match(xml, /<lastBuildDate>Wed, 15 Apr 2026 00:00:00 GMT<\/lastBuildDate>/);
 });

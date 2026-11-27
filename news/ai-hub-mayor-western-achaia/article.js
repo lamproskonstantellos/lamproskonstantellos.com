@@ -8,6 +8,9 @@ defineArticle({
   dateLabel: "July 25, 2024",
   location: "Western Achaia, Greece",
   title: "AI-Hub Meeting with the Mayor of Western Achaia",
+  // Shorter wording for the <title> tag (search results, browser tab); with
+  // " - Lampros Konstantellos" it stays within 60 characters.
+  seoTitle: "AI-Hub Meeting in Western Achaia",
   excerpt: "A meeting between the University of Patras AI-Hub team and the Municipality of Western Achaia on practical AI applications for municipal services, including water-quality monitoring.",
   seoDescription: "University of Patras AI-Hub meets the Municipality of Western Achaia on practical AI for municipal services, including water-quality monitoring.",
   keywords: [

@@ -57,7 +57,11 @@
   // The document <title> for a route. Single source of truth shared by the
   // server (computePageMeta, injected into the served HTML) and the client
   // (navigate, which keeps the tab title correct after SPA navigation).
-  // ctx: { siteName, jobTitle, articleTitle }.
+  // ctx: { siteName, jobTitle, articleTitle, articleSeoTitle }.
+  // An article's optional seoTitle (a shorter wording for search results and
+  // the browser tab) replaces its headline here only — the page <h1>, og:title
+  // and JSON-LD headline keep the full title. Search engines cut titles at
+  // about 60 characters, and "<headline> - <site name>" ran to 64-94.
   function pageTitle(route, ctx) {
     switch (route && route.page) {
       case "home":
@@ -68,7 +72,7 @@
         return `Publications - ${ctx.siteName}`;
       case "article":
         return ctx.articleTitle
-          ? `${ctx.articleTitle} - ${ctx.siteName}`
+          ? `${ctx.articleSeoTitle || ctx.articleTitle} - ${ctx.siteName}`
           : `Page not found - ${ctx.siteName}`;
       default:
         return `Page not found - ${ctx.siteName}`;
@@ -97,7 +101,7 @@
   }
 
   // Per-route meta description. Same dual consumers as pageSocialTitle.
-  // ctx: { defaultDescription, articleDescription }.
+  // ctx: { defaultDescription, homeDescription, articleDescription }.
   const NEWS_DESCRIPTION =
     "Reflections from conferences, forums, awards, and projects in renewable energy, battery storage, grid flexibility, and electricity markets.";
   // Covers ALL of the page's categories — the filter pills split into
@@ -106,6 +110,10 @@
     "Journal and conference papers, theses, and reports on renewable energy, battery storage, PV, V2G, and grid simulation.";
   function pageDescription(route, ctx) {
     switch (route && route.page) {
+      case "home":
+        // The home snippet names the person, role and affiliation; the
+        // generic site description stays the fallback everywhere else.
+        return ctx.homeDescription || ctx.defaultDescription;
       case "news-list":
         return NEWS_DESCRIPTION;
       case "publications-list":

@@ -45,10 +45,40 @@ test("server-injected title equals pageTitle(parseRoute(path)) for every route",
   ];
   for (const p of cases) {
     const route = routes.parseRoute(p);
-    const articleTitle =
-      route.page === "article" ? (server.loadArticleMeta(route.slug) || {}).title : undefined;
-    const expected = routes.pageTitle(route, { ...ctx, articleTitle });
+    const meta = route.page === "article" ? server.loadArticleMeta(route.slug) || {} : {};
+    const expected = routes.pageTitle(route, {
+      ...ctx,
+      articleTitle: meta.title,
+      articleSeoTitle: meta.seoTitle,
+    });
     assert.equal(server.computePageMeta(p).title, expected, `title drift at ${p}`);
+  }
+});
+
+test("an article's seoTitle replaces its headline in <title> only", () => {
+  assert.equal(
+    routes.pageTitle({ page: "article" }, { ...ctx, articleTitle: "A Long Headline", articleSeoTitle: "Short" }),
+    "Short - Lampros Konstantellos"
+  );
+  // The social headline keeps the full title.
+  assert.equal(
+    routes.pageSocialTitle({ page: "article" }, { ...ctx, articleTitle: "A Long Headline", articleSeoTitle: "Short" }),
+    "A Long Headline"
+  );
+});
+
+test("every article's <title> fits the ~60 characters search results show", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const newsDir = path.join(__dirname, "..", "news");
+  const slugs = fs.readdirSync(newsDir).filter((d) => fs.existsSync(path.join(newsDir, d, "article.js")));
+  assert.ok(slugs.length >= 1);
+  for (const slug of slugs) {
+    const title = server.computePageMeta(`/news/${slug}`).title;
+    assert.ok(
+      title.length <= 60,
+      `"${title}" is ${title.length} characters — add a shorter seoTitle to news/${slug}/article.js`
+    );
   }
 });
 

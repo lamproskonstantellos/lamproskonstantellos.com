@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://lamproskonstantellos.com/</loc>
     <lastmod>2026-11-27</lastmod>
@@ -15,45 +15,120 @@
   <url>
     <loc>https://lamproskonstantellos.com/news/7th-power-gas-forum-athens</loc>
     <lastmod>2026-04-07</lastmod>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/7th-power-gas-forum-athens/cover.jpg</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://lamproskonstantellos.com/news/7th-renewable-storage-forum</loc>
     <lastmod>2025-10-23</lastmod>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/7th-renewable-storage-forum/cover.jpg</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://lamproskonstantellos.com/news/ai-hub-mayor-western-achaia</loc>
     <lastmod>2024-07-25</lastmod>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/ai-hub-mayor-western-achaia/cover.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/ai-hub-mayor-western-achaia/photo-01.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/ai-hub-mayor-western-achaia/photo-02.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/ai-hub-mayor-western-achaia/photo-03.jpg</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://lamproskonstantellos.com/news/bareti-energy-planning-training-nairobi</loc>
     <lastmod>2026-11-27</lastmod>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/bareti-energy-planning-training-nairobi/cover.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/bareti-energy-planning-training-nairobi/lampros-konstantellos-bareti-training-nairobi-kenya.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/bareti-energy-planning-training-nairobi/bareti-kenya-training-participants-nairobi.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/bareti-energy-planning-training-nairobi/bareti-kenya-capacity-factors-presentation.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/bareti-energy-planning-training-nairobi/bareti-kenya-training-group-work.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/bareti-energy-planning-training-nairobi/lampros-konstantellos-bareti-kenya-group-photo.jpg</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://lamproskonstantellos.com/news/evs38-gothenburg-ev-charging</loc>
     <lastmod>2025-06-18</lastmod>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/evs38-gothenburg-ev-charging/cover.jpg</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://lamproskonstantellos.com/news/ieee-pess-2025-best-paper-award</loc>
     <lastmod>2025-10-10</lastmod>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/ieee-pess-2025-best-paper-award/cover.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/ieee-pess-2025-best-paper-award/photo-01.jpg</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://lamproskonstantellos.com/news/intersolar-europe-2026</loc>
     <lastmod>2026-06-25</lastmod>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/intersolar-europe-2026/cover.jpg</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://lamproskonstantellos.com/news/kibera-visit-nairobi</loc>
     <lastmod>2026-11-27</lastmod>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/kibera-visit-nairobi/cover.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/kibera-visit-nairobi/kibera-nairobi-water-queue.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/kibera-visit-nairobi/kibera-nairobi-school-classroom.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/kibera-visit-nairobi/kibera-nairobi-school-classroom-children.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/kibera-visit-nairobi/kibera-nairobi-children-school-bags.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/kibera-visit-nairobi/kibera-nairobi-railway-tracks.jpg</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://lamproskonstantellos.com/news/renewable-energytech-expo-thessaloniki</loc>
     <lastmod>2026-03-28</lastmod>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/renewable-energytech-expo-thessaloniki/cover.jpg</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://lamproskonstantellos.com/news/wind-farm-foundation-pour</loc>
     <lastmod>2025-05-22</lastmod>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/wind-farm-foundation-pour/cover.jpg</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://lamproskonstantellos.com/news/wind-farm-turbine-erection</loc>
     <lastmod>2025-10-16</lastmod>
+    <image:image>
+      <image:loc>https://lamproskonstantellos.com/news/wind-farm-turbine-erection/cover.jpg</image:loc>
+    </image:image>
   </url>
 </urlset>

@@ -9,6 +9,9 @@ defineArticle({
   dateLabel: "November 13, 2026",
   location: "Nairobi, Kenya",
   title: "Reflections from a Visit to Kibera in Nairobi, Kenya",
+  // Shorter wording for the <title> tag (search results, browser tab); with
+  // " - Lampros Konstantellos" it stays within 60 characters.
+  seoTitle: "A Visit to Kibera in Nairobi, Kenya",
   excerpt: "Notes from a visit to Kibera in Nairobi, Kenya, and a week of conversations on water, education, healthcare, inequality, and how much depends on where we are born.",
   seoDescription: "Notes from a visit to Kibera in Nairobi, Kenya, and a week of conversations on water, education, healthcare, inequality, and where we are born.",
   keywords: [

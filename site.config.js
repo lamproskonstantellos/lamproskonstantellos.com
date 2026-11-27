@@ -33,6 +33,28 @@ const SITE = {
   cvPath: "/lampros-konstantellos-cv.pdf",
   defaultDescription:
     "Exploring renewable energy, battery storage, grid flexibility, and electricity markets through engineering, modelling, and applied research.",
+  // The name in Greek, for searches typed in Greek script. It goes into the
+  // home meta description and the JSON-LD alternateName; it is not shown on
+  // the page.
+  alternateName: "Λάμπρος Κωνσταντέλλος",
+  // Home page meta description (the snippet under the link when someone
+  // searches the name): who, role, affiliation, topics. Keep within ~160
+  // characters. Update it together with worksFor when the role changes.
+  homeDescription:
+    "Lampros Konstantellos (Λάμπρος Κωνσταντέλλος), Research Associate and doctoral candidate at TUM. Research on energy management, renewables, and storage.",
+  // Home-page Person JSON-LD: a one-sentence description and the topics the
+  // person works on (schema.org knowsAbout).
+  personDescription:
+    "Research Associate and doctoral candidate at the Technical University of Munich (TUM), working on home energy management systems, renewable energy, grid flexibility, and battery storage.",
+  knowsAbout: [
+    "Renewable energy",
+    "Battery storage",
+    "Grid flexibility",
+    "Home energy management systems",
+    "Energy markets",
+    "Techno-economic assessment",
+    "Vehicle-to-grid",
+  ],
   // Home-page Person JSON-LD affiliations, mirroring the CV. Each unit
   // climbs to its institution through `parent` (JSON-LD
   // parentOrganization); `type` defaults to Organization. Update them when

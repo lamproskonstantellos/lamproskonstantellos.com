@@ -14,7 +14,7 @@ const {
   ROBOTS_INDEX,
   ROBOTS_NOINDEX,
 } = require("./routes.js");
-const { validateArticle, plainBody, escapeHtml } = require("./article-schema.js");
+const { validateArticle, plainBody, escapeHtml, compareByDateDesc } = require("./article-schema.js");
 const { buildSitemap, buildRss, buildFeed } = require("./feeds.js");
 const { createSsrRenderer, GLOBAL_SCRIPTS: SSR_GLOBAL_SCRIPTS } = require("./ssr.js");
 // Shared responsive-image vocabulary (same module the browser loads), so the
@@ -172,6 +172,7 @@ const PROFILE_JSONLD = {
     {
       "@type": "WebSite",
       "name": SITE_CFG.name,
+      "alternateName": SITE_CFG.alternateName,
       "url": HOME_URL
     },
     {
@@ -179,9 +180,16 @@ const PROFILE_JSONLD = {
       "mainEntity": {
         "@type": "Person",
         "name": SITE_CFG.name,
+        // The Greek spelling, so a search typed in Greek resolves to the
+        // same person.
+        "alternateName": SITE_CFG.alternateName,
         "jobTitle": SITE_CFG.jobTitle,
+        "description": SITE_CFG.personDescription,
+        "knowsAbout": SITE_CFG.knowsAbout,
         "url": HOME_URL,
-        "image": DEFAULT_IMAGE,
+        // The portrait itself — the 1200x630 share card (name on a navy
+        // ground) is not a picture of the person.
+        "image": `${SITE_CFG.url}${SITE_CFG.heroImage}`,
         // Affiliations from site.config.js (unit → … → university).
         "worksFor": orgJsonLd(SITE_CFG.worksFor),
         "affiliation": orgJsonLd(SITE_CFG.affiliation),
@@ -598,7 +606,10 @@ function computePageMeta(pathname) {
   if (route.page === "home") {
     return {
       title: pageTitle(route, titleCtx),
-      description: DEFAULT_DESCRIPTION,
+      description: pageDescription(route, {
+        defaultDescription: DEFAULT_DESCRIPTION,
+        homeDescription: SITE_CFG.homeDescription,
+      }),
       url: HOME_URL,
       image: DEFAULT_IMAGE,
       imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
@@ -641,6 +652,19 @@ function computePageMeta(pathname) {
               { "@type": "ListItem", "position": 1, "name": "Home", "item": HOME_URL },
               { "@type": "ListItem", "position": 2, "name": "News", "item": `${SITE_CFG.url}/news` },
             ],
+          },
+          // The list itself, newest first — the same order the page renders —
+          // so crawlers get every article URL and headline as data, like the
+          // /publications ItemList.
+          {
+            "@type": "ItemList",
+            "name": "News",
+            "itemListElement": [...ARTICLES].sort(compareByDateDesc).map((a, i) => ({
+              "@type": "ListItem",
+              "position": i + 1,
+              "url": `${SITE_CFG.url}/news/${a.slug}`,
+              "name": a.title,
+            })),
           },
         ],
       },
@@ -708,11 +732,32 @@ function computePageMeta(pathname) {
       // article invisible to search engines.
       const modifiedDate = article.dateUpdated || article.date;
 
+      // Article.image: the social crop first (the 1200x630 card), then the
+      // full cover and every article photo as ImageObjects with their
+      // captions — the page's images stated as data, so image search can
+      // tie each photo to this article and its description. No creator is
+      // claimed: some event photos were taken by third parties (see README).
+      const place = article.location
+        ? { "@type": "Place", "name": article.location }
+        : undefined;
+      const imageObject = (rel, caption) => {
+        const node = { "@type": "ImageObject", "url": `${SITE_CFG.url}/${rel}` };
+        if (caption) node.caption = caption;
+        if (place) node.contentLocation = place;
+        return node;
+      };
+      const articleImages = [image];
+      if (article.cover) articleImages.push(imageObject(article.cover, article.title));
+      for (const p of Array.isArray(article.photos) ? article.photos : []) {
+        const src = typeof p === "string" ? p : p && p.src;
+        if (src) articleImages.push(imageObject(src, typeof p === "object" ? p.caption : undefined));
+      }
+
       const articleSchema = {
         "@type": "Article",
         "headline": article.title,
         "description": description,
-        "image": image,
+        "image": articleImages.length > 1 ? articleImages : image,
         "datePublished": article.date,
         "dateModified": modifiedDate,
         "author": { "@type": "Person", "name": SITE_CFG.name, "url": HOME_URL },
@@ -727,6 +772,18 @@ function computePageMeta(pathname) {
       }
       if (article.articleSection) {
         articleSchema.articleSection = article.articleSection;
+      }
+      // A self-hosted clip is declared as a VideoObject (name, thumbnail and
+      // upload date are what video results require).
+      if (article.video) {
+        articleSchema.video = {
+          "@type": "VideoObject",
+          "name": article.title,
+          "description": description,
+          "uploadDate": `${article.date}T00:00:00+00:00`,
+          "contentUrl": `${SITE_CFG.url}/${article.video}`,
+          "thumbnailUrl": article.poster ? `${SITE_CFG.url}/${article.poster}` : image,
+        };
       }
       if (article.topics && article.topics.length) {
         articleSchema.about = article.topics.map((t) => ({
@@ -746,7 +803,7 @@ function computePageMeta(pathname) {
       };
 
       return {
-        title: pageTitle(route, { ...titleCtx, articleTitle: article.title }),
+        title: pageTitle(route, { ...titleCtx, articleTitle: article.title, articleSeoTitle: article.seoTitle }),
         description,
         url: `${SITE_CFG.url}/news/${article.slug}`,
         image,
