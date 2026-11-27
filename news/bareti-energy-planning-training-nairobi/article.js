@@ -9,6 +9,9 @@ defineArticle({
   dateLabel: "November 11, 2026",
   location: "Nairobi, Kenya",
   title: "Reflections from the BARETI Energy Planning Training in Nairobi, Kenya",
+  // Shorter wording for the <title> tag (search results, browser tab); with
+  // " - Lampros Konstantellos" it stays within 60 characters.
+  seoTitle: "BARETI Training in Nairobi, Kenya",
   excerpt: "Notes from the two-day BARETI training in Nairobi, Kenya: what the participants told us about power cuts, solar PV, and battery storage, and what I took from the training room.",
   seoDescription: "Notes from the two-day BARETI energy planning training in Nairobi, Kenya: participant polls on power cuts, solar PV, battery storage, and willingness to pay.",
   keywords: [

@@ -694,6 +694,7 @@ function App() {
       siteName: SITE.name,
       jobTitle: SITE.jobTitle,
       articleTitle,
+      articleSeoTitle: article && article.seoTitle,
     });
 
     // A route that renders the not-found view (unknown path OR unknown slug)

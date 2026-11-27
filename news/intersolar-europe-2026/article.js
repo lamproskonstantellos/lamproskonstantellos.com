@@ -8,6 +8,9 @@ defineArticle({
   dateLabel: "June 25, 2026",
   location: "Munich, Germany",
   title: "Reflections from Intersolar Europe 2026 and The smarter E Europe",
+  // Shorter wording for the <title> tag (search results, browser tab); with
+  // " - Lampros Konstantellos" it stays within 60 characters.
+  seoTitle: "Intersolar Europe 2026 in Munich",
   excerpt: "Notes from Munich on battery storage as a revenue asset, hybrid PV plus storage, grid-forming inverters, energy management software, bidirectional charging, and what structural curtailment means for Greece.",
   seoDescription: "Notes from Intersolar Europe 2026 in Munich on battery storage as a revenue asset, hybrid PV plus storage, grid-forming inverters, and curtailment in Greece.",
   keywords: [

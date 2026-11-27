@@ -57,7 +57,11 @@
   // The document <title> for a route. Single source of truth shared by the
   // server (computePageMeta, injected into the served HTML) and the client
   // (navigate, which keeps the tab title correct after SPA navigation).
-  // ctx: { siteName, jobTitle, articleTitle }.
+  // ctx: { siteName, jobTitle, articleTitle, articleSeoTitle }.
+  // An article's optional seoTitle (a shorter wording for search results and
+  // the browser tab) replaces its headline here only — the page <h1>, og:title
+  // and JSON-LD headline keep the full title. Search engines cut titles at
+  // about 60 characters, and "<headline> - <site name>" ran to 64-94.
   function pageTitle(route, ctx) {
     switch (route && route.page) {
       case "home":
@@ -68,7 +72,7 @@
         return `Publications - ${ctx.siteName}`;
       case "article":
         return ctx.articleTitle
-          ? `${ctx.articleTitle} - ${ctx.siteName}`
+          ? `${ctx.articleSeoTitle || ctx.articleTitle} - ${ctx.siteName}`
           : `Page not found - ${ctx.siteName}`;
       default:
         return `Page not found - ${ctx.siteName}`;

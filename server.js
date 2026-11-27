@@ -767,7 +767,7 @@ function computePageMeta(pathname) {
       };
 
       return {
-        title: pageTitle(route, { ...titleCtx, articleTitle: article.title }),
+        title: pageTitle(route, { ...titleCtx, articleTitle: article.title, articleSeoTitle: article.seoTitle }),
         description,
         url: `${SITE_CFG.url}/news/${article.slug}`,
         image,

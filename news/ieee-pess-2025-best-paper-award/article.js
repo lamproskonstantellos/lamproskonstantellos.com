@@ -8,6 +8,9 @@ defineArticle({
   dateLabel: "October 10, 2025",
   location: "Munich, Germany",
   title: "Third Best Paper Award at IEEE PESS 2025",
+  // Shorter wording for the <title> tag (search results, browser tab); with
+  // " - Lampros Konstantellos" it stays within 60 characters.
+  seoTitle: "3rd Best Paper Award, IEEE PESS 2025",
   excerpt: "Our work on PV and Vehicle-to-Grid integration in the isolated island grid of Kastellorizo received the 3rd Best Paper Award at IEEE PESS 2025 in Munich.",
   keywords: [
     "IEEE PESS",

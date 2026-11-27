@@ -138,7 +138,8 @@ test("200 routes have self-consistent canonical, og:url, title", async () => {
 test("article meta matches article.js source", () => {
   const a = server.loadArticleMeta(ARTICLE);
   const meta = server.computePageMeta(`/news/${ARTICLE}`);
-  assert.equal(meta.title, `${a.title} - ${SITE.name}`);
+  // <title> uses the article's shorter seoTitle when it has one.
+  assert.equal(meta.title, `${a.seoTitle || a.title} - ${SITE.name}`);
   assert.equal(meta.description, a.excerpt);
   // og:image is the dedicated 1200x630 social crop (cover-og.jpg) plus a
   // content-hash ?v= so a same-name cover replacement busts LinkedIn/Facebook/
@@ -356,7 +357,7 @@ test("the 404 route is noindex and emits no empty JSON-LD block", async () => {
 
 test("article served HTML carries title/canonical/JSON-LD without JS", async () => {
   const html = (await request(base, `/news/${ARTICLE}`)).body.toString("utf8");
-  assert.match(html, /<title>Third Best Paper Award at IEEE PESS 2025 - Lampros Konstantellos<\/title>/);
+  assert.match(html, /<title>3rd Best Paper Award, IEEE PESS 2025 - Lampros Konstantellos<\/title>/);
   assert.match(html, new RegExp(`<link rel="canonical" href="${SITE.url}/news/${ARTICLE}"`));
   assert.match(html, /<meta property="og:type" content="article"/);
   assert.ok(html.includes('"@type":"Article"'), "Article JSON-LD present in raw HTML");
@@ -412,7 +413,7 @@ test("og:title is the bare headline; <title> keeps the site-name suffix", async 
   const html = (await request(base, `/news/${ARTICLE}`)).body.toString("utf8");
   assert.match(html, /<meta property="og:title" content="Third Best Paper Award at IEEE PESS 2025" \/>/);
   assert.match(html, /<meta name="twitter:title" content="Third Best Paper Award at IEEE PESS 2025" \/>/);
-  assert.match(html, /<title>Third Best Paper Award at IEEE PESS 2025 - Lampros Konstantellos<\/title>/);
+  assert.match(html, /<title>3rd Best Paper Award, IEEE PESS 2025 - Lampros Konstantellos<\/title>/);
   // Lists and home carry og:type website plus their own social titles.
   const news = (await request(base, "/news")).body.toString("utf8");
   assert.match(news, /<meta property="og:type" content="website"/);

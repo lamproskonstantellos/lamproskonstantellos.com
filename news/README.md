@@ -24,6 +24,8 @@ defineArticle({
   dateLabel: "May 12, 2026",                 // human-readable, shown on the card
   location: "Athens",                        // optional, shown after the date
   title: "Title of the article",
+  // seoTitle: "Shorter title",              // optional: wording for the <title> tag only (search
+  //                                         // results, browser tab) — see the SEO checklist
   excerpt: "One- or two-sentence preview shown on the card.",
   cover: "news/my-article-slug/cover.jpg",   // optional: card + article cover
   coverAlign: "top",                         // optional: crop the cover + thumbnail from the top instead of centre
@@ -69,6 +71,7 @@ defineArticle({
 | `dateUpdated` | optional | `YYYY-MM-DD` | Post-publication edit date (must be ≥ `date`): JSON-LD `dateModified`, `article:modified_time`, sitemap `<lastmod>`, JSON Feed `date_modified` |
 | `dateLabel` | ✅ | string | Human-readable date on the card/article |
 | `title` | ✅ | string | Heading, `<title>`, JSON-LD headline |
+| `seoTitle` | optional | string | Shorter wording for the `<title>` tag only (search results, browser tab). The page heading, `og:title` and JSON-LD keep `title`. Needed whenever `title` + ` - Lampros Konstantellos` runs past 60 characters — `npm test` fails until it fits |
 | `excerpt` | ✅ | string | Card preview, RSS/feed summary, and the meta description when `seoDescription` is absent |
 | `body` | ✅ | string[] | Article paragraphs (`**bold**` supported); also JSON-LD `articleBody` |
 | `seoDescription` | optional | string | Shorter (≤~160 char) meta/OG/Twitter/JSON-LD description; falls back to `excerpt` when omitted |
@@ -113,6 +116,11 @@ build time — you only supply good inputs:
    summary, and the meta description fallback.
 2. **`seoDescription`** — add it when the excerpt runs past ~160 characters, so
    Google shows a clean snippet instead of truncating.
+2b. **`seoTitle`** — search results show about 60 characters of a title, and
+   every title gets ` - Lampros Konstantellos` (24 characters) appended. When
+   the headline is longer than about 36 characters, add a shorter `seoTitle`
+   (the event and place are enough) so the result is not cut mid-word and the
+   name stays visible.
 3. **`keywords` / `articleSection` / `topics`** — power JSON-LD rich results
    and feed tags. `topics` entries become `Article.about` entities: point
    `sameAs` at the canonical English Wikipedia page for the concept (e.g.

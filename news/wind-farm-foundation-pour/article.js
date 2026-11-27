@@ -8,6 +8,9 @@ defineArticle({
   dateLabel: "May 22, 2025",
   location: "Boeotia, Greece",
   title: "Foundation Pour at the 23.1 MW Wind Farm",
+  // Shorter wording for the <title> tag (search results, browser tab); with
+  // " - Lampros Konstantellos" it stays within 60 characters.
+  seoTitle: "Foundation Pour, 23.1 MW Wind Farm",
   excerpt: "Notes from site during the continuous, uninterrupted concrete pour of a wind turbine foundation, and why the engineering is decided in the logistics, not only in the concrete.",
   seoDescription: "Notes from site during the continuous concrete pour of a wind turbine foundation, and why the engineering is decided in the logistics, not the concrete.",
   keywords: [
