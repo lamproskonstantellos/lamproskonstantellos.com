@@ -708,11 +708,32 @@ function computePageMeta(pathname) {
       // article invisible to search engines.
       const modifiedDate = article.dateUpdated || article.date;
 
+      // Article.image: the social crop first (the 1200x630 card), then the
+      // full cover and every article photo as ImageObjects with their
+      // captions — the page's images stated as data, so image search can
+      // tie each photo to this article and its description. No creator is
+      // claimed: some event photos were taken by third parties (see README).
+      const place = article.location
+        ? { "@type": "Place", "name": article.location }
+        : undefined;
+      const imageObject = (rel, caption) => {
+        const node = { "@type": "ImageObject", "url": `${SITE_CFG.url}/${rel}` };
+        if (caption) node.caption = caption;
+        if (place) node.contentLocation = place;
+        return node;
+      };
+      const articleImages = [image];
+      if (article.cover) articleImages.push(imageObject(article.cover, article.title));
+      for (const p of Array.isArray(article.photos) ? article.photos : []) {
+        const src = typeof p === "string" ? p : p && p.src;
+        if (src) articleImages.push(imageObject(src, typeof p === "object" ? p.caption : undefined));
+      }
+
       const articleSchema = {
         "@type": "Article",
         "headline": article.title,
         "description": description,
-        "image": image,
+        "image": articleImages.length > 1 ? articleImages : image,
         "datePublished": article.date,
         "dateModified": modifiedDate,
         "author": { "@type": "Person", "name": SITE_CFG.name, "url": HOME_URL },

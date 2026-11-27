@@ -456,13 +456,15 @@ function Article({ slug, from, navigate }) {
           {/* width/height (when the article provides them) let the browser
               reserve the figure's box from the intrinsic ratio before the
               image decodes — no layout shift mid-article.
-              alt="" whenever a caption follows: the visible <figcaption>
-              carries the description and the button's aria-label names the
-              action — a full alt on top announced the same sentence three
-              times in a row. Caption-less photos keep the generated alt. */}
+              The image always carries its description as alt (the caption
+              when there is one): alt is what image search reads, and an
+              empty alt left every captioned photo invisible to it. The
+              wrapping role="button" has its own aria-label, which is the
+              accessible name assistive tech announces for the control, so
+              the alt does not add a second reading there. */}
           <Picture
             src={asset(photo.src)}
-            alt={photo.caption ? "" : alt}
+            alt={alt}
             width={photo.width}
             height={photo.height}
             natural={photo.width ? { width: photo.width, height: photo.height } : undefined}

@@ -179,14 +179,18 @@ test("og:image is a per-article 1200x630 social crop, not the raw cover", async 
   );
   assert.match(article, /<meta property="og:image:width" content="1200" \/>/);
   assert.match(article, /<meta property="og:image:height" content="630" \/>/);
-  // Scoped to <head>: the pre-rendered BODY legitimately renders the raw
-  // cover as the on-page <img> — only the share metadata must never point
-  // at it.
-  const head = article.slice(0, article.indexOf("</head>"));
-  assert.ok(
-    !head.includes(`/news/${ARTICLE}/cover.jpg`),
-    "article head must not reference the raw cover as a share image"
-  );
+  // Scoped to the share tags (og:image / twitter:image): the pre-rendered
+  // BODY legitimately renders the raw cover as the on-page <img>, and the
+  // Article JSON-LD lists it as an ImageObject — only the share metadata
+  // must never point at it.
+  const shareTags = article.match(/<meta (?:property="og:image"|name="twitter:image") content="[^"]*"/g) || [];
+  assert.ok(shareTags.length >= 2, "og:image and twitter:image present");
+  for (const tag of shareTags) {
+    assert.ok(
+      !tag.includes(`/news/${ARTICLE}/cover.jpg`),
+      "article share tags must not reference the raw cover"
+    );
+  }
 });
 
 // ---- JSON-LD Article: ISO dates, consistent author/publisher ---------------
@@ -292,7 +296,7 @@ test("feed.json conforms to JSON Feed 1.1", async () => {
 test("sitemap.xml is well-formed with absolute locs and YYYY-MM-DD lastmod", async () => {
   const xml = (await request(base, "/sitemap.xml")).body.toString("utf8");
   assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
-  assert.match(xml, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
+  assert.match(xml, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9" xmlns:image="http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1">/);
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
   assert.ok(locs.length >= 4);
   for (const loc of locs) assert.match(loc, /^https:\/\/lamproskonstantellos\.com\//);
@@ -477,4 +481,43 @@ test("/publications emits a typed ItemList with DOIs and full author lists", asy
     (e) => e.item.identifier && e.item.identifier.value === "10.1016/j.epsr.2026.113914"
   ).item;
   assert.equal(epsr.datePublished, "2026-08-07", "EPSR article reports its online-first day");
+});
+
+
+// ---- Image discovery: sitemap image entries, Article.image, photo alts -----
+
+test("sitemap lists each article's cover and photos as image entries", async () => {
+  const xml = (await request(base, "/sitemap.xml")).body.toString("utf8");
+  const block = xml.split("<url>").find((u) => u.includes(`<loc>${SITE.url}/news/${ARTICLE}</loc>`));
+  assert.ok(block, "article url entry present");
+  const images = [...block.matchAll(/<image:loc>([^<]+)<\/image:loc>/g)].map((m) => m[1]);
+  assert.ok(images.includes(`${SITE.url}/news/${ARTICLE}/cover.jpg`), "cover listed");
+  for (const loc of images) assert.match(loc, new RegExp(`^${SITE.url}/news/${ARTICLE}/`));
+  // The static pages carry no image entries.
+  const home = xml.split("<url>").find((u) => u.includes(`<loc>${SITE.url}/</loc>`));
+  assert.ok(!home.includes("<image:image>"));
+});
+
+test("Article JSON-LD lists the social crop first, then cover and photos as ImageObjects", () => {
+  const meta = server.computePageMeta(`/news/${ARTICLE}`);
+  const article = meta.jsonLd["@graph"].find((n) => n["@type"] === "Article");
+  assert.ok(Array.isArray(article.image), "image is a list");
+  assert.match(article.image[0], /\/cover-og\.jpg/);
+  const objects = article.image.slice(1);
+  assert.ok(objects.length >= 1);
+  for (const o of objects) {
+    assert.equal(o["@type"], "ImageObject");
+    assert.match(o.url, new RegExp(`^${SITE.url}/news/${ARTICLE}/`));
+    assert.equal(o.creator, undefined, "no authorship claimed for photos");
+  }
+});
+
+test("captioned article photos carry their caption as alt text", async () => {
+  const html = (await request(base, `/news/${ARTICLE}`)).body.toString("utf8");
+  const figures = html.match(/<figure class="article-figure[^"]*">[\s\S]*?<\/figure>/g) || [];
+  assert.ok(figures.length >= 1, "the article has an inline photo");
+  for (const f of figures) {
+    const alt = (f.match(/<img [^>]*alt="([^"]*)"/) || [])[1];
+    assert.ok(alt && alt.length > 0, "inline photo has a non-empty alt");
+  }
 });
