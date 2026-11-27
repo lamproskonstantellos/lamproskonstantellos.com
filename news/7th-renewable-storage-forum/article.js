@@ -21,6 +21,8 @@ defineArticle({
     "grid connection",
     "Greece",
   ],
+  // The kind of piece: shown on the card and used by the /news filters.
+  category: "Conferences",
   articleSection: "Energy Storage",
   cover: "news/7th-renewable-storage-forum/cover.jpg",
   // Natural cover dimensions (px): they let the srcset advertise the full

@@ -27,6 +27,7 @@ defineArticle({
   // seoTitle: "Shorter title",              // optional: wording for the <title> tag only (search
   //                                         // results, browser tab) — see the SEO checklist
   excerpt: "One- or two-sentence preview shown on the card.",
+  category: "Conferences",                   // the kind of piece: card label + /news filter
   cover: "news/my-article-slug/cover.jpg",   // optional: card + article cover
   coverAlign: "top",                         // optional: crop the cover + thumbnail from the top instead of centre
   photos: [                                  // optional: article photos — see "Photos" below
@@ -74,6 +75,7 @@ defineArticle({
 | `seoTitle` | optional | string | Shorter wording for the `<title>` tag only (search results, browser tab). The page heading, `og:title` and JSON-LD keep `title`. Needed whenever `title` + ` - Lampros Konstantellos` runs past 60 characters — `npm test` fails until it fits |
 | `excerpt` | ✅ | string | Card preview, RSS/feed summary, and the meta description when `seoDescription` is absent |
 | `body` | ✅ | string[] | Article paragraphs (`**bold**` supported); also JSON-LD `articleBody` |
+| `category` | ✅ | string | The kind of piece, shown above the date on the card and used by the `/news` filter pills. Use one of the existing ones: `Conferences`, `Projects`, `Training`, `Perspectives`. A new value adds a new pill, so keep the set small (`npm test` fails past six) |
 | `seoDescription` | optional | string | Shorter (≤~160 char) meta/OG/Twitter/JSON-LD description; falls back to `excerpt` when omitted |
 | `location` | optional | string | Shown after the date |
 | `cover` | optional | path | Card thumbnail + article cover (`og:image` for the article) |

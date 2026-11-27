@@ -21,6 +21,8 @@ defineArticle({
     "QA/QC",
     "Greece",
   ],
+  // The kind of piece: shown on the card and used by the /news filters.
+  category: "Projects",
   articleSection: "Construction and Engineering",
   cover: "news/wind-farm-foundation-pour/cover.jpg",
   // Natural cover dimensions (px): they let the srcset advertise the full

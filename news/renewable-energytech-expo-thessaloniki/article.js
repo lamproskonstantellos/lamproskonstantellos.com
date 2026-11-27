@@ -23,6 +23,8 @@ defineArticle({
     "young engineers",
     "EESTEC",
   ],
+  // The kind of piece: shown on the card and used by the /news filters.
+  category: "Conferences",
   articleSection: "Energy Markets",
   cover: "news/renewable-energytech-expo-thessaloniki/cover.jpg",
   // Natural cover dimensions (px): they let the srcset advertise the full

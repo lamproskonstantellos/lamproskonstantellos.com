@@ -382,3 +382,18 @@ test("every font-size in styles.css comes from the six-step type scale", () => {
     .filter((v) => !tokens.has(v) && !allowed.has(v));
   assert.deepEqual(offenders, [], "font sizes outside the type scale");
 });
+
+// ---- News categories ---------------------------------------------------------
+
+test("every article has a category, from a small set", () => {
+  const newsDir = path.join(ROOT, "news");
+  const slugs = fs.readdirSync(newsDir).filter((d) => fs.existsSync(path.join(newsDir, d, "article.js")));
+  const categories = new Set();
+  for (const slug of slugs) {
+    const meta = server.loadArticleMeta(slug);
+    assert.ok(meta && meta.category, `news/${slug}/article.js needs a category (it drives the /news filters)`);
+    categories.add(meta.category);
+  }
+  // A handful of kinds, not one per article — otherwise the filters are noise.
+  assert.ok(categories.size <= 6, `too many categories: ${[...categories].join(", ")}`);
+});

@@ -81,7 +81,7 @@
     // pasted-from-PDF stray byte in any of them breaks the same consumers,
     // so the guard covers every text field a feed or the head interpolates.
     const CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F]/;
-    for (const field of ["title", "seoTitle", "excerpt", "seoDescription", "dateLabel", "articleSection", "location"]) {
+    for (const field of ["title", "seoTitle", "excerpt", "seoDescription", "dateLabel", "articleSection", "category", "location"]) {
       if (typeof article[field] === "string" && CONTROL_CHARS.test(article[field])) {
         throw new Error(
           `[article] "${article.slug}" has a control character in ${field}`
@@ -194,6 +194,11 @@
     }
     // Optional SEO meta description (<=~160 chars) used for the meta/OG/Twitter
     // description in place of the fuller card/feed excerpt when present.
+    // Optional display category (the kind of piece): the card label and the
+    // /news filter pills. A short plain word or two.
+    if (article.category !== undefined && (typeof article.category !== "string" || !article.category.trim())) {
+      throw new Error(`[article] "${article.slug}" has an empty or non-string category`);
+    }
     if (article.seoTitle !== undefined && (typeof article.seoTitle !== "string" || !article.seoTitle.trim())) {
       throw new Error(`[article] "${article.slug}" has an empty or non-string seoTitle`);
     }
