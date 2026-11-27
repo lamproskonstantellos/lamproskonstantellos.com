@@ -723,6 +723,7 @@ function App() {
     setContent('meta[name="twitter:title"]', social);
     const description = pageDescription(route, {
       defaultDescription: SITE.defaultDescription,
+      homeDescription: SITE.homeDescription,
       articleDescription: article && (article.seoDescription || article.excerpt),
     });
     setContent('meta[name="description"]', description);

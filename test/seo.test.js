@@ -522,3 +522,26 @@ test("captioned article photos carry their caption as alt text", async () => {
     assert.ok(alt && alt.length > 0, "inline photo has a non-empty alt");
   }
 });
+
+// ---- Home: who the person is, in the snippet and in the Person data --------
+
+test("home describes the person: name, Greek spelling, role and affiliation", async () => {
+  const meta = server.computePageMeta("/");
+  assert.equal(meta.description, SITE.homeDescription);
+  assert.ok(meta.description.length <= 160, `home description is ${meta.description.length} characters`);
+  assert.ok(meta.description.includes(SITE.name));
+  assert.ok(meta.description.includes(SITE.alternateName));
+  assert.match(meta.description, /TUM/);
+  // Other routes keep their own descriptions.
+  assert.notEqual(server.computePageMeta("/news").description, SITE.homeDescription);
+  assert.equal(server.computePageMeta("/no-such-route").description, SITE.defaultDescription);
+
+  const graph = meta.jsonLd["@graph"];
+  const person = graph.find((n) => n["@type"] === "ProfilePage").mainEntity;
+  assert.equal(person.alternateName, SITE.alternateName);
+  assert.equal(person.description, SITE.personDescription);
+  assert.deepEqual(person.knowsAbout, SITE.knowsAbout);
+  // The Person image is the portrait, not the text share card.
+  assert.equal(person.image, `${SITE.url}${SITE.heroImage}`);
+  assert.equal(graph.find((n) => n["@type"] === "WebSite").alternateName, SITE.alternateName);
+});

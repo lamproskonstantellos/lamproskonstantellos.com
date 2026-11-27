@@ -172,6 +172,7 @@ const PROFILE_JSONLD = {
     {
       "@type": "WebSite",
       "name": SITE_CFG.name,
+      "alternateName": SITE_CFG.alternateName,
       "url": HOME_URL
     },
     {
@@ -179,9 +180,16 @@ const PROFILE_JSONLD = {
       "mainEntity": {
         "@type": "Person",
         "name": SITE_CFG.name,
+        // The Greek spelling, so a search typed in Greek resolves to the
+        // same person.
+        "alternateName": SITE_CFG.alternateName,
         "jobTitle": SITE_CFG.jobTitle,
+        "description": SITE_CFG.personDescription,
+        "knowsAbout": SITE_CFG.knowsAbout,
         "url": HOME_URL,
-        "image": DEFAULT_IMAGE,
+        // The portrait itself — the 1200x630 share card (name on a navy
+        // ground) is not a picture of the person.
+        "image": `${SITE_CFG.url}${SITE_CFG.heroImage}`,
         // Affiliations from site.config.js (unit → … → university).
         "worksFor": orgJsonLd(SITE_CFG.worksFor),
         "affiliation": orgJsonLd(SITE_CFG.affiliation),
@@ -598,7 +606,10 @@ function computePageMeta(pathname) {
   if (route.page === "home") {
     return {
       title: pageTitle(route, titleCtx),
-      description: DEFAULT_DESCRIPTION,
+      description: pageDescription(route, {
+        defaultDescription: DEFAULT_DESCRIPTION,
+        homeDescription: SITE_CFG.homeDescription,
+      }),
       url: HOME_URL,
       image: DEFAULT_IMAGE,
       imageWidth: DEFAULT_IMAGE_DIMS && DEFAULT_IMAGE_DIMS.width,
