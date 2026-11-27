@@ -225,7 +225,9 @@ main { flex: 1 0 auto; width: 100%; }
 .site-header-inner {
   max-width: var(--container);
   margin: 0 auto;
-  padding: 18px 28px;
+  /* 16px + the 40px CV button = the same 73px header as before (the bar was
+     18px + a 36px button). */
+  padding: 16px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -335,11 +337,14 @@ main { flex: 1 0 auto; width: 100%; }
    with light lettering (the same tokens as the primary button, so dark mode
    flips it correctly), compact on purpose. */
 .nav .nav-cv {
+  display: inline-flex;
+  align-items: center;
   color: var(--solid-ink);
   background: var(--solid-bg);
-  padding: 7px 14px;
+  min-height: 40px;
+  padding: 0 16px;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   transition: background var(--transition);
 }
 .nav .nav-cv:hover {
@@ -408,7 +413,10 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 18px;
+  /* One button scale: 44px here (the hero and 404 actions), 40px for the
+     secondary controls (View all, Back, CV). */
+  min-height: 44px;
+  padding: 0 20px;
   border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 500;
@@ -430,6 +438,14 @@ main {
 .btn-primary:hover { background: var(--solid-hover-bg); color: var(--solid-ink); transform: translateY(-1px); }
 .btn-ghost { border-color: var(--line); color: var(--ink); background: var(--surface); }
 .btn-ghost:hover { border-color: var(--ink); color: var(--ink); transform: translateY(-1px); }
+/* Pressed: the button settles back from its hover lift and its ground
+   answers, so a click reads as a press instead of a frozen hover. */
+.btn:active { transform: translateY(0); }
+.btn-primary:active { background: var(--solid-bg); }
+.btn-ghost:active,
+.view-all:active,
+.back-link:active { background: var(--tint-accent); }
+.nav .nav-cv:active { background: var(--solid-bg); }
 
 /* A quiet portrait: a small square with the page's hairline border and no
    drop shadow, so the headline carries the hero and the photo accompanies it
@@ -538,26 +554,27 @@ section.block {
   margin-top: 10px;
 }
 .section-label-action { margin-left: auto; }
-/* "View all" is an outlined pill — the same quiet stadium shape as the Back
-   link on the list/article pages, so every secondary navigation control
-   shares one look. */
+/* "View all" is an outlined 40px button with the same 8px corners as every
+   other button on the site (pills are reserved for filters and tags); the
+   Back link on the list/article pages shares the exact look. */
 .view-all {
   display: inline-flex;
   align-items: center;
-  /* 13.5px matches .back-link exactly — the two pills share one look. */
-  font-size: 13.5px;
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--accent);
+  color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 8px 18px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: color var(--transition), border-color var(--transition);
+  transition: color var(--transition), border-color var(--transition),
+    background var(--transition);
 }
 .view-all:hover {
-  color: var(--accent-hover);
-  border-color: var(--accent);
+  color: var(--ink);
+  border-color: var(--ink);
 }
 
 /* ===== About ===== */
@@ -579,22 +596,18 @@ section.block {
   margin-bottom: 14px;
 }
 .chip-list { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Focus areas are labels, not controls: flat tinted tags with no border and
+   no hover response, so nothing here looks clickable. */
 .chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--ink-soft);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  padding: 5px 11px;
+  color: var(--ink);
+  background: var(--tint-accent);
   border-radius: 999px;
-  transition: border-color var(--transition), color var(--transition),
-    transform var(--transition);
-  cursor: default;
-}
-.chip:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  transform: translateY(-1px);
 }
 
 .about-stream {
@@ -652,27 +665,25 @@ section.block {
 }
 
 /* ===== Publications ===== */
-/* One full-width card per entry, stacked newest-first. grid-auto-rows: 1fr
-   makes every white card the same height — the tallest entry sets the shared
-   size, and a new, longer entry simply raises it for the whole set. */
+/* One full-width card per entry, stacked newest-first. Each card is as tall
+   as its own content (the former equal-height rows left an empty band above
+   the links on entries without a description). */
 .pub-list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
-  grid-auto-rows: 1fr;
+  gap: 16px;
 }
 .pub-card {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  padding: 24px 26px 22px 28px;
+  padding: 24px;
   transition: border-color var(--transition), transform var(--transition),
     box-shadow var(--transition);
   overflow: hidden;
   cursor: default;
-  /* Fill the shared row height; the links pin to the bottom edge so every
-     card closes the same way. */
+  /* A column, so the links row always closes the card. */
   display: flex;
   flex-direction: column;
 }
@@ -896,7 +907,7 @@ section.block {
   /* min(280px, 100%) lets the min track collapse below 280px instead of
      overflowing the container on very narrow (<320px) viewports. */
   grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
-  gap: 18px;
+  gap: 16px;
 }
 .news-card {
   background: var(--surface);
@@ -1012,25 +1023,27 @@ section.block {
 .article {
   padding: clamp(28px, 4vw, 44px) 0 clamp(56px, 7vw, 80px);
 }
-/* The Back link is an outlined pill, matching .view-all so the two secondary
-   navigation controls share one look. */
+/* The Back link matches .view-all exactly, so the two secondary navigation
+   controls share one look. */
 .back-link {
   display: inline-flex;
   align-items: center;
-  font-size: 13.5px;
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--accent);
+  color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 8px 18px;
+  border-radius: var(--radius-sm);
   margin-bottom: 32px;
   cursor: pointer;
-  transition: color var(--transition), border-color var(--transition);
+  transition: color var(--transition), border-color var(--transition),
+    background var(--transition);
 }
 .back-link:hover {
-  color: var(--accent-hover);
-  border-color: var(--accent);
+  color: var(--ink);
+  border-color: var(--ink);
 }
 
 .article-meta {
@@ -1429,7 +1442,7 @@ section.block {
 .contact-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 .contact-card {
   display: flex;
@@ -1701,7 +1714,6 @@ section.block {
 @media (hover: none) {
   .btn-primary:hover,
   .btn-ghost:hover,
-  .chip:hover,
   .footer-col a:hover { transform: none; }
   .pub-card:hover,
   .news-card:hover,
@@ -1750,16 +1762,30 @@ section.block {
 }
 
 /* ===== Responsive ===== */
+/* Tablet (601-820px) keeps the desktop hero — headline left, portrait right —
+   at a smaller scale; the phone layout below starts at 600px. (It used to
+   start at 820px, so an upright iPad showed the phone hero stretched: a 94px
+   avatar, the name twice, and one 630px-wide button.) */
 @media (max-width: 820px) {
   .hero {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1.25fr 0.75fr;
+    gap: 32px;
     /* Same rule as on desktop: bottom padding tracks --space-section so
        the divider above About stays equidistant on small screens too. */
+    padding: 48px 0 var(--space-section);
+  }
+  .hero-text h1 { font-size: clamp(28px, 4.6vw, 36px); }
+  .hero-text p { font-size: 16px; }
+  .hero-photo { max-width: 220px; }
+}
+@media (max-width: 600px) {
+  .hero {
+    grid-template-columns: 1fr;
     padding: 40px 0 var(--space-section);
   }
   .hero-text h1 { line-height: 1.18; }
-  /* On small screens the photo moves into the profile card above the
-     headline; the large portrait is hidden entirely. */
+  /* On phones the photo moves into the profile card above the headline;
+     the portrait is hidden entirely. */
   .hero-photo { display: none; }
   .hero-intro {
     display: flex;
@@ -1767,11 +1793,11 @@ section.block {
     gap: 14px;
     margin-bottom: 26px;
   }
-  /* Button stack per the mobile design: the primary CTA takes the full row,
-     the two quiet actions share the next one. */
-  .hero-actions .btn { justify-content: center; }
-  .hero-actions .btn-primary { flex-basis: 100%; }
-  .hero-actions .btn-ghost { flex: 1; }
+  /* The two actions share one row as equal halves, and fall back to one
+     full-width button each when the labels no longer fit side by side. */
+  .hero-actions .btn { flex: 1 1 auto; justify-content: center; }
+}
+@media (max-width: 820px) {
   .nav { gap: 16px; }
   .nav a { font-size: 13px; }
   .site-header-inner { padding: 14px 20px; }
@@ -1784,10 +1810,12 @@ section.block {
   .footer-tagline { max-width: none; }
 }
 
-/* On very narrow phones (≤560px) the brand + 4 inline nav links overran the
-   viewport (~372px min) and forced a horizontal scrollbar at 360px. Tighten the
-   header gaps/type so it fits without a scrollbar. */
-@media (max-width: 560px) {
+/* On phones (≤600px) the brand + 4 inline nav links overran the viewport
+   (~372px min) and forced a horizontal scrollbar at 360px. Tighten the header
+   gaps/type so it fits without a scrollbar. Same 600px line as the phone hero
+   below, whose profile card carries the name once the header drops it (the
+   brand used to stay until 560px and wrapped the bar onto two rows first). */
+@media (max-width: 600px) {
   .site-header-inner { gap: 12px; padding-left: 16px; padding-right: 16px; }
   /* Show only the LK badge on small phones; the name/role are hidden so the
      four nav links keep plenty of room (no horizontal overflow at 360px). */
@@ -1802,7 +1830,7 @@ section.block {
   .site-header-inner { gap: 8px; }
   .nav { gap: 8px; }
   .nav a { font-size: 12.5px; }
-  .nav .nav-cv { padding: 6px 9px; }
+  .nav .nav-cv { padding: 0 10px; min-height: 36px; }
 }
 
 @media (max-width: 430px) {

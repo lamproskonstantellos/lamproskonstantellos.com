@@ -131,14 +131,15 @@
   // sizes attributes shared between the components and the server-side
   // preloads (they MUST match, or the browser preloads one candidate and
   // renders another — a double download).
-  // Hero portrait: the 96px mobile intro card below 820px; above it ~44vw of
+  // Hero portrait: the 96px mobile intro card up to 600px; the 220px-capped
+  // tablet portrait up to 820px; above that ~44vw of
   // the hero grid, but never more than the 280px the CSS caps .hero-photo at
   // — a bare 44vw claimed up to ~700px on wide desktops and made DPR-1
   // screens (and the preload) fetch the 960w candidate where 480w suffices,
   // on the LCP path. Article cover: the full container width, up to the
   // 1044px content box of the 1100px container (the article page spans the
   // same width as the header since the full-width layout).
-  const HERO_IMG_SIZES = "(max-width: 820px) 96px, min(44vw, 280px)";
+  const HERO_IMG_SIZES = "(max-width: 600px) 96px, (max-width: 820px) min(34vw, 220px), min(44vw, 280px)";
   const ARTICLE_COVER_SIZES = "(max-width: 1100px) 100vw, 1044px";
   // A single inline landscape figure is capped at 760px inside the text.
   const ARTICLE_FIGURE_SIZES = "(max-width: 816px) 100vw, 760px";
@@ -153,12 +154,12 @@
   // desktop case.
   const ARTICLE_PORTRAIT_SIZES = "(max-width: 776px) 100vw, 480px";
   // News cards live in the 1100px-capped container (28px side padding,
-  // 18px gaps): three columns of at most ~336px on desktop, two above
+  // 16px gaps): three columns of at most ~338px on desktop, two above
   // 640px. The former bare "50vw, 33vw" claimed the viewport fraction with
   // no cap, so a 1920px desktop fetched the 960w cover for a 336px slot on
   // every card.
   const NEWS_CARD_SIZES =
-    "(max-width: 640px) calc(100vw - 56px), (max-width: 1024px) calc(50vw - 37px), 336px";
+    "(max-width: 640px) calc(100vw - 56px), (max-width: 1024px) calc(50vw - 36px), 338px";
 
   const api = {
     shareLinks,
